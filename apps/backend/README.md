@@ -24,4 +24,4 @@ python manage.py runserver
 
 ## References
 - [Task Plan](PLAN.md)
-- [Code Guide](GUIDE.md)
+- [Code Guide](CODE_GUIDE.md)

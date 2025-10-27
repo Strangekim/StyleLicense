@@ -388,7 +388,7 @@ Backend → Frontend: 이미지 URL 반환
 #### 비즈니스 규칙
 - 토큰 부족 시 이미지 생성 불가
 - 이미지 생성 실패 시 토큰 환불
-- 서명은 삭제 불가 (원본 이미지는 사용자 접근 불가)
+- 서명은 위치/크기/투명도 규칙 고정, 제거 불가 (원본 이미지는 사용자 접근 불가)
 - 생성된 이미지는 자동으로 작가 정보 메타데이터 포함
 
 ### 8.3 토큰 시스템
@@ -472,7 +472,7 @@ project-root/
 ### 10.1 인증 및 인가
 
 #### Google OAuth 2.0
-- **라이브러리**: Django-allauth
+- **라이브러리**: Google OAuth 2.0 + Django Session(HttpOnly)
 - **플로우**: Authorization Code Flow
 - **세션 관리**: Django Session (httponly cookie)
 - **세션 만료**: 2주 (재로그인 필요)
@@ -765,7 +765,6 @@ Push → Lint (Black) → Test (pytest) → Build Docker → Deploy to EC2
 project-root/
 ├── README.md              # 프로젝트 소개 (외부용)
 ├── TECHSPEC.md            # 이 문서 (전체 시스템 개요)
-├── ARCHITECTURE.md        # 시스템 다이어그램
 ├── PLAN.md                # 개발 계획 및 진행 상황
 ├── claude.md              # Claude 작업 가이드
 ├── docs/
@@ -778,19 +777,19 @@ project-root/
     ├── backend/
     │   ├── README.md      # Backend 아키텍처
     │   ├── PLAN.md        # Backend 작업 계획
-    │   └── GUIDE.md       # Backend 코드 가이드
+    │   └── CODE_GUIDE.md       # Backend 코드 가이드
     ├── frontend/
     │   ├── README.md
     │   ├── PLAN.md
-    │   └── GUIDE.md
+    │   └── CODE_GUIDE.md
     ├── training-server/
     │   ├── README.md
     │   ├── PLAN.md
-    │   └── GUIDE.md
+    │   └── CODE_GUIDE.md
     └── inference-server/
         ├── README.md
         ├── PLAN.md
-        └── GUIDE.md
+        └── CODE_GUIDE.md
 ```
 
 ### 15.2 문서 작성 규칙

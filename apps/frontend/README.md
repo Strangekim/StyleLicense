@@ -81,6 +81,6 @@ npm run test:e2e
 
 ## References
 - [Task Plan](PLAN.md)
-- [Code Guide](GUIDE.md)
+- [Code Guide](CODE_GUIDE.md)
 - [API Spec](../../docs/API.md)
 - [Design System](../../design/README.md)
