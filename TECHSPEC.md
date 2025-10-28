@@ -1,7 +1,7 @@
 # Style License 프로젝트 기술 명세서 (TECHSPEC.md)
 
 **Repository :**  작성 예정
-**Version :** 0.2(초안)
+**Version :** 0.3(DB 설계 추가)
 
 ---
 
@@ -56,6 +56,7 @@
 - 기본적인 결제 및 토큰 충전 기능
 
 #### 2.1.2 스타일(화풍) 생성 시스템
+- 1인 1스타일 생성 가능 (MVP 단계)
 - 작가가 자신의 화풍을 등록하여 Style(스타일 모델) 을 생성할 수 있는 시스템 구축
 - **학습용 이미지**: 최소 10장 이상, 최대 100장까지 등록 가능
 - 각각의 학습 이미지에 태그(학습 키워드) 입력 (⚠ 영어만 허용)
@@ -69,6 +70,7 @@
   - 이미지당 가격 (토큰 단가) — 1장 생성 시 소모되는 토큰 수
 - 업로드된 이미지는 서버에서 검증(형식·크기 등) 후, RabbitMQ를 통해 학습 큐로 전달 → LoRA Fine-tuning 자동 실행
 - 학습 완료 후 결과는 모델 파일(S3 저장) + Style 등록 완료 알림으로 작가에게 전달
+- 학습된 모델 (스타일) 작가 임의로 삭제 불가능
 
 #### 2.1.3 이미지 생성 시스템 (Image Generation System)
 - 사용자는 등록된 스타일(Style) 중 하나를 선택하여 이미지 생성 가능
@@ -100,10 +102,16 @@
 - 이미지 메타데이터에 작가 정보 기록
 
 #### 2.1.7 태그 및 검색 시스템
-- 작가가 모델 학습 시 태그 등록 기능
-- 학습 이미지별 개별 태그 설정 기능
-- 태그 기반 스타일 검색 기능
-- 이미지 생성 시 태그 기반 프롬프트 입력 (태그 입력/조합, ⚠ 영어만 허용)
+- 학습 태깅 구조
+  - 작가가 모델 학습시 각 이미지별로 태그를 자동 / 수동 등록할 수 있음.
+  - 학습 이미지(artworks)의 태그(artwork_tags)는 자동으로 집계되어 스타일(styles) 태그로 반영됨
+- 검색 및 관리
+  - 태그 단위로 스타일, 학습 이미지, 생성물을 통합 검색 가능
+  - 스타일 대표 태그(style_tags)를 기반으로 빠른 스타일 검색 제공
+  - 태그별 사용 빈도, 활성화 여부(is_active), 검열 상태(is_flagged) 관리 가능
+- 프롬프트 입력
+  - 이미지 생성 시 태그 기반 프롬프트 입력/조합 기능 제공
+  - ⚠ 영어만 허용 (Stable Diffusion 프롬프트 호환성 고려)
 
 #### 2.1.8 기본 커뮤니티 기능
 - 생성된 이미지 공개/비공개 설정
@@ -150,6 +158,7 @@
 - 실시간 협업 기능
 - 이미지 편집 도구 (외부 도구 연동)
 - AI 기반 자동 프롬프트 생성 및 최적화
+- 작가 다중 스타일 생성 가능
 
 #### 2.2.4 정산 및 수익화 고도화
 - 작가의 토큰 현금 환전 기능
@@ -316,13 +325,62 @@ Backend → Frontend: 이미지 URL 반환
 
 ## 5. 데이터 모델 및 스키마
 
-### 5.1 주요 엔티티
+### 5.1 개요
 
-- 작성 예정
+PostgreSQL 15.x 기반, 7개 논리적 스키마로 구성
 
-### 5.2 엔티티 관계도 (ERD)
+### 5.2 스키마 구조
+```
+style_license_db
+├── auth           # 사용자 인증 (users, artists)
+├── token          # 토큰 거래 및 결제 (transactions, purchases)
+├── style          # 화풍 모델 (styles, artworks)
+├── generation     # 이미지 생성 (generations)
+├── community      # 소셜 기능 (follows, likes, comments)
+├── tagging        # 태그 시스템 (tags, M:N 테이블들)
+└── system         # 알림 (notifications)
+```
 
-### 5.3 데이터 검증 규칙
+### 5.3 핵심 엔티티
+
+| 엔티티 | 설명 | 주요 필드 |
+|--------|------|-----------|
+| **users** | 사용자 계정 | token_balance, role(user/artist) |
+| **artists** | 작가 프로필 (1:1) | earned_token_balance, signature_image_url |
+| **transactions** | 토큰 거래 내역 | sender, receiver, amount, status |
+| **purchases** | 토스 결제 기록 | amount_tokens, status, provider_payment_key |
+| **styles** | 화풍 모델 | training_status, generation_cost_tokens |
+| **artworks** | 학습 이미지 (10~100장) | image_url, is_valid |
+| **generations** | 생성 요청/결과 | status, result_url, is_public |
+| **tags** | 태그 마스터 (영어) | name, usage_count |
+
+### 5.4 핵심 관계
+```
+users ─┬─ artists (1:1)
+       ├─ styles ── artworks (1:N)
+       ├─ generations
+       ├─ follows (N:N self)
+       └─ likes, comments
+
+styles ── generations (1:N, ON DELETE RESTRICT)
+tags ──── styles/artworks/generations (M:N)
+```
+
+### 5.5 주요 제약 조건
+
+- 토큰 잔액 음수 불가: `token_balance >= 0`
+- 중복 팔로우/좋아요 방지: UNIQUE 제약
+- 사용 중인 스타일 삭제 불가: ON DELETE RESTRICT
+- 자기 팔로우 방지: `follower_id != following_id`
+
+### 5.6 성능 전략
+
+- **캐싱 컬럼**: follower_count, like_count, comment_count
+- **인덱스**: 모든 FK + (user_id, created_at) 복합 인덱스
+- **동시성**: 토큰 차감 시 `SELECT FOR UPDATE`
+- **소프트 삭제**: is_active, is_flagged 플래그
+
+> **상세 정보**: [docs/database/README.md](../docs/database/README.md) 참조
 
 ---
 
@@ -362,7 +420,7 @@ Backend → Frontend: 이미지 URL 반환
 - **Main Page**: 플랫폼 메인 / 공개 피드 그리드
 - **Feed Detail Page**: 개별 피드(이미지)의 상세보기
   - **Comment Modal**: 댓글 목록보기
-- **Search & Following Style Page**: 스타일 검색 및 팔로우 목록 조회
+- **Search & Following Artist Page**: 스타일 검색 및 팔로우 목록 조회
 - **Style Detail Page**: 특정 스타일(작가)의 상세 정보 및 이미지 생성 화면
 - **My Page**: 
 - **Edit / Create Style Page**: 새로운 화풍(모델) 생성 / 업로드 / 가격, 설명 수정
@@ -805,7 +863,12 @@ project-root/
 ├── PLAN.md                # 개발 계획 및 진행 상황
 ├── claude.md              # Claude 작업 가이드
 ├── docs/
-│   ├── DATABASE.md        # DB 스키마 상세
+│   ├── database/
+│   │   ├── README.md                # DB 개요, 전체 ERD, 설계 원칙
+│   │   ├── guides/
+│   │   │   ├── queries.md     (실전 쿼리 모음)
+│   │   │   └── operations.md  (마이그레이션 + 운영)
+│   │   └── TABLES.md          (모든 테이블 정의 한 곳에)
 │   ├── API.md             # API 명세 상세
 │   ├── SECURITY.md        # 보안 정책
 │   ├── DEPLOYMENT.md      # 배포 가이드
@@ -814,7 +877,7 @@ project-root/
     ├── backend/
     │   ├── README.md      # Backend 아키텍처
     │   ├── PLAN.md        # Backend 작업 계획
-    │   └── CODE_GUIDE.md       # Backend 코드 가이드
+    │   └── CODE_GUIDE.md  # Backend 코드 가이드
     ├── frontend/
     │   ├── README.md
     │   ├── PLAN.md
