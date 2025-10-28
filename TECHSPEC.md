@@ -346,7 +346,7 @@ style_license_db
 | 엔티티 | 설명 | 주요 필드 |
 |--------|------|-----------|
 | **users** | 사용자 계정 | token_balance, role(user/artist) |
-| **artists** | 작가 프로필 (1:1) | earned_token_balance, signature_image_url |
+| **artists** | 작가 프로필 (1:1) | earned_token_balance, follower_count, signature_image_url |
 | **transactions** | 토큰 거래 내역 | sender, receiver, amount, status |
 | **purchases** | 토스 결제 기록 | amount_tokens, status, provider_payment_key |
 | **styles** | 화풍 모델 | training_status, generation_cost_tokens |
@@ -375,7 +375,7 @@ tags ──── styles/artworks/generations (M:N)
 
 ### 5.6 성능 전략
 
-- **캐싱 컬럼**: follower_count, like_count, comment_count
+- **캐싱 컬럼**: follower_count (artists), like_count, comment_count (generations)
 - **인덱스**: 모든 FK + (user_id, created_at) 복합 인덱스
 - **동시성**: 토큰 차감 시 `SELECT FOR UPDATE`
 - **소프트 삭제**: is_active, is_flagged 플래그

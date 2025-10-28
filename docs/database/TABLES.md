@@ -65,6 +65,7 @@ CREATE TABLE artists (
     verified_email          VARCHAR(255),
     earned_token_balance    BIGINT DEFAULT 0 NOT NULL 
                             CHECK (earned_token_balance >= 0),
+    follower_count          INT DEFAULT 0 NOT NULL,
     created_at              TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at              TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -76,6 +77,7 @@ CREATE INDEX idx_artists_user_id ON artists(user_id);
 **주요 컬럼**:
 - `user_id`: users.id와 1:1 관계
 - `earned_token_balance`: 수익 잔액 (미정산)
+- `follower_count`: 팔로우 수 캐싱용
 - `signature_image_url`: 생성 이미지 워터마크용
 
 **비즈니스 규칙**:
@@ -199,7 +201,6 @@ CREATE TABLE styles (
                             CHECK (license_type IN ('personal','commercial','exclusive')),
     valid_from              DATE DEFAULT CURRENT_DATE NOT NULL,
     valid_to                DATE,
-    follower_count          INT DEFAULT 0 NOT NULL,
     generation_cost_tokens  BIGINT NOT NULL DEFAULT 0 
                             CHECK (generation_cost_tokens >= 0),
     is_flagged              BOOLEAN DEFAULT FALSE NOT NULL,
@@ -276,7 +277,7 @@ CREATE TABLE generations (
     result_url          TEXT,
     status              VARCHAR(20) DEFAULT 'queued' NOT NULL 
                         CHECK (status IN ('queued','processing','completed','failed')),
-    description         TEXT NOT NULL,
+    description         TEXT,
     like_count          INT DEFAULT 0 NOT NULL,
     comment_count       INT DEFAULT 0 NOT NULL,
     is_public           BOOLEAN DEFAULT FALSE NOT NULL,
