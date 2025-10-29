@@ -1,7 +1,7 @@
 # StyleLicense
 StyleLicense
 
-
+```
 project-root/
 ├── README.md                         # 프로젝트 소개 (외부용)
 ├── claude.md                         # Claude 작업 흐름 가이드 (진입점)
@@ -41,3 +41,4 @@ project-root/
         ├── README.md                # 배포 가이드
         ├── docker-compose.yml       # 개발 환경
         └── scripts/                 # 배포 스크립트
+```

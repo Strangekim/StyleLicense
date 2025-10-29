@@ -31,9 +31,10 @@ CREATE TABLE users (
     role                VARCHAR(20) DEFAULT 'user' NOT NULL,
     token_balance       BIGINT DEFAULT 0 NOT NULL CHECK (token_balance >= 0),
     bio                 TEXT,
+    is_active           BOOLEAN DEFAULT TRUE NOT NULL,
     created_at          TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at          TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    
+
     CONSTRAINT unique_provider_user UNIQUE (provider, provider_user_id)
 );
 
@@ -46,10 +47,12 @@ CREATE INDEX idx_users_role ON users(role) WHERE role = 'artist';
 - `token_balance`: 보유 토큰 수 (음수 불가, SELECT FOR UPDATE 필수)
 - `role`: 'user' 또는 'artist'
 - `provider`: OAuth 제공자 (현재: 'google')
+- `is_active`: 계정 활성화 상태 (탈퇴 시 false, 소프트 삭제)
 
 **비즈니스 규칙**:
 - OAuth 인증 전용 (provider + provider_user_id 조합으로 유니크)
 - 토큰 차감/증가 시 트랜잭션 필수
+- 작가가 스타일 사용 내역이 있으면 물리 삭제 불가 → `is_active=false`로 비활성화
 
 ---
 
@@ -92,45 +95,52 @@ CREATE INDEX idx_artists_user_id ON artists(user_id);
 
 ```sql
 CREATE TABLE transactions (
-    id                  BIGSERIAL PRIMARY KEY,
-    sender_id           BIGINT NOT NULL 
-                        REFERENCES users(id) ON DELETE CASCADE,
-    receiver_id         BIGINT 
-                        REFERENCES users(id) ON DELETE CASCADE,
-    amount              BIGINT NOT NULL,
-    price_per_token     DECIMAL(10,2),
-    total_price         DECIMAL(18,2) GENERATED ALWAYS AS 
-                        (amount * price_per_token) STORED,
-    status              VARCHAR(20) DEFAULT 'completed' NOT NULL 
-                        CHECK (status IN ('pending','completed','failed')),
-    memo                TEXT,
-    created_at          TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    related_style_id    BIGINT REFERENCES styles(id) ON DELETE SET NULL,
-    payment_method      VARCHAR(30) DEFAULT 'token' NOT NULL,
-    refunded            BOOLEAN DEFAULT FALSE NOT NULL
+    id                      BIGSERIAL PRIMARY KEY,
+    sender_id               BIGINT NOT NULL
+                            REFERENCES users(id) ON DELETE CASCADE,
+    receiver_id             BIGINT
+                            REFERENCES users(id) ON DELETE CASCADE,
+    amount                  BIGINT NOT NULL,
+    price_per_token         DECIMAL(10,2),
+    currency_code           CHAR(3) DEFAULT 'KRW',
+    total_price             DECIMAL(18,2) GENERATED ALWAYS AS
+                            (amount * price_per_token) STORED,
+    status                  VARCHAR(20) DEFAULT 'completed' NOT NULL
+                            CHECK (status IN ('pending','completed','failed')),
+    memo                    TEXT,
+    created_at              TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    related_style_id        BIGINT REFERENCES styles(id) ON DELETE SET NULL,
+    related_generation_id   BIGINT REFERENCES generations(id) ON DELETE SET NULL,
+    payment_method          VARCHAR(30) DEFAULT 'token' NOT NULL,
+    refunded                BOOLEAN DEFAULT FALSE NOT NULL
 );
 
 -- 인덱스
 CREATE INDEX idx_transactions_sender ON transactions(sender_id, created_at DESC);
 CREATE INDEX idx_transactions_receiver ON transactions(receiver_id, created_at DESC);
 CREATE INDEX idx_transactions_style ON transactions(related_style_id);
+CREATE INDEX idx_transactions_generation ON transactions(related_generation_id);
 CREATE INDEX idx_transactions_status ON transactions(status, created_at DESC);
 ```
 
 **주요 컬럼**:
 - `sender_id`: 토큰 차감 대상
 - `receiver_id`: 토큰 증가 대상 (NULL = 플랫폼으로부터 구매)
+- `currency_code`: 통화 코드 (기본값: 'KRW')
 - `related_style_id`: 이미지 생성 결제 시 사용한 스타일
+- `related_generation_id`: 이미지 생성 결제 시 생성된 이미지 ID
 - `refunded`: 환불 여부 (true면 잔액 계산 제외)
 
-**거래 유형**:
-- `receiver_id=NULL`: 토큰 구매
-- `receiver_id!=NULL, related_style_id=NULL`: 송금
-- `receiver_id!=NULL, related_style_id!=NULL`: 생성 결제
+**거래 유형 판별**:
+- `receiver_id=NULL`: 토큰 구매 (플랫폼에서 지급)
+- `receiver_id!=NULL, related_generation_id=NULL`: 송금 또는 웰컴 보너스
+- `receiver_id!=NULL, related_generation_id!=NULL`: 이미지 생성 결제
 
 **비즈니스 규칙**:
-- 토큰 잔액 = (받은 토큰 - 보낸 토큰)
-- 거래 생성 시 users.token_balance 동시 업데이트 (atomic)
+- **토큰 잔액 관리**: `users.token_balance`가 단일 진실 공급원(Single Source of Truth)
+- **transactions 테이블 역할**: 이벤트 로그 및 감사 추적(audit trail)용
+- 거래 생성 시 `users.token_balance`를 애플리케이션에서 직접 업데이트 (atomic)
+- transactions는 이력 기록만, 잔액 계산에 직접 사용하지 않음
 
 ---
 
@@ -202,8 +212,9 @@ CREATE TABLE styles (
                             CHECK (license_type IN ('personal','commercial','exclusive')),
     valid_from              DATE DEFAULT CURRENT_DATE NOT NULL,
     valid_to                DATE,
-    generation_cost_tokens  BIGINT NOT NULL DEFAULT 0 
+    generation_cost_tokens  BIGINT NOT NULL DEFAULT 0
                             CHECK (generation_cost_tokens >= 0),
+    usage_count             INT DEFAULT 0 NOT NULL,
     is_flagged              BOOLEAN DEFAULT FALSE NOT NULL,
     is_active               BOOLEAN DEFAULT TRUE NOT NULL,
     created_at              TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -215,8 +226,9 @@ CREATE TABLE styles (
 -- 인덱스
 CREATE INDEX idx_styles_artist ON styles(artist_id, is_active);
 CREATE INDEX idx_styles_status ON styles(training_status);
-CREATE INDEX idx_styles_active ON styles(is_active, created_at DESC) 
+CREATE INDEX idx_styles_active ON styles(is_active, created_at DESC)
     WHERE is_active = true;
+CREATE INDEX idx_styles_usage ON styles(usage_count DESC, created_at DESC);
 ```
 
 **주요 컬럼**:
@@ -227,11 +239,15 @@ CREATE INDEX idx_styles_active ON styles(is_active, created_at DESC)
   - NULL이면 진행 정보 없음 (pending 또는 completed 상태)
 - `model_path`: LoRA 모델 파일 경로 (S3)
 - `generation_cost_tokens`: 이미지 1장당 토큰 (작가 설정)
+- `usage_count`: 실제 생성 횟수 (캐싱 컬럼, generations 테이블 집계)
+  - 이미지 생성 완료 시 자동 증가
+  - popular 정렬에 사용
 
 **비즈니스 규칙**:
 - MVP: 작가당 1개 스타일만 생성 가능
 - training_status='completed'일 때만 생성 가능
 - ON DELETE RESTRICT: 사용 중인 스타일 삭제 불가
+- usage_count는 애플리케이션 또는 트리거에서 관리
 
 ---
 
@@ -280,8 +296,8 @@ CREATE TABLE generations (
     seed                BIGINT,
     consumed_tokens     BIGINT DEFAULT 0 NOT NULL,
     result_url          TEXT,
-    status              VARCHAR(20) DEFAULT 'queued' NOT NULL 
-                        CHECK (status IN ('queued','processing','completed','failed')),
+    status              VARCHAR(20) DEFAULT 'queued' NOT NULL
+                        CHECK (status IN ('queued','processing','retrying','completed','failed')),
     generation_progress JSONB, 
     description         TEXT,
     like_count          INT DEFAULT 0 NOT NULL,
@@ -300,7 +316,12 @@ CREATE INDEX idx_generations_public ON generations(is_public, created_at DESC)
 ```
 
 **주요 컬럼**:
-- `status`: 처리 상태 (queued → processing → completed/failed)
+- `status`: 처리 상태 (queued → processing → completed/failed/retrying)
+  - `queued`: 대기 중
+  - `processing`: 생성 중
+  - `retrying`: 재시도 중 (실패 후 자동 재시도)
+  - `completed`: 완료
+  - `failed`: 최종 실패 (3회 재시도 후)
 - `generation_progress`: 생성 진행 상황 (JSONB)
   - 예시: `{"progress_percent": 75, "current_step": 38, "total_steps": 50, "last_updated": "2025-01-15T12:00:05Z"}`
   - Inference Server가 업데이트
@@ -311,7 +332,8 @@ CREATE INDEX idx_generations_public ON generations(is_public, created_at DESC)
 
 **비즈니스 규칙**:
 - 생성 전 토큰 차감 (atomic)
-- 실패 시 3회 재시도 후 환불
+- 실패 시 최대 3회 자동 재시도 (GPU OOM, 타임아웃 등)
+- 재시도 실패 시 토큰 전액 환불
 - style_id는 RESTRICT (스타일 삭제 방지)
 
 ---
@@ -395,11 +417,13 @@ CREATE INDEX idx_comments_parent ON comments(parent_id);
 
 **주요 컬럼**:
 - `parent_id`: NULL이면 일반 댓글, 값 있으면 대댓글
+- `like_count`: 댓글 좋아요 수 (MVP 미구현, 향후 Phase 2 예정)
 
 **비즈니스 규칙**:
 - MVP: 1단계 대댓글만 허용
 - 댓글 삭제 시 대댓글도 CASCADE 삭제
 - 작성 시 generations.comment_count 증가
+- **댓글 좋아요 기능**: MVP에서는 구현하지 않음, `like_count`는 0으로 유지
 
 ---
 
@@ -501,8 +525,8 @@ CREATE TABLE notifications (
                     REFERENCES users(id) ON DELETE CASCADE,
     actor_id        BIGINT 
                     REFERENCES users(id) ON DELETE CASCADE,
-    type            VARCHAR(30) NOT NULL 
-                    CHECK (type IN ('follow','like','comment','generation_complete','style_training_complete')),
+    type            VARCHAR(30) NOT NULL
+                    CHECK (type IN ('follow','like','comment','generation_complete','generation_failed','style_training_complete','style_training_failed')),
     target_type     VARCHAR(30),
     target_id       BIGINT,
     is_read         BOOLEAN DEFAULT FALSE NOT NULL,
@@ -516,11 +540,13 @@ CREATE INDEX idx_notifications_actor ON notifications(actor_id);
 ```
 
 **알림 타입**:
-- `follow`: A가 나를 팔로우
-- `like`: A가 내 게시물 좋아요
-- `comment`: A가 댓글 작성
-- `generation_complete`: 이미지 생성 완료 (시스템)
-- `style_training_complete`: 스타일 학습 완료 (시스템)
+- `follow`: A가 나를 팔로우 (actor 존재)
+- `like`: A가 내 게시물 좋아요 (actor 존재)
+- `comment`: A가 댓글 작성 (actor 존재)
+- `generation_complete`: 이미지 생성 완료 (시스템, actor=null)
+- `generation_failed`: 이미지 생성 실패 (시스템, actor=null)
+- `style_training_complete`: 스타일 학습 완료 (시스템, actor=null)
+- `style_training_failed`: 스타일 학습 실패 (시스템, actor=null)
 
 **비즈니스 규칙**:
 - actor_id=NULL: 시스템 알림

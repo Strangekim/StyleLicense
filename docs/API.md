@@ -1,98 +1,83 @@
-# API Documentation
+# API 명세서 (API.md)
 
 **Project**: Style License  
 **API Version**: v1  
 **Base URL**: `https://api.stylelicense.com/v1`  
-**Last Updated**: 2025-10-28
+**Last Updated**: 2025-10-29
 
 ---
 
-## Table of Contents
+## 📚 문서 구조 안내
 
-1. [Overview](#1-overview)
-2. [Authentication](#2-authentication)
-3. [Common Patterns](#3-common-patterns)
-4. [Error Codes](#4-error-codes)
-5. [Auth API](#5-auth-api)
-6. [Users API](#6-users-api)
-7. [Token API](#7-token-api)
-8. [Styles API](#8-styles-api)
-9. [Generations API](#9-generations-api)
-10. [Community API](#10-community-api)
-11. [Tags API](#11-tags-api)
-12. [Notifications API](#12-notifications-api)
-13. [Webhooks](#13-webhooks)
+이 문서는 각 API 그룹별로 독립적으로 읽을 수 있도록 구성되어 있습니다.
 
----
-
-## 1. Overview
-
-### 1.1 API Design Principles
-
-- **RESTful**: Resource-based URLs
-- **Stateless**: Session-based authentication
-- **JSON**: All requests and responses in JSON format
-- **HTTPS**: HTTPS only in production
-- **Versioning**: URL-based versioning (`/v1`)
-
-### 1.2 Technology Stack
-
-- **Backend**: Django 5.x + Django REST Framework
-- **Authentication**: Django Session + Google OAuth 2.0
-- **Database**: PostgreSQL 15.x
-- **Message Queue**: RabbitMQ
-
-### 1.3 Rate Limiting
-
-| Endpoint Type | Limit |
-|---------------|-------|
-| Login attempts | 5 requests / 5 minutes (per IP) |
-| Image generation | 10 requests / minute (per user) |
-| All other APIs | 100 requests / minute (per user) |
+| 섹션 | 내용 | 언제 읽어야 하나? |
+|------|------|----------------|
+| [1. 개요](#1-개요) | 공통 규칙, 응답 형식 | 프로젝트 시작 시 1회 |
+| [2. 인증 API](#2-인증-api) | OAuth, 로그인/로그아웃 | M1 인증 구현 시 |
+| [3. 사용자 API](#3-사용자-api) | 프로필, 작가 신청 | M2 사용자 기능 구현 시 |
+| [4. 토큰 API](#4-토큰-api) | 잔액, 구매, 거래내역 | M2 토큰 시스템 구현 시 |
+| [5. 스타일 API](#5-스타일-api) | 화풍 생성/조회/수정 | M2 스타일 기능 구현 시 |
+| [6. 생성 API](#6-생성-api) | 이미지 생성 요청/조회 | M4 이미지 생성 구현 시 |
+| [7. 커뮤니티 API](#7-커뮤니티-api) | 팔로우, 좋아요, 댓글 | M5 커뮤니티 구현 시 |
+| [8. 검색 API](#8-검색-api) | 통합 검색 | M5 검색 기능 구현 시 |
+| [9. 알림 API](#9-알림-api) | 알림 목록/읽음 처리 | M5 알림 기능 구현 시 |
+| [10. Webhook API](#10-webhook-api) | 내부 서버 간 통신 | M4 AI 통합 시 |
+| [11. 에러 코드](#11-에러-코드) | 전체 에러 코드 목록 | 에러 처리 구현 시 참조 |
+| [12. Rate Limiting](#12-rate-limiting) | 요청 제한 정책 | 성능 최적화 시 참조 |
 
 ---
 
-## 2. Authentication
+## 목차
 
-### 2.1 Authentication Flow
+1. [개요](#1-개요)
+2. [인증 API](#2-인증-api)
+3. [사용자 API](#3-사용자-api)
+4. [토큰 API](#4-토큰-api)
+5. [스타일 API](#5-스타일-api)
+6. [생성 API](#6-생성-api)
+7. [커뮤니티 API](#7-커뮤니티-api)
+8. [검색 API](#8-검색-api)
+9. [알림 API](#9-알림-api)
+10. [Webhook API](#10-webhook-api)
+11. [에러 코드](#11-에러-코드)
+12. [Rate Limiting](#12-rate-limiting)
 
-```
-1. Frontend → GET /api/auth/google/login
-2. Redirect → Google OAuth Consent Screen
-3. Google → Callback to /api/auth/google/callback
-4. Backend → Set Session Cookie + Redirect to Frontend
-5. Frontend → All subsequent requests include session cookie
-```
+---
 
-### 2.2 Session Management
+## 1. 개요
 
+### 1.1 공통 규칙
+
+#### Base URL (호스트만 포함)
+- **개발**: `http://localhost:8000`
+- **프로덕션**: `https://api.stylelicense.com`
+
+#### 엔드포인트 경로
+모든 엔드포인트는 `/api/v1/...` 형식으로 시작합니다.
+
+**전체 URL = Base URL + 엔드포인트 경로**
+
+예시:
+- 개발: `http://localhost:8000/api/v1/auth/me`
+- 프로덕션: `https://api.stylelicense.com/api/v1/auth/me`
+
+#### 인증
+- **방식**: 세션 쿠키 기반
+- **헤더**: 
+  ```http
+  Cookie: sessionid=abc123...
+  X-CSRFToken: xyz789...  # POST/PUT/PATCH/DELETE만
+  ```
+
+#### Content-Type
 ```http
-Cookie: sessionid=abc123...
-X-CSRFToken: xyz789...
-```
-
-**Session Duration**: 2 weeks (configurable)  
-**CSRF Protection**: Required for all POST/PUT/DELETE requests
-
----
-
-## 3. Common Patterns
-
-### 3.1 Request Format
-
-```http
-POST /api/resource
 Content-Type: application/json
-X-CSRFToken: xyz789...
-
-{
-  "field": "value"
-}
 ```
 
-### 3.2 Response Format
+### 1.2 응답 형식
 
-#### Success Response
+#### 성공 응답
 ```json
 {
   "success": true,
@@ -103,7 +88,7 @@ X-CSRFToken: xyz789...
 }
 ```
 
-#### Error Response
+#### 에러 응답
 ```json
 {
   "success": false,
@@ -118,9 +103,7 @@ X-CSRFToken: xyz789...
 }
 ```
 
-### 3.3 Pagination
-
-#### Cursor-based Pagination
+#### 페이지네이션 응답 (Cursor-based)
 ```json
 {
   "success": true,
@@ -132,85 +115,74 @@ X-CSRFToken: xyz789...
 }
 ```
 
-**Query Parameters**:
-- `cursor`: Next page cursor (ISO 8601 timestamp)
-- `limit`: Items per page (default: 20, max: 100)
+**쿼리 파라미터**:
+- `cursor`: 다음 페이지 커서 (ISO 8601 datetime)
+- `limit`: 결과 수 (1-100, 기본값 20)
+
+### 1.3 타임스탬프 형식
+모든 날짜/시간은 **ISO 8601 형식** 사용:
+```
+2025-01-15T12:34:56Z
+```
 
 ---
 
-## 4. Error Codes
+## 2. 인증 API
 
-### 4.1 HTTP Status Codes
+### 2.1 Google OAuth 로그인 시작
 
-| Code | Meaning | Usage |
-|------|---------|-------|
-| 200 | OK | Success |
-| 201 | Created | Resource created |
-| 400 | Bad Request | Invalid input |
-| 401 | Unauthorized | Not authenticated |
-| 403 | Forbidden | Insufficient permissions |
-| 404 | Not Found | Resource not found |
-| 409 | Conflict | Resource conflict |
-| 422 | Unprocessable Entity | Validation error |
-| 429 | Too Many Requests | Rate limit exceeded |
-| 500 | Internal Server Error | Server error |
-
-### 4.2 Application Error Codes
-
-| Code | HTTP | Description |
-|------|------|-------------|
-| `INSUFFICIENT_TOKENS` | 402 | Not enough tokens |
-| `ARTIST_ONLY` | 403 | Artist permission required |
-| `STYLE_LIMIT_REACHED` | 403 | Style creation limit (MVP: 1) |
-| `TRAINING_IN_PROGRESS` | 409 | Model training already in progress |
-| `TRAINING_FAILED` | 500 | Model training failed |
-| `GENERATION_FAILED` | 500 | Image generation failed |
-| `INVALID_IMAGE_FORMAT` | 422 | Invalid image format |
-| `IMAGE_SIZE_EXCEEDED` | 422 | Image size exceeds 10MB |
-| `DUPLICATE_FOLLOW` | 409 | Already following |
-| `SELF_FOLLOW_NOT_ALLOWED` | 400 | Cannot follow yourself |
-| `PAYMENT_FAILED` | 402 | Payment failed |
-| `PROGRESS_UNAVAILABLE` | 404 | Progress info not available (pending/completed) |
-
----
-
-## 5. Auth API
-
-### 5.1 Google Login
-
-**Initiates Google OAuth flow**
-
+#### Request
 ```http
 GET /api/auth/google/login
 ```
 
-**Response**: 302 Redirect to Google OAuth Consent Screen
+#### Response
+```
+302 Redirect → Google OAuth Consent Screen
+```
+
+#### 설명
+- 사용자를 Google OAuth 동의 화면으로 리다이렉트
+- 인증 없이 접근 가능
 
 ---
 
-### 5.2 Google Callback
+### 2.2 Google OAuth 콜백
 
-**Handles OAuth callback**
-
+#### Request
 ```http
 GET /api/auth/google/callback?code=...&state=...
 ```
 
-**Response**: 
-- 302 Redirect to Frontend (`/`)
-- Set-Cookie: `sessionid=...`
+#### Response
+```
+302 Redirect → Frontend (/)
+Set-Cookie: sessionid=...; HttpOnly; Secure; SameSite=Lax
+```
+
+#### 설명
+- Google이 인증 코드와 함께 호출
+- Backend에서 세션 쿠키 설정 후 프론트엔드로 리다이렉트
+- **신규 사용자 처리**:
+  1. `users` 테이블에 레코드 생성 (`token_balance=100`)
+  2. `transactions` 테이블에 웰컴 보너스 기록:
+     - `sender_id`: NULL (플랫폼)
+     - `receiver_id`: 신규 사용자 ID
+     - `amount`: 100
+     - `status`: 'completed'
+     - `memo`: 'Welcome Bonus'
+     - `related_generation_id`: NULL
 
 ---
 
-### 5.3 Get Current User
+### 2.3 현재 사용자 정보 조회
 
-**Returns authenticated user info**
-
+#### Request
 ```http
 GET /api/auth/me
 ```
 
-**Response** (User):
+#### Response
 ```json
 {
   "success": true,
@@ -220,44 +192,41 @@ GET /api/auth/me
     "profile_image": "https://s3.../profile.jpg",
     "role": "user",
     "token_balance": 150,
+    "bio": null,
     "created_at": "2025-01-01T00:00:00Z",
     "artist": null
   }
 }
 ```
 
-**Response** (Artist):
+**role='artist'인 경우**:
 ```json
 {
-  "success": true,
-  "data": {
-    "id": 1,
-    "username": "john_artist",
-    "role": "artist",
-    "token_balance": 150,
-    "artist": {
-      "id": 10,
-      "artist_name": "John Artist",
-      "signature_image_url": "https://s3.../signature.png",
-      "earned_token_balance": 500,
-      "follower_count": 123
-    }
+  "artist": {
+    "id": 10,
+    "artist_name": "John Artist",
+    "signature_image_url": "https://s3.../signature.png",
+    "verified_email": "john@example.com",
+    "earned_token_balance": 500,
+    "follower_count": 123
   }
 }
 ```
 
+#### 에러
+- `401 UNAUTHORIZED`: 로그인 필요
+
 ---
 
-### 5.4 Logout
+### 2.4 로그아웃
 
-**Ends user session**
-
+#### Request
 ```http
 POST /api/auth/logout
 X-CSRFToken: xyz789...
 ```
 
-**Response**:
+#### Response
 ```json
 {
   "success": true,
@@ -265,19 +234,22 @@ X-CSRFToken: xyz789...
 }
 ```
 
+#### 설명
+- 세션 쿠키 삭제
+- 프론트엔드는 `/login`으로 리다이렉트
+
 ---
 
-## 6. Users API
+## 3. 사용자 API
 
-### 6.1 Get User Profile
+### 3.1 사용자 프로필 조회
 
-**Returns public user profile**
-
+#### Request
 ```http
 GET /api/users/:id
 ```
 
-**Response**:
+#### Response
 ```json
 {
   "success": true,
@@ -285,7 +257,7 @@ GET /api/users/:id
     "id": 1,
     "username": "john_doe",
     "profile_image": "https://s3.../profile.jpg",
-    "bio": "디지털 아티스트",
+    "bio": "안녕하세요!",
     "role": "artist",
     "created_at": "2025-01-01T00:00:00Z",
     "artist": {
@@ -296,19 +268,20 @@ GET /api/users/:id
     "stats": {
       "total_generations": 50,
       "public_generations": 30,
-      "follower_count": 123,
       "following_count": 45
     }
   }
 }
 ```
 
+#### 에러
+- `404 NOT_FOUND`: 사용자 없음
+
 ---
 
-### 6.2 Update Profile
+### 3.2 내 프로필 수정
 
-**Updates current user profile**
-
+#### Request
 ```http
 PATCH /api/users/me
 Content-Type: application/json
@@ -320,24 +293,28 @@ X-CSRFToken: xyz789...
 }
 ```
 
-**Response**:
+#### Response
 ```json
 {
   "success": true,
   "data": {
     "id": 1,
     "username": "new_name",
-    "bio": "새로운 소개"
+    "bio": "새로운 소개",
+    "updated_at": "2025-01-15T12:00:00Z"
   }
 }
 ```
 
+#### 에러
+- `401 UNAUTHORIZED`: 로그인 필요
+- `422 VALIDATION_ERROR`: 유효성 검증 실패
+
 ---
 
-### 6.3 Upgrade to Artist
+### 3.3 작가 권한 신청
 
-**Upgrades user to artist role**
-
+#### Request
 ```http
 POST /api/users/me/upgrade-to-artist
 Content-Type: application/json
@@ -346,11 +323,11 @@ X-CSRFToken: xyz789...
 {
   "artist_name": "John Artist",
   "verified_email": "john@example.com",
-  "signature_image": "base64_encoded_image"
+  "signature_image": "data:image/png;base64,..."
 }
 ```
 
-**Response**:
+#### Response
 ```json
 {
   "success": true,
@@ -362,28 +339,29 @@ X-CSRFToken: xyz789...
     "artist": {
       "id": 10,
       "artist_name": "John Artist",
-      "verified_email": "john@example.com"
+      "verified_email": "john@example.com",
+      "signature_image_url": "https://s3.../signature.png"
     }
   }
 }
 ```
 
-**Errors**:
-- `409 Conflict` - Already an artist
+#### 에러
+- `401 UNAUTHORIZED`: 로그인 필요
+- `409 CONFLICT`: 이미 작가 권한 보유
 
 ---
 
-## 7. Token API
+## 4. 토큰 API
 
-### 7.1 Get Token Balance
+### 4.1 토큰 잔액 조회
 
-**Returns current token balance**
-
+#### Request
 ```http
 GET /api/tokens/balance
 ```
 
-**Response**:
+#### Response
 ```json
 {
   "success": true,
@@ -395,17 +373,25 @@ GET /api/tokens/balance
 }
 ```
 
+#### 설명
+- `token_balance`: 사용 가능한 토큰 (사용자)
+- `artist_earned_balance`: 작가가 벌어들인 토큰 (작가만, 현금화 대기 중)
+
 ---
 
-### 7.2 Get Transaction History
+### 4.2 토큰 거래 내역 조회 (통합)
 
-**Returns paginated transaction history**
-
+#### Request
 ```http
-GET /api/tokens/transactions?cursor=...&limit=20
+GET /api/tokens/transactions?type=all&cursor=...&limit=20
 ```
 
-**Response**:
+**쿼리 파라미터**:
+- `type`: `all` (기본값), `purchase` (충전), `usage` (사용)
+- `cursor`: 페이지네이션 커서
+- `limit`: 결과 수 (1-100, 기본값 20)
+
+#### Response
 ```json
 {
   "success": true,
@@ -414,27 +400,43 @@ GET /api/tokens/transactions?cursor=...&limit=20
       {
         "id": 100,
         "type": "purchase",
-        "sender_id": 1,
-        "receiver_id": null,
         "amount": 100,
         "price_per_token": 100.00,
         "total_price": 10000.00,
+        "currency_code": "KRW",
         "status": "completed",
         "memo": "토큰 구매",
         "created_at": "2025-01-15T10:00:00Z",
+        "sender": null,
+        "receiver": {
+          "id": 1,
+          "username": "john_doe"
+        },
         "related_style": null
       },
       {
         "id": 101,
-        "type": "generation",
-        "sender_id": 1,
-        "receiver_id": 5,
+        "type": "usage",
         "amount": 50,
+        "currency_code": "KRW",
         "status": "completed",
+        "memo": "이미지 생성 결제",
         "created_at": "2025-01-15T11:00:00Z",
+        "sender": {
+          "id": 1,
+          "username": "john_doe"
+        },
+        "receiver": {
+          "id": 5,
+          "username": "artist_name"
+        },
         "related_style": {
           "id": 10,
           "name": "Watercolor Style"
+        },
+        "related_generation": {
+          "id": 500,
+          "result_url": "https://s3.../generated_500.jpg"
         }
       }
     ],
@@ -444,63 +446,82 @@ GET /api/tokens/transactions?cursor=...&limit=20
 }
 ```
 
+#### 거래 타입 판별 규칙
+거래 타입은 DB에 저장되지 않으며, 다음 필드 조합으로 프론트엔드에서 판별:
+- `purchase` (토큰 구매): `sender` 존재, `receiver=null`, `related_generation_id=null`
+- `welcome` (웰컴 보너스): `sender=null`, `receiver` 존재, `memo='Welcome Bonus'`
+- `usage` (이미지 생성 결제): `sender` 존재, `receiver` 존재, `related_generation_id` 존재
+- `transfer` (송금, MVP 제외): `sender` 존재, `receiver` 존재, `related_generation_id=null`
+
 ---
 
-### 7.3 Purchase Tokens
+### 4.3 토큰 구매 시작
 
-**Initiates token purchase (Toss Payments)**
-
+#### Request
 ```http
 POST /api/tokens/purchase
 Content-Type: application/json
 X-CSRFToken: xyz789...
 
 {
-  "amount_tokens": 100,
-  "price_per_token": 100.00,
-  "currency_code": "KRW"
+  "package_id": "basic_100"
 }
 ```
 
-**Response**:
+**지원 패키지**:
+- `basic_100`: 100 토큰, ₩10,000
+- `standard_500`: 500 토큰, ₩45,000 (10% 할인)
+- `premium_1000`: 1000 토큰, ₩80,000 (20% 할인)
+
+#### Response
 ```json
 {
   "success": true,
   "data": {
     "order_id": "ORDER_20250115_123456",
     "payment_url": "https://pay.toss.im/...",
+    "package_id": "basic_100",
     "amount_tokens": 100,
-    "total_price": 10000.00
+    "price_per_token": 100.00,
+    "currency_code": "KRW",
+    "total_price": 10000.00,
+    "expires_at": "2025-01-15T12:15:00Z"
   }
 }
 ```
 
-**Flow**:
-1. Frontend → Backend: `/api/tokens/purchase`
-2. Backend → DB: Create `purchases` record with `status='pending'`
-3. Backend → Frontend: Return payment URL
-4. Frontend → Payment Gateway
-5. Payment Gateway → Backend Webhook: `/api/webhooks/toss/payment`
-6. Backend → DB: Update `purchases.status='paid'`, increase `users.token_balance`
+#### 설명
+1. **클라이언트**: 패키지 ID만 전달 (가격은 서버에서 결정)
+2. **Backend**:
+   - 패키지 정의에서 가격 조회 (조작 불가)
+   - `purchases` 레코드 생성 (`status='pending'`)
+   - 토스 결제 URL 생성하여 반환
+3. **프론트엔드**: `payment_url`로 리다이렉트
+4. **토스 결제 완료**: Webhook 호출 → 토큰 충전
+
+#### 에러
+- `401 UNAUTHORIZED`: 로그인 필요
+- `400 INVALID_PACKAGE`: 존재하지 않는 패키지 ID
+- `422 VALIDATION_ERROR`: 유효하지 않은 요청
 
 ---
 
-## 8. Styles API
+## 5. 스타일 API
 
-### 8.1 List Styles
+### 5.1 스타일 목록 조회
 
-**Returns paginated style list**
-
+#### Request
 ```http
-GET /api/styles?cursor=...&limit=20&search=...&tags=tag1,tag2&sort=popular
+GET /api/styles?sort=popular&cursor=...&limit=20&tags=watercolor,portrait
 ```
 
-**Query Parameters**:
-- `search`: Style name or artist search
-- `tags`: Comma-separated tag names (AND logic)
-- `sort`: `popular` (default), `recent`, `most_used`
+**쿼리 파라미터**:
+- `sort`: `recent` (기본값), `popular`
+- `tags`: 쉼표로 구분된 태그 목록 (AND 조건)
+- `artist_id`: 특정 작가의 스타일만 (선택)
+- `training_status`: `completed` (기본값), `all`
 
-**Response**:
+#### Response
 ```json
 {
   "success": true,
@@ -509,7 +530,7 @@ GET /api/styles?cursor=...&limit=20&search=...&tags=tag1,tag2&sort=popular
       {
         "id": 10,
         "name": "Watercolor Dreams",
-        "description": "수채화 화풍",
+        "description": "부드러운 수채화 스타일",
         "thumbnail_url": "https://s3.../thumbnail.jpg",
         "artist": {
           "id": 5,
@@ -529,24 +550,28 @@ GET /api/styles?cursor=...&limit=20&search=...&tags=tag1,tag2&sort=popular
 }
 ```
 
+#### 정렬 기준
+- `recent`: `created_at DESC`
+- `popular`: `usage_count DESC, created_at DESC`
+  - usage_count = 실제 생성 횟수 (generations 테이블 COUNT)
+
 ---
 
-### 8.2 Get Style Detail
+### 5.2 스타일 상세 조회 (진행 상황 포함)
 
-**Returns detailed style information**
-
+#### Request
 ```http
 GET /api/styles/:id
 ```
 
-**Response**:
+#### Response (학습 완료 - 일반 사용자)
 ```json
 {
   "success": true,
   "data": {
     "id": 10,
     "name": "Watercolor Dreams",
-    "description": "수채화 화풍 상세 설명...",
+    "description": "부드러운 수채화 스타일...",
     "thumbnail_url": "https://s3.../thumbnail.jpg",
     "artist": {
       "id": 5,
@@ -562,6 +587,7 @@ GET /api/styles/:id
     "valid_to": null,
     "is_active": true,
     "created_at": "2025-01-01T00:00:00Z",
+    "updated_at": "2025-01-01T02:30:00Z",
     "tags": ["watercolor", "portrait", "dreamy"],
     "stats": {
       "total_generations": 1234,
@@ -570,153 +596,37 @@ GET /api/styles/:id
     "sample_artworks": [
       {
         "id": 100,
-        "image_url": "https://s3.../artwork1.jpg"
+        "image_url": "https://s3.../artwork1.jpg",
+        "tags": ["woman", "portrait"]
       }
-    ]
-  }
-}
-```
-
----
-
-### 8.3 Create Style
-
-**Creates new style (training request)**
-
-```http
-POST /api/styles
-Content-Type: multipart/form-data
-X-CSRFToken: xyz789...
-
-{
-  "name": "My Style",
-  "description": "화풍 설명",
-  "generation_cost_tokens": 50,
-  "license_type": "personal",
-  "tags": ["watercolor", "portrait"],
-  "images": [File, File, ...],  // 10-100 files
-  "image_tags": {
-    "0": ["woman", "portrait"],
-    "1": ["landscape", "mountain"]
-  }
-}
-```
-
-**Validation Rules**:
-- Image count: 10-100
-- Image formats: JPG, PNG
-- Min resolution: 512x512
-- Max file size: 10MB per image
-- Tags: English only
-- MVP: 1 style per artist
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "id": 10,
-    "name": "My Style",
-    "training_status": "pending",
-    "artwork_count": 15,
-    "created_at": "2025-01-15T10:00:00Z"
-  }
-}
-```
-
-**Errors**:
-- `403 ARTIST_ONLY` - Not an artist
-- `403 STYLE_LIMIT_REACHED` - MVP limit (1)
-- `422 INVALID_IMAGE_FORMAT` - Invalid format
-- `422 IMAGE_SIZE_EXCEEDED` - Size exceeded
-
----
-
-### 8.4 Update Style
-
-**Updates style metadata**
-
-```http
-PATCH /api/styles/:id
-Content-Type: application/json
-X-CSRFToken: xyz789...
-
-{
-  "description": "새 설명",
-  "generation_cost_tokens": 60,
-  "is_active": true
-}
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "id": 10,
-    "description": "새 설명",
-    "generation_cost_tokens": 60
-  }
-}
-```
-
-**Restrictions**:
-- Only `training_status='completed'` styles can be updated
-- `name` cannot be changed
-
----
-
-### 8.5 Get My Styles
-
-**Returns current user's styles**
-
-```http
-GET /api/styles/me
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "results": [
-      {
-        "id": 10,
-        "name": "My Style",
-        "training_status": "completed",
-        "generation_cost_tokens": 50,
-        "usage_count": 123,
-        "total_earned_tokens": 6150,
-        "created_at": "2025-01-01T00:00:00Z"
-      }
-    ]
-  }
-}
-```
-
----
-
-### 8.6 Get Style Training Progress
-
-**Returns training progress for a style**
-```http
-GET /api/styles/:id/progress
-```
-
-**Response** (Pending):
-```json
-{
-  "success": true,
-  "data": {
-    "id": 10,
-    "name": "My Style",
-    "training_status": "pending",
+    ],
     "progress": null
   }
 }
 ```
 
-**Response** (Training):
+#### Response (학습 완료 - 소유자/관리자)
+소유자(`artist_id == request.user.id`) 또는 관리자만 `model_path` 필드 포함:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 10,
+    "name": "Watercolor Dreams",
+    "training_status": "completed",
+    "model_path": "s3://bucket/models/style_10.safetensors",
+    "training_metric": {
+      "loss": 0.05,
+      "epochs": 100
+    },
+    ...
+  }
+}
+```
+
+**보안**: `model_path`는 내부 스토리지 경로로 소유자만 조회 가능
+
+#### Response (학습 중)
 ```json
 {
   "success": true,
@@ -730,43 +640,158 @@ GET /api/styles/:id/progress
       "progress_percent": 50,
       "estimated_seconds": 900,
       "last_updated": "2025-01-15T12:00:00Z"
-    }
+    },
+    "created_at": "2025-01-15T10:00:00Z"
   }
 }
 ```
 
-**Response** (Completed):
+#### 진행 상황 필드 설명
+- `progress`: `training_status='training'`일 때만 존재, 그 외 `null`
+- `current_epoch`: 현재 에포크 (0부터 시작)
+- `total_epochs`: 전체 에포크 수
+- `progress_percent`: 진행률 (0-100)
+- `estimated_seconds`: 예상 남은 시간 (초)
+- `last_updated`: 마지막 업데이트 시각 (Training Server가 30초마다 전송)
+
+#### 에러
+- `404 NOT_FOUND`: 스타일 없음
+
+---
+
+### 5.3 스타일 생성 (학습 요청)
+
+#### Request
+```http
+POST /api/styles
+Content-Type: multipart/form-data
+X-CSRFToken: xyz789...
+
+{
+  "name": "My Watercolor Style",
+  "description": "부드러운 수채화 스타일",
+  "generation_cost_tokens": 50,
+  "license_type": "personal",
+  "tags": ["watercolor", "portrait"],
+  "images": [File, File, ...],  // 10~100장
+  "image_tags": {
+    "0": ["woman", "portrait"],
+    "1": ["landscape", "mountain"]
+  }
+}
+```
+
+#### Validation
+- **이미지 수**: 10~100장
+- **파일 형식**: JPG, PNG만
+- **해상도**: 최소 512×512px
+- **파일 크기**: 최대 10MB/장
+- **태그**: 영어만 허용
+- **MVP 제한**: 작가당 1개 스타일만 생성 가능
+
+#### Response
 ```json
 {
   "success": true,
   "data": {
     "id": 10,
-    "name": "My Style",
-    "training_status": "completed",
-    "progress": null,
-    "completed_at": "2025-01-15T12:30:00Z"
+    "name": "My Watercolor Style",
+    "training_status": "pending",
+    "artwork_count": 15,
+    "created_at": "2025-01-15T10:00:00Z",
+    "progress": null
   }
 }
 ```
 
-**Business Rules**:
-- `progress` object only returned when `training_status='training'`
-- Training Server updates every 30 seconds (max 30s delay)
-- Frontend should poll every 5 seconds
-- Artist-only access (own styles)
-
-**Errors**:
-- `404 NOT_FOUND` - Style does not exist
-- `403 FORBIDDEN` - Not the style owner
+#### 에러
+- `403 ARTIST_ONLY`: 작가 권한 필요
+- `403 STYLE_LIMIT_REACHED`: MVP 제한 (1개)
+- `422 INVALID_IMAGE_FORMAT`: 지원하지 않는 형식
+- `422 IMAGE_SIZE_EXCEEDED`: 파일 크기 초과
+- `422 IMAGE_RESOLUTION_TOO_LOW`: 해상도 부족
+- `422 INSUFFICIENT_IMAGES`: 이미지 수 부족 (10장 미만)
+- `422 TOO_MANY_IMAGES`: 이미지 수 초과 (100장 초과)
 
 ---
 
-## 9. Generations API
+### 5.4 스타일 메타데이터 수정
 
-### 9.1 Generate Image
+#### Request
+```http
+PATCH /api/styles/:id
+Content-Type: application/json
+X-CSRFToken: xyz789...
 
-**Creates image generation request**
+{
+  "description": "수정된 설명",
+  "generation_cost_tokens": 60,
+  "is_active": true
+}
+```
 
+#### Response
+```json
+{
+  "success": true,
+  "data": {
+    "id": 10,
+    "description": "수정된 설명",
+    "generation_cost_tokens": 60,
+    "is_active": true,
+    "updated_at": "2025-01-15T12:00:00Z"
+  }
+}
+```
+
+#### 제약
+- `training_status='completed'` 상태에서만 가격/설명 수정 가능
+- `name`은 수정 불가 (고유 식별자)
+
+#### 에러
+- `403 FORBIDDEN`: 소유자가 아님
+- `422 STYLE_NOT_READY`: 학습 미완료
+
+---
+
+### 5.5 내 스타일 목록 조회
+
+#### Request
+```http
+GET /api/styles/me
+```
+
+#### Response
+```json
+{
+  "success": true,
+  "data": {
+    "results": [
+      {
+        "id": 10,
+        "name": "My Style",
+        "training_status": "completed",
+        "generation_cost_tokens": 50,
+        "usage_count": 123,
+        "total_earned_tokens": 6150,
+        "progress": null,
+        "created_at": "2025-01-01T00:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+#### 에러
+- `403 ARTIST_ONLY`: 작가 권한 필요
+
+---
+
+## 6. 생성 API
+
+### 6.1 이미지 생성 요청
+
+#### Request
 ```http
 POST /api/generations
 Content-Type: application/json
@@ -781,14 +806,14 @@ X-CSRFToken: xyz789...
 }
 ```
 
-**Parameters**:
-- `style_id` (required): Style to use
-- `prompt_tags` (required): Tag-based prompt (English)
-- `description` (optional): Image description
-- `aspect_ratio`: `1:1` (default), `2:2`, `1:2`
-- `seed` (optional): Random seed for reproducibility
+**파라미터**:
+- `style_id` (필수): 사용할 스타일 ID
+- `prompt_tags` (필수): 프롬프트 태그 배열 (영어)
+- `description` (선택): 이미지 설명 (한글 가능)
+- `aspect_ratio`: `1:1` (기본값), `2:2`, `1:2`
+- `seed` (선택): 재현 가능한 생성을 위한 시드값
 
-**Response**:
+#### Response
 ```json
 {
   "success": true,
@@ -799,39 +824,61 @@ X-CSRFToken: xyz789...
     "status": "queued",
     "consumed_tokens": 50,
     "aspect_ratio": "1:1",
-    "created_at": "2025-01-15T12:00:00Z"
+    "created_at": "2025-01-15T12:00:00Z",
+    "progress": null
   }
 }
 ```
 
-**Errors**:
-- `402 INSUFFICIENT_TOKENS` - Not enough tokens
-- `404 NOT_FOUND` - Style not found
-- `422` - Style not trained yet
+#### 에러
+- `402 INSUFFICIENT_TOKENS`: 토큰 부족
+- `404 NOT_FOUND`: 스타일 없음
+- `422 STYLE_NOT_READY`: 학습 미완료 스타일
 
 ---
 
-### 9.2 Get Generation Status
+### 6.2 생성 상태 조회 (진행 상황 포함)
 
-**Returns generation status and result**
-
+#### Request
 ```http
 GET /api/generations/:id
 ```
 
-**Response** (Queued):
+#### Response (대기 중)
 ```json
 {
   "success": true,
   "data": {
     "id": 500,
     "status": "queued",
+    "consumed_tokens": 50,
+    "created_at": "2025-01-15T12:00:00Z",
+    "progress": null
+  }
+}
+```
+
+#### Response (처리 중)
+```json
+{
+  "success": true,
+  "data": {
+    "id": 500,
+    "status": "processing",
+    "consumed_tokens": 50,
+    "progress": {
+      "current_step": 38,
+      "total_steps": 50,
+      "progress_percent": 76,
+      "estimated_seconds": 3,
+      "last_updated": "2025-01-15T12:00:05Z"
+    },
     "created_at": "2025-01-15T12:00:00Z"
   }
 }
 ```
 
-**Response** (Completed):
+#### Response (완료)
 ```json
 {
   "success": true,
@@ -855,33 +902,60 @@ GET /api/generations/:id
     "comment_count": 0,
     "tags": ["woman", "portrait", "sunset"],
     "consumed_tokens": 50,
+    "progress": null,
     "created_at": "2025-01-15T12:00:00Z",
     "updated_at": "2025-01-15T12:00:10Z"
   }
 }
 ```
 
-**Status Values**:
-- `queued`: Waiting in queue
-- `processing`: Generating
-- `completed`: Done
-- `failed`: Failed (tokens refunded)
+#### Response (실패)
+```json
+{
+  "success": true,
+  "data": {
+    "id": 500,
+    "status": "failed",
+    "error_message": "GPU memory exceeded",
+    "refunded": true,
+    "progress": null,
+    "created_at": "2025-01-15T12:00:00Z"
+  }
+}
+```
+
+#### 진행 상황 필드 설명
+- `progress`: `status='processing'`일 때만 존재, 그 외 `null`
+- `current_step`: 현재 diffusion step
+- `total_steps`: 전체 step 수 (보통 50)
+- `progress_percent`: 진행률 (0-100)
+- `estimated_seconds`: 예상 남은 시간
+- `last_updated`: 마지막 업데이트 시각
+
+#### 상태 코드
+- `queued`: 대기 중
+- `processing`: 생성 중
+- `retrying`: 재시도 중 (1~3회)
+- `completed`: 완료
+- `failed`: 실패 (토큰 환불됨)
+
+#### 에러
+- `404 NOT_FOUND`: 생성 요청 없음
 
 ---
 
-### 9.3 Get Public Feed
+### 6.3 공개 피드 조회
 
-**Returns public generations feed**
-
+#### Request
 ```http
-GET /api/generations/feed?cursor=...&limit=20&tags=tag1,tag2
+GET /api/generations/feed?cursor=...&limit=20&tags=portrait
 ```
 
-**Query Parameters**:
-- `tags`: Filter by tags
-- `sort`: `recent` (default), `popular`
+**쿼리 파라미터**:
+- `tags`: 태그 필터 (쉼표 구분)
+- `sort`: `recent` (기본값), `popular`
 
-**Response**:
+#### Response
 ```json
 {
   "success": true,
@@ -913,19 +987,28 @@ GET /api/generations/feed?cursor=...&limit=20&tags=tag1,tag2
 }
 ```
 
-**Note**: `is_liked` is only included for authenticated users
+#### 정렬 기준
+- `recent`: `created_at DESC`
+- `popular`: `like_count DESC, created_at DESC`
+
+#### 설명
+- `is_liked`: 로그인한 사용자가 좋아요 누른 경우 `true`
+- `is_public=true`인 이미지만 노출
 
 ---
 
-### 9.4 Get My Generations
+### 6.4 내 생성 이미지 목록
 
-**Returns current user's generations**
-
+#### Request
 ```http
 GET /api/generations/me?cursor=...&limit=20&status=completed
 ```
 
-**Response**:
+**쿼리 파라미터**:
+- `status`: `all` (기본값), `completed`, `failed`, `processing`
+- `is_public`: `all` (기본값), `true`, `false`
+
+#### Response
 ```json
 {
   "success": true,
@@ -942,6 +1025,7 @@ GET /api/generations/me?cursor=...&limit=20&status=completed
         "is_public": false,
         "like_count": 15,
         "consumed_tokens": 50,
+        "progress": null,
         "created_at": "2025-01-15T12:00:00Z"
       }
     ],
@@ -953,10 +1037,9 @@ GET /api/generations/me?cursor=...&limit=20&status=completed
 
 ---
 
-### 9.5 Update Generation
+### 6.5 생성 이미지 수정
 
-**Updates generation metadata**
-
+#### Request
 ```http
 PATCH /api/generations/:id
 Content-Type: application/json
@@ -964,130 +1047,37 @@ X-CSRFToken: xyz789...
 
 {
   "is_public": true,
-  "description": "새 설명"
+  "description": "수정된 설명"
 }
 ```
 
-**Response**:
+#### Response
 ```json
 {
   "success": true,
   "data": {
     "id": 500,
     "is_public": true,
-    "description": "새 설명"
+    "description": "수정된 설명",
+    "updated_at": "2025-01-15T12:30:00Z"
   }
 }
 ```
+
+#### 에러
+- `403 FORBIDDEN`: 소유자가 아님
+
+#### MVP 제한
+- 이미지 삭제 불가
+- 비공개 전환(`is_public=false`)으로 숨김 처리
 
 ---
 
-### 9.6 Delete Generation
+## 7. 커뮤니티 API
 
-**Deletes generation (soft delete)**
+### 7.1 팔로우/언팔로우
 
-```http
-DELETE /api/generations/:id
-X-CSRFToken: xyz789...
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "message": "이미지가 삭제되었습니다"
-}
-```
-
-**Note**: Soft delete (sets `is_active=false`), tokens not refunded
-
----
-
-### 9.7 Get Generation Progress
-
-**Returns generation progress**
-```http
-GET /api/generations/:id/progress
-```
-
-**Response** (Queued):
-```json
-{
-  "success": true,
-  "data": {
-    "id": 500,
-    "status": "queued",
-    "progress": null,
-    "created_at": "2025-01-15T12:00:00Z"
-  }
-}
-```
-
-**Response** (Processing):
-```json
-{
-  "success": true,
-  "data": {
-    "id": 500,
-    "status": "processing",
-    "progress": {
-      "progress_percent": 75,
-      "current_step": 38,
-      "total_steps": 50,
-      "estimated_seconds": 3,
-      "last_updated": "2025-01-15T12:00:05Z"
-    }
-  }
-}
-```
-
-**Response** (Completed):
-```json
-{
-  "success": true,
-  "data": {
-    "id": 500,
-    "status": "completed",
-    "result_url": "https://s3.../generated_500.jpg",
-    "progress": null,
-    "completed_at": "2025-01-15T12:00:10Z"
-  }
-}
-```
-
-**Response** (Failed):
-```json
-{
-  "success": true,
-  "data": {
-    "id": 500,
-    "status": "failed",
-    "progress": null,
-    "error_message": "GPU memory exceeded",
-    "failed_at": "2025-01-15T12:00:08Z",
-    "refunded": true
-  }
-}
-```
-
-**Business Rules**:
-- `progress` object only returned when `status='processing'`
-- Inference Server updates at key steps
-- Frontend should poll every 5 seconds
-- User can only access own generations
-
-**Errors**:
-- `404 NOT_FOUND` - Generation does not exist
-- `403 FORBIDDEN` - Not the generation owner
-
----
-
-## 10. Community API
-
-### 10.1 Follow/Unfollow User
-
-**Follow a user**
-
+#### 팔로우
 ```http
 POST /api/users/:id/follow
 X-CSRFToken: xyz789...
@@ -1104,8 +1094,7 @@ X-CSRFToken: xyz789...
 }
 ```
 
-**Unfollow a user**
-
+#### 언팔로우
 ```http
 DELETE /api/users/:id/follow
 X-CSRFToken: xyz789...
@@ -1122,50 +1111,20 @@ X-CSRFToken: xyz789...
 }
 ```
 
-**Errors**:
-- `400 SELF_FOLLOW_NOT_ALLOWED` - Cannot follow yourself
+#### 에러
+- `400 SELF_FOLLOW_NOT_ALLOWED`: 자기 자신 팔로우 불가
+- `409 DUPLICATE_FOLLOW`: 이미 팔로우 중
 
 ---
 
-### 10.2 Get Followers
+### 7.2 팔로잉 목록 조회
 
-**Returns user's followers**
-
+#### Request
 ```http
-GET /api/users/:id/followers?cursor=...&limit=20
+GET /api/users/me/following?cursor=...&limit=20
 ```
 
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "results": [
-      {
-        "id": 2,
-        "username": "follower1",
-        "profile_image": "https://s3.../profile.jpg",
-        "is_following": false,
-        "followed_at": "2025-01-10T00:00:00Z"
-      }
-    ],
-    "next_cursor": "2025-01-10T00:00:00Z",
-    "has_more": true
-  }
-}
-```
-
----
-
-### 10.3 Get Following
-
-**Returns users that user is following**
-
-```http
-GET /api/users/:id/following?cursor=...&limit=20
-```
-
-**Response**:
+#### Response
 ```json
 {
   "success": true,
@@ -1175,8 +1134,9 @@ GET /api/users/:id/following?cursor=...&limit=20
         "id": 3,
         "username": "artist1",
         "profile_image": "https://s3.../profile.jpg",
+        "artist_name": "Artist One",
         "role": "artist",
-        "is_following": true,
+        "follower_count": 456,
         "followed_at": "2025-01-05T00:00:00Z"
       }
     ],
@@ -1186,12 +1146,15 @@ GET /api/users/:id/following?cursor=...&limit=20
 }
 ```
 
+#### MVP 제한
+- 팔로워 목록 조회 불가 (내가 팔로잉하는 목록만)
+- 타인의 팔로잉 목록도 조회 불가
+
 ---
 
-### 10.4 Like/Unlike Generation
+### 7.3 좋아요/좋아요 취소
 
-**Like a generation**
-
+#### 좋아요
 ```http
 POST /api/generations/:id/like
 X-CSRFToken: xyz789...
@@ -1208,8 +1171,7 @@ X-CSRFToken: xyz789...
 }
 ```
 
-**Unlike a generation**
-
+#### 좋아요 취소
 ```http
 DELETE /api/generations/:id/like
 X-CSRFToken: xyz789...
@@ -1226,17 +1188,19 @@ X-CSRFToken: xyz789...
 }
 ```
 
+#### 에러
+- `409 DUPLICATE_LIKE`: 이미 좋아요 누름
+
 ---
 
-### 10.5 Get Comments
+### 7.4 댓글 목록 조회
 
-**Returns generation comments**
-
+#### Request
 ```http
 GET /api/generations/:id/comments?cursor=...&limit=20
 ```
 
-**Response**:
+#### Response
 ```json
 {
   "success": true,
@@ -1264,7 +1228,8 @@ GET /api/generations/:id/comments?cursor=...&limit=20
             "created_at": "2025-01-15T12:15:00Z"
           }
         ],
-        "created_at": "2025-01-15T12:10:00Z"
+        "created_at": "2025-01-15T12:10:00Z",
+        "updated_at": "2025-01-15T12:10:00Z"
       }
     ],
     "next_cursor": "2025-01-15T12:10:00Z",
@@ -1273,12 +1238,16 @@ GET /api/generations/:id/comments?cursor=...&limit=20
 }
 ```
 
+#### 설명
+- `parent_id=null`: 일반 댓글
+- `parent_id!=null`: 대댓글
+- MVP: 1단계 대댓글만 (대댓글의 대댓글 불가)
+
 ---
 
-### 10.6 Create Comment
+### 7.5 댓글 작성
 
-**Creates a comment or reply**
-
+#### Request
 ```http
 POST /api/generations/:id/comments
 Content-Type: application/json
@@ -1290,7 +1259,7 @@ X-CSRFToken: xyz789...
 }
 ```
 
-**Response**:
+#### Response
 ```json
 {
   "success": true,
@@ -1307,15 +1276,14 @@ X-CSRFToken: xyz789...
 }
 ```
 
-**Restrictions**:
-- MVP: Only 1-level replies (cannot reply to replies)
+#### 에러
+- `422 REPLY_DEPTH_EXCEEDED`: 대댓글의 대댓글 시도 (MVP 제한)
 
 ---
 
-### 10.7 Update Comment
+### 7.6 댓글 수정
 
-**Updates comment content**
-
+#### Request
 ```http
 PATCH /api/comments/:id
 Content-Type: application/json
@@ -1326,7 +1294,7 @@ X-CSRFToken: xyz789...
 }
 ```
 
-**Response**:
+#### Response
 ```json
 {
   "success": true,
@@ -1338,18 +1306,20 @@ X-CSRFToken: xyz789...
 }
 ```
 
+#### 에러
+- `403 FORBIDDEN`: 작성자가 아님
+
 ---
 
-### 10.8 Delete Comment
+### 7.7 댓글 삭제
 
-**Deletes comment**
-
+#### Request
 ```http
 DELETE /api/comments/:id
 X-CSRFToken: xyz789...
 ```
 
-**Response**:
+#### Response
 ```json
 {
   "success": true,
@@ -1357,88 +1327,27 @@ X-CSRFToken: xyz789...
 }
 ```
 
-**Note**: Deleting parent comment also deletes all replies (CASCADE)
+#### 설명
+- 댓글 삭제 시 대댓글도 CASCADE 삭제
+- 작성자 본인 또는 관리자만 삭제 가능
 
 ---
 
-## 11. Tags API
+## 8. 검색 API
 
-### 11.1 Get Popular Tags
+### 8.1 통합 검색
 
-**Returns most used tags**
-
-```http
-GET /api/tags/popular?limit=20
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "results": [
-      {
-        "id": 1,
-        "name": "portrait",
-        "usage_count": 1234,
-        "is_active": true
-      },
-      {
-        "id": 2,
-        "name": "watercolor",
-        "usage_count": 980
-      }
-    ]
-  }
-}
-```
-
----
-
-### 11.2 Tag Autocomplete
-
-**Returns tag suggestions**
-
-```http
-GET /api/tags/autocomplete?q=port&limit=10
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "results": [
-      {
-        "id": 1,
-        "name": "portrait",
-        "usage_count": 1234
-      },
-      {
-        "id": 15,
-        "name": "port_view",
-        "usage_count": 45
-      }
-    ]
-  }
-}
-```
-
----
-
-### 11.3 Global Search
-
-**Searches across styles, generations, and artists**
-
+#### Request
 ```http
 GET /api/search?q=watercolor&type=all&limit=20
 ```
 
-**Query Parameters**:
-- `q`: Search query (style name, description)
-- `type`: `all`, `styles`, `generations`, `artists`
+**쿼리 파라미터**:
+- `q` (필수): 검색어
+- `type`: `all` (기본값), `styles`, `artists`
+- `limit`: 결과 수 (1-100, 기본값 20)
 
-**Response**:
+#### Response
 ```json
 {
   "success": true,
@@ -1447,40 +1356,65 @@ GET /api/search?q=watercolor&type=all&limit=20
       {
         "id": 10,
         "name": "Watercolor Dreams",
-        "thumbnail_url": "https://s3.../thumbnail.jpg"
-      }
-    ],
-    "generations": [
-      {
-        "id": 500,
-        "result_url": "https://s3.../generated_500.jpg",
-        "like_count": 15
+        "thumbnail_url": "https://s3.../thumbnail.jpg",
+        "artist": {
+          "id": 5,
+          "artist_name": "John Artist"
+        },
+        "matched_by": "tag",
+        "usage_count": 1234
       }
     ],
     "artists": [
       {
         "id": 5,
-        "username": "watercolor_artist",
-        "artist_name": "Watercolor Artist"
+        "username": "watercolor_master",
+        "artist_name": "Watercolor Master",
+        "profile_image": "https://s3.../profile.jpg",
+        "follower_count": 1234,
+        "matched_by": "name"
       }
     ]
   }
 }
 ```
 
+#### 검색 로직
+- **스타일 검색**:
+  - 태그 매칭 (`tags.name LIKE '%watercolor%'`)
+  - 스타일 이름 매칭 (`styles.name LIKE '%watercolor%'`)
+  - 스타일 이름은 자동으로 태그에 포함됨
+  
+- **작가 검색**:
+  - 작가명 매칭 (`artists.artist_name LIKE '%watercolor%'`)
+  - 유저명 매칭 (`users.username LIKE '%watercolor%'`)
+
+#### type 파라미터 사용
+```
+GET /api/search?q=watercolor&type=styles  # 스타일만
+GET /api/search?q=watercolor&type=artists # 작가만
+GET /api/search?q=watercolor&type=all     # 통합 (기본값)
+```
+
+#### MVP 제외 기능
+- 인기 태그 API (`/api/tags/popular`)
+- 태그 자동완성 API (`/api/tags/autocomplete`)
+
 ---
 
-## 12. Notifications API
+## 9. 알림 API
 
-### 12.1 Get Notifications
+### 9.1 알림 목록 조회
 
-**Returns user notifications**
-
+#### Request
 ```http
 GET /api/notifications?cursor=...&limit=20&unread_only=false
 ```
 
-**Response**:
+**쿼리 파라미터**:
+- `unread_only`: `true` (읽지 않은 것만), `false` (기본값, 전체)
+
+#### Response
 ```json
 {
   "success": true,
@@ -1520,25 +1454,26 @@ GET /api/notifications?cursor=...&limit=20&unread_only=false
 }
 ```
 
-**Notification Types**:
-- `follow`: User followed you
-- `like`: User liked your generation
-- `comment`: User commented on your generation
-- `generation_complete`: Image generation completed
-- `style_training_complete`: Style training completed
+#### 알림 타입
+- `follow`: 팔로우 알림 (`actor` 존재)
+- `like`: 좋아요 알림 (`actor` 존재)
+- `comment`: 댓글 알림 (`actor` 존재)
+- `generation_complete`: 생성 완료 (시스템, `actor=null`)
+- `generation_failed`: 생성 실패 (시스템, `actor=null`)
+- `style_training_complete`: 학습 완료 (시스템, `actor=null`)
+- `style_training_failed`: 학습 실패 (시스템, `actor=null`)
 
 ---
 
-### 12.2 Mark Notification as Read
+### 9.2 알림 읽음 처리
 
-**Marks single notification as read**
-
+#### Request
 ```http
 PATCH /api/notifications/:id/read
 X-CSRFToken: xyz789...
 ```
 
-**Response**:
+#### Response
 ```json
 {
   "success": true,
@@ -1551,16 +1486,15 @@ X-CSRFToken: xyz789...
 
 ---
 
-### 12.3 Mark All as Read
+### 9.3 모든 알림 읽음 처리
 
-**Marks all notifications as read**
-
+#### Request
 ```http
 POST /api/notifications/read-all
 X-CSRFToken: xyz789...
 ```
 
-**Response**:
+#### Response
 ```json
 {
   "success": true,
@@ -1573,12 +1507,29 @@ X-CSRFToken: xyz789...
 
 ---
 
-## 13. Webhooks
+## 10. Webhook API
 
-### 13.1 Toss Payment Webhook
+**⚠️ 내부 서버 간 통신 전용, 외부 접근 차단**
 
-**Receives payment completion from Toss**
+### 10.1 인증 방식
 
+#### Request Header
+```http
+Authorization: Bearer <INTERNAL_API_TOKEN>
+X-Request-Source: training-server | inference-server
+```
+
+#### 보안 설정
+- 환경변수: `INTERNAL_API_TOKEN` (긴 UUID, 최소 32자)
+- IP 화이트리스트: AI 서버 IP만 허용
+- 토큰 Rotation: 월 1회
+- 요청 검증 실패 시 401 반환
+
+---
+
+### 10.2 토스 결제 Webhook
+
+#### Request
 ```http
 POST /api/webhooks/toss/payment
 Content-Type: application/json
@@ -1592,136 +1543,33 @@ Content-Type: application/json
 }
 ```
 
-**Response**:
+#### Response
 ```http
 200 OK
-
 {
   "success": true
 }
 ```
 
-**Processing Steps**:
-1. Verify `paymentKey` for idempotency
-2. Update `purchases.status`: `pending` → `paid`
-3. Increase `users.token_balance`
-4. Create `transactions` record
+#### 처리 로직
+1. `paymentKey`로 멱등성 검증 (중복 처리 방지)
+2. `purchases.status` 업데이트: `pending` → `paid`
+3. `users.token_balance` 증가
+4. `transactions` 레코드 생성
 
 ---
 
-### 13.2 Inference Server Callback
+### 10.3 스타일 학습 완료
 
-#### 13.2.1 Update Generation Progress
-
-**Updates generation progress (called by Inference Server)**
-```http
-PATCH /api/generations/:id/progress
-Content-Type: application/json
-Authorization: Bearer 
-
-{
-  "progress_percent": 50,
-  "current_step": 25,
-  "total_steps": 50,
-  "estimated_seconds": 5
-}
-```
-
-**Response**:
-```http
-200 OK
-
-{
-  "success": true
-}
-```
-
-**Processing Steps**:
-1. Verify internal token
-2. Update `generations.generation_progress` (JSONB field)
-3. Frontend detects change via polling
-
----
-
-#### 13.2.2 Generation Complete Callback
-
-**Receives generation completion from Inference Server**
-
-```http
-POST /api/webhooks/inference/complete
-Content-Type: application/json
-Authorization: Bearer <internal_token>
-
-{
-  "generation_id": 500,
-  "status": "completed",
-  "result_url": "https://s3.../generated_500.jpg"
-}
-```
-
-**Response**:
-```http
-200 OK
-
-{
-  "success": true
-}
-```
-
-**Processing Steps**:
-1. Update `generations.status`: `processing` → `completed`
-2. Set `generations.result_url`
-3. Create notification for user
-
----
-
-### 13.3 Training Server Callback
-
-#### 13.3.1 Update Training Progress
-
-**Updates training progress (called by Training Server)**
-```http
-PATCH /api/styles/:id/progress
-Content-Type: application/json
-Authorization: Bearer 
-
-{
-  "current_epoch": 50,
-  "total_epochs": 100,
-  "progress_percent": 50,
-  "estimated_seconds": 900,
-  "loss": 0.05
-}
-```
-
-**Response**:
-```http
-200 OK
-
-{
-  "success": true
-}
-```
-
-**Processing Steps**:
-1. Verify internal token
-2. Update `styles.training_progress` (JSONB field)
-3. Training Server calls every 30 seconds
-4. Frontend detects change via polling
-
----
-#### 13.3.2 Training Complete Callback
-
-**Receives training completion from Training Server**
-
+#### Request
 ```http
 POST /api/webhooks/training/complete
+Authorization: Bearer <INTERNAL_API_TOKEN>
+X-Request-Source: training-server
 Content-Type: application/json
-Authorization: Bearer <internal_token>
 
 {
   "style_id": 10,
-  "status": "completed",
   "model_path": "s3://bucket/models/style_10.safetensors",
   "training_metric": {
     "loss": 0.05,
@@ -1730,39 +1578,318 @@ Authorization: Bearer <internal_token>
 }
 ```
 
-**Response**:
+#### Response
 ```http
 200 OK
-
 {
   "success": true
 }
 ```
 
-**Processing Steps**:
-1. Update `styles.training_status`: `training` → `completed`
-2. Set `styles.model_path`
-3. Set `styles.training_metric`
-4. Create notification for artist
+#### 처리 로직
+1. `styles.training_status` 업데이트: `training` → `completed`
+2. `styles.model_path` 저장
+3. `styles.training_metric` 저장
+4. `styles.progress` = `null`
+5. 작가에게 알림 전송 (`style_training_complete`)
 
 ---
 
-## Appendices
+### 10.4 스타일 학습 실패
 
-### A. Database Schema Reference
+#### Request
+```http
+POST /api/webhooks/training/failed
+Authorization: Bearer <INTERNAL_API_TOKEN>
+X-Request-Source: training-server
+Content-Type: application/json
 
-See [docs/database/TABLES.md](database/TABLES.md) for complete schema
+{
+  "style_id": 10,
+  "error_message": "Insufficient training data quality",
+  "error_code": "LOW_QUALITY_DATA"
+}
+```
 
-### B. Query Examples
+#### Response
+```http
+200 OK
+{
+  "success": true
+}
+```
 
-See [docs/database/guides/QUERIES.md](database/guides/QUERIES.md) for Django ORM examples
-
-### C. Deployment Guide
-
-See [docs/DEPLOYMENT.md](DEPLOYMENT.md) for production setup
+#### 처리 로직
+1. `styles.training_status` 업데이트: `training` → `failed`
+2. `styles.progress` = `null`
+3. 작가에게 에러 알림 전송 (`style_training_failed`)
 
 ---
 
-**Version**: 1.0  
-**Created**: 2025-10-28  
-**Last Updated**: 2025-10-28
+### 10.5 이미지 생성 완료
+
+#### Request
+```http
+POST /api/webhooks/inference/complete
+Authorization: Bearer <INTERNAL_API_TOKEN>
+X-Request-Source: inference-server
+Content-Type: application/json
+
+{
+  "generation_id": 500,
+  "result_url": "https://s3.../generated_500.jpg",
+  "metadata": {
+    "seed": 42,
+    "steps": 50,
+    "guidance_scale": 7.5
+  }
+}
+```
+
+#### Response
+```http
+200 OK
+{
+  "success": true
+}
+```
+
+#### 처리 로직
+1. `generations.status` 업데이트: `processing` → `completed`
+2. `generations.result_url` 저장
+3. `generations.progress` = `null`
+4. 사용자에게 알림 전송 (`generation_complete`)
+
+---
+
+### 10.6 이미지 생성 실패
+
+#### Request
+```http
+POST /api/webhooks/inference/failed
+Authorization: Bearer <INTERNAL_API_TOKEN>
+X-Request-Source: inference-server
+Content-Type: application/json
+
+{
+  "generation_id": 500,
+  "error_message": "GPU out of memory",
+  "error_code": "GPU_OOM",
+  "retry_count": 3
+}
+```
+
+#### Response
+```http
+200 OK
+{
+  "success": true
+}
+```
+
+#### 처리 로직
+1. **재시도 판단**:
+   - `retry_count < 3` + 재시도 가능 오류 → `status='retrying'` + 재시도 큐 전송
+   - 그 외 → `status='failed'` + 토큰 환불
+
+2. **최종 실패 시**:
+   - `generations.status` = `failed`
+   - `generations.progress` = `null`
+   - 토큰 환불 (원자적 트랜잭션)
+   - 사용자에게 에러 알림 전송 (`generation_failed`)
+
+---
+
+### 10.7 진행 상황 업데이트
+
+#### 스타일 학습 진행
+```http
+PATCH /api/styles/:id
+Authorization: Bearer <INTERNAL_API_TOKEN>
+X-Request-Source: training-server
+Content-Type: application/json
+
+{
+  "progress": {
+    "current_epoch": 50,
+    "total_epochs": 100,
+    "progress_percent": 50,
+    "estimated_seconds": 900
+  }
+}
+```
+
+#### 이미지 생성 진행
+```http
+PATCH /api/generations/:id
+Authorization: Bearer <INTERNAL_API_TOKEN>
+X-Request-Source: inference-server
+Content-Type: application/json
+
+{
+  "progress": {
+    "current_step": 38,
+    "total_steps": 50,
+    "progress_percent": 76,
+    "estimated_seconds": 3
+  }
+}
+```
+
+#### Response
+```http
+200 OK
+{
+  "success": true
+}
+```
+
+#### 설명
+- Training Server: 30초마다 전송
+- Inference Server: 주요 단계(10%, 25%, 50%, 75%, 90%)마다 전송
+- `progress` JSONB 필드에 저장
+- 프론트엔드는 5초마다 폴링하여 최대 30초 지연
+
+---
+
+## 11. 에러 코드
+
+### 11.1 HTTP 상태 코드
+
+| 코드 | 의미 | 사용 예시 |
+|------|------|----------|
+| **200** | OK | 성공 |
+| **201** | Created | 리소스 생성 성공 |
+| **400** | Bad Request | 잘못된 요청 파라미터 |
+| **401** | Unauthorized | 인증 필요 (로그인 안 함) |
+| **402** | Payment Required | 토큰 부족 |
+| **403** | Forbidden | 권한 없음 |
+| **404** | Not Found | 리소스 없음 |
+| **409** | Conflict | 리소스 충돌 |
+| **422** | Unprocessable Entity | 유효성 검증 실패 |
+| **429** | Too Many Requests | Rate Limit 초과 |
+| **500** | Internal Server Error | 서버 내부 오류 |
+
+---
+
+### 11.2 애플리케이션 에러 코드
+
+#### 인증 & 권한
+- `UNAUTHORIZED` (401): 로그인 필요
+- `FORBIDDEN` (403): 접근 권한 없음
+- `ARTIST_ONLY` (403): 작가 권한 필요
+- `SESSION_EXPIRED` (401): 세션 만료
+
+#### 토큰 관련
+- `INSUFFICIENT_TOKENS` (402): 토큰 잔액 부족
+- `PAYMENT_FAILED` (402): 결제 실패
+- `INVALID_TOKEN_AMOUNT` (400): 유효하지 않은 토큰 수량
+- `PURCHASE_EXPIRED` (400): 결제 만료
+
+#### 스타일 관련
+- `STYLE_LIMIT_REACHED` (403): 스타일 생성 한도 초과 (MVP: 1개)
+- `STYLE_NOT_FOUND` (404): 스타일 없음
+- `STYLE_NOT_READY` (422): 학습 미완료 스타일
+- `TRAINING_IN_PROGRESS` (409): 이미 학습 진행 중
+- `TRAINING_FAILED` (500): 모델 학습 실패
+
+#### 이미지 업로드
+- `INVALID_IMAGE_FORMAT` (422): 지원하지 않는 형식 (JPG, PNG만)
+- `IMAGE_SIZE_EXCEEDED` (422): 파일 크기 초과 (10MB)
+- `IMAGE_RESOLUTION_TOO_LOW` (422): 해상도 부족 (최소 512×512)
+- `INSUFFICIENT_IMAGES` (422): 이미지 수 부족 (최소 10장)
+- `TOO_MANY_IMAGES` (422): 이미지 수 초과 (최대 100장)
+
+#### 이미지 생성
+- `GENERATION_FAILED` (500): 이미지 생성 실패
+- `GENERATION_NOT_FOUND` (404): 생성 요청 없음
+- `GENERATION_STILL_PROCESSING` (409): 아직 처리 중
+
+#### 커뮤니티
+- `DUPLICATE_FOLLOW` (409): 이미 팔로우 중
+- `SELF_FOLLOW_NOT_ALLOWED` (400): 자기 자신 팔로우 불가
+- `DUPLICATE_LIKE` (409): 이미 좋아요함
+- `COMMENT_NOT_FOUND` (404): 댓글 없음
+- `REPLY_DEPTH_EXCEEDED` (422): 대댓글 깊이 초과 (MVP: 1단계)
+
+#### 태그
+- `TAG_NOT_FOUND` (404): 태그 없음
+- `INVALID_TAG_LANGUAGE` (422): 영어가 아닌 태그
+
+#### 기타
+- `RATE_LIMIT_EXCEEDED` (429): 요청 횟수 초과
+- `RESOURCE_NOT_FOUND` (404): 일반 리소스 없음
+- `VALIDATION_ERROR` (422): 입력 검증 실패
+- `INTERNAL_SERVER_ERROR` (500): 서버 내부 오류
+
+---
+
+## 12. Rate Limiting
+
+### 12.1 제한 정책
+
+| 엔드포인트 유형 | 제한 | 식별 기준 | 리셋 방식 |
+|--------------|------|----------|----------|
+| 로그인 시도 | 5회 / 5분 | IP | 슬라이딩 윈도우 |
+| 이미지 생성 | 6회 / 분 | User ID | 슬라이딩 윈도우 |
+| 인증 필요 API | 100회 / 분 | User ID | 슬라이딩 윈도우 |
+| 비인증 API | 50회 / 분 | IP | 슬라이딩 윈도우 |
+
+### 12.2 초과 시 처리
+
+#### Response
+```http
+429 Too Many Requests
+Retry-After: 45
+Content-Type: application/json
+
+{
+  "success": false,
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "요청 횟수를 초과했습니다",
+    "details": {
+      "limit": 100,
+      "window": "1 minute",
+      "retry_after": 45
+    }
+  }
+}
+```
+
+#### Headers
+- `X-RateLimit-Limit`: 전체 제한 수
+- `X-RateLimit-Remaining`: 남은 요청 수
+- `X-RateLimit-Reset`: 리셋 시각 (Unix timestamp)
+- `Retry-After`: 재시도 가능까지 남은 시간 (초)
+
+### 12.3 구현 방식
+- 라이브러리: `django-ratelimit`
+- 저장소: Redis (캐시)
+- 알고리즘: 슬라이딩 윈도우
+
+### 12.4 이미지 생성 제한 근거
+- 6회/분 = GPU 처리 속도 고려 (평균 10초/장)
+- 동시 요청 제한으로 GPU 큐 과부하 방지
+- 토큰 고갈 전에 Rate Limit 걸림
+
+---
+
+## 참조 문서
+
+### 관련 문서
+- **데이터베이스 스키마**: [docs/database/README.md](database/README.md)
+- **쿼리 예제**: [docs/database/guides/QUERIES.md](database/guides/QUERIES.md)
+- **보안 정책**: [docs/SECURITY.md](SECURITY.md)
+- **배포 가이드**: [docs/DEPLOYMENT.md](DEPLOYMENT.md)
+
+### 프로젝트 문서
+- **기술 명세**: [TECHSPEC.md](../TECHSPEC.md)
+- **개발 계획**: [PLAN.md](../PLAN.md)
+- **Claude 가이드**: [CLAUDE.md](../CLAUDE.md)
+
+---
+
+**문서 버전**: 2.0  
+**작성일**: 2025-10-29  
+**작성자**: Development Team

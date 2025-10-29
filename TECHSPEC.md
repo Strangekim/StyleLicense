@@ -134,14 +134,15 @@
 - 이미지 메타데이터에 작가 정보 기록
 
 #### 2.1.7 태그 및 검색 시스템
-- 학습 태깅 구조
-  - 작가가 모델 학습시 각 이미지별로 태그를 자동 / 수동 등록할 수 있음.
+- **학습 태깅 구조**
+  - 작가가 모델 학습 시 각 이미지별로 태그를 수동 등록
+  - **스타일 이름 자동 태그화**: 스타일 생성 시 스타일 이름이 모든 학습 이미지 태그에 자동으로 포함 하도록 등록
   - 학습 이미지(artworks)의 태그(artwork_tags)는 자동으로 집계되어 스타일(styles) 태그로 반영됨
-- 검색 및 관리
-  - 태그 단위로 스타일, 학습 이미지, 생성물을 통합 검색 가능
-  - 스타일 대표 태그(style_tags)를 기반으로 빠른 스타일 검색 제공
-  - 태그별 사용 빈도, 활성화 여부(is_active), 검열 상태(is_flagged) 관리 가능
-- 프롬프트 입력
+- **검색 및 관리**
+  - 태그 기반 스타일 검색 (스타일 이름 포함)
+  - 작가 이름 검색
+  - 태그별 활성화 여부(is_active), 검열 상태(is_flagged) 관리 가능
+- **프롬프트 입력**
   - 이미지 생성 시 태그 기반 프롬프트 입력/조합 기능 제공
   - ⚠ 영어만 허용 (Stable Diffusion 프롬프트 호환성 고려)
 
@@ -153,6 +154,9 @@
 - 이미지 댓글 / 대댓글 기능
 - 작가 팔로우/언팔로우 기능
 - 내가 팔로우한 작가 목록 조회
+- **MVP 제한사항**:
+  - 이미지 물리 삭제 기능 제외 (비공개 전환으로 대체)
+  - 작가의 팔로워 목록 조회 기능 제외
 
 #### 2.1.9 알림 시스템
 - 내 공개 이미지에 좋아요 알림
@@ -205,6 +209,8 @@
 - 큐레이션 및 추천 시스템
 - 이미지 신고 및 관리 시스템
 - 작가 프로필 커스터마이징
+- **작가의 팔로워 목록 조회** (MVP 제외)
+- **이미지 물리 삭제** (MVP 제외)
 
 #### 2.2.6 알림 고도화
 - 실시간 푸시 알림 (웹/모바일)
@@ -217,6 +223,8 @@
 - 카테고리 기반 분류
 - AI 기반 유사 스타일 추천
 - 텍스트 프롬프트 자동 태그 변환
+- **인기 태그 API** (MVP 제외)
+- **태그 자동완성 API** (MVP 제외)
 
 #### 2.2.8 다국어 고도화
 - 추가 언어 지원 (일본어, 중국어, 스페인어 등)
@@ -421,45 +429,43 @@ tags ──── styles/artworks/generations (M:N)
 ### 6.1 API 개요
 
 #### 6.1.1 설계 원칙
-- **RESTful 아키텍처**: 리소스 기반 URL 설계 (`/api/styles`, `/api/generations`)
-- **Stateless**: 세션 쿠키 기반 인증, 서버는 상태를 저장하지 않음
-- **JSON 통신**: 모든 요청/응답은 `application/json` 형식
-- **버전 관리**: URL 기반 버전 (`/v1`), 하위 호환성 보장
-- **HTTPS 필수**: 프로덕션 환경에서 암호화된 통신만 허용
+- **RESTful 아키텍처**: 리소스 기반 URL 설계, HTTP 메서드 활용
+- **Session-based Authentication**: Django 세션 쿠키 기반 인증
+- **JSON 통신**: 모든 요청/응답은 `application/json`
+- **버전 관리**: URL 기반 (`/v1`)
+- **HTTPS 필수**: 프로덕션 환경
+- **멱등성 보장**: 동일 요청 반복 시 동일 결과 (결제, 중복 방지 등)
 
 #### 6.1.2 Base URL
-- **개발**: `http://localhost:8000/api/v1`
-- **프로덕션**: `https://api.stylelicense.com/v1`
+- **개발**: `http://localhost:8000`
+- **프로덕션**: `https://api.stylelicense.com`
+
+**엔드포인트**: 모든 API는 `/api/v1/...` 형식으로 시작
+**전체 URL**: Base URL + 엔드포인트 (예: `http://localhost:8000/api/v1/auth/me`)
 
 #### 6.1.3 공통 응답 형식
 
-**성공 응답**:
+**성공**:
 ```json
 {
   "success": true,
-  "data": {
-    "id": 123,
-    "field": "value"
-  }
+  "data": { "id": 123, "field": "value" }
 }
 ```
 
-**에러 응답**:
+**에러**:
 ```json
 {
   "success": false,
   "error": {
     "code": "INSUFFICIENT_TOKENS",
     "message": "토큰 잔액이 부족합니다",
-    "details": {
-      "required": 100,
-      "available": 50
-    }
+    "details": { "required": 100, "available": 50 }
   }
 }
 ```
 
-**페이지네이션 응답**:
+**페이지네이션** (Cursor-based):
 ```json
 {
   "success": true,
@@ -473,231 +479,229 @@ tags ──── styles/artworks/generations (M:N)
 
 ---
 
-### 6.2 인증 API
+### 6.2 API 그룹 개요
 
-#### 6.2.1 인증 플로우
-```
-1. 사용자 → GET /api/auth/google/login
-2. 리다이렉트 → Google OAuth 동의 화면
-3. Google → Callback /api/auth/google/callback
-4. Backend → 세션 쿠키 설정 + 프론트엔드로 리다이렉트
-5. 이후 모든 요청 → 세션 쿠키 포함
-```
+프로젝트는 다음 7개의 API 그룹으로 구성됩니다:
 
-#### 6.2.2 주요 엔드포인트
+| 그룹 | 엔드포인트 예시 | 주요 기능 |
+|------|---------------|-----------|
+| **인증** | `/api/auth/*` | Google OAuth, 로그인/로그아웃 |
+| **사용자** | `/api/users/*` | 프로필 조회/수정, 작가 권한 신청 |
+| **토큰** | `/api/tokens/*` | 잔액 조회, 구매, 거래 내역 |
+| **화풍** | `/api/styles/*` | 스타일 생성/조회/수정, 학습 진행 |
+| **생성** | `/api/generations/*` | 이미지 생성 요청/조회, 공개 피드 |
+| **커뮤니티** | `/api/users/:id/follow`, `/api/generations/:id/like` | 팔로우, 좋아요, 댓글 |
+| **검색/알림** | `/api/search`, `/api/notifications` | 통합 검색, 알림 목록 |
 
-| 엔드포인트 | 메서드 | 설명 | 인증 |
-|----------|--------|------|------|
-| `/api/auth/google/login` | GET | Google OAuth 시작 | 불필요 |
-| `/api/auth/google/callback` | GET | OAuth 콜백 처리 | 불필요 |
-| `/api/auth/me` | GET | 현재 사용자 정보 | 필수 |
-| `/api/auth/logout` | POST | 로그아웃 | 필수 |
-
-**상세 명세**: [docs/API.md#5-auth-api](docs/API.md#5-auth-api)
+**상세 명세**: [docs/API.md](docs/API.md)
 
 ---
 
-### 6.3 사용자 & 작가 API
+### 6.3 인증 시스템
 
-#### 6.3.1 사용자 관리
+#### 6.3.1 인증 플로우
+```
+1. GET /api/auth/google/login → Google OAuth 시작
+2. Google 동의 → Callback /api/auth/google/callback
+3. Backend → 세션 쿠키 설정 + 프론트엔드 리다이렉트
+4. 이후 모든 요청 → 세션 쿠키 자동 포함
+```
 
-| 엔드포인트 | 메서드 | 설명 | 권한 |
-|----------|--------|------|------|
-| `/api/users/:id` | GET | 사용자 프로필 조회 | 공개 |
-| `/api/users/me` | PATCH | 내 프로필 수정 | 본인 |
-| `/api/users/me/upgrade-to-artist` | POST | 작가 권한 신청 | 사용자 |
+#### 6.3.2 핵심 엔드포인트
+- `GET /api/auth/google/login` - OAuth 시작
+- `GET /api/auth/google/callback` - OAuth 콜백
+- `GET /api/auth/me` - 현재 사용자 정보
+- `POST /api/auth/logout` - 로그아웃
 
-#### 6.3.2 작가 권한
-- 일반 사용자는 `role='user'` 상태
-- 작가 신청 시 `role='artist'` 변경 및 `artists` 테이블 레코드 생성
-- 작가만 스타일 생성 가능 (`POST /api/styles`)
+#### 6.3.3 권한 관리
+- **일반 사용자** (`role='user'`): 이미지 생성, 토큰 구매
+- **작가** (`role='artist'`): 일반 권한 + 스타일 생성
+- 작가 신청: `POST /api/users/me/upgrade-to-artist`
 
-**상세 명세**: [docs/API.md#6-users-api](docs/API.md#6-users-api)
+**상세 명세**: [docs/API.md#auth-api](docs/API.md#auth-api)
 
 ---
 
-### 6.4 토큰 시스템 API
+### 6.4 토큰 시스템
 
-#### 6.4.1 토큰 조회 & 구매
-
-| 엔드포인트 | 메서드 | 설명 |
-|----------|--------|------|
-| `/api/tokens/balance` | GET | 토큰 잔액 조회 |
-| `/api/tokens/transactions` | GET | 거래 내역 (페이지네이션) |
-| `/api/tokens/purchase` | POST | 토큰 구매 시작 (토스 결제) |
-
-#### 6.4.2 결제 플로우
+#### 6.4.1 토큰 이코노미
 ```
-1. Frontend → POST /api/tokens/purchase
+[충전] 사용자 → 토스 결제 → 플랫폼 → 토큰 발급
+[사용] 이미지 생성 시 사용자 토큰 차감 → 작가 수익 증가
+[정산] 작가 토큰 → 현금 환전 (MVP 제외, 향후 구현)
+```
+
+#### 6.4.2 핵심 엔드포인트
+- `GET /api/tokens/balance` - 토큰 잔액 조회
+- `POST /api/tokens/purchase` - 토큰 구매 시작 (토스 결제)
+- `GET /api/tokens/transactions` - 거래 내역 (충전/사용 통합)
+
+**거래 내역 필터**:
+```
+GET /api/tokens/transactions?type=purchase  # 충전만
+GET /api/tokens/transactions?type=usage     # 사용만
+GET /api/tokens/transactions                # 전체
+```
+
+#### 6.4.3 결제 플로우
+```
+1. POST /api/tokens/purchase
 2. Backend → purchases 레코드 생성 (status='pending')
-3. Backend → Frontend: 결제 URL 반환
-4. Frontend → 토스 결제 페이지로 리다이렉트
-5. 토스 → Backend Webhook: /api/webhooks/toss/payment
-6. Backend → purchases.status='paid' + users.token_balance 증가
+3. Backend → 결제 URL 반환
+4. 토스 결제 완료 → Webhook /api/webhooks/toss/payment
+5. Backend → token_balance 증가 + status='paid'
 ```
 
-**상세 명세**: [docs/API.md#7-token-api](docs/API.md#7-token-api)
+#### 6.4.4 주요 특징
+- 사용자 간 토큰 전송 불가
+- 작가는 자신의 스타일 사용 시에도 토큰 차감 (공정성)
+- 모든 토큰 거래는 `transactions` 테이블에 기록
+
+**상세 명세**: [docs/API.md#token-api](docs/API.md#token-api)
 
 ---
 
-### 6.5 화풍(Style) API
+### 6.5 화풍(Style) 시스템
 
-#### 6.5.1 스타일 CRUD
-
-| 엔드포인트 | 메서드 | 설명 | 권한 |
-|----------|--------|------|------|
-| `/api/styles` | GET | 스타일 목록 (필터, 정렬, 페이지네이션) | 공개 |
-| `/api/styles/:id` | GET | 스타일 상세 정보 | 공개 |
-| `/api/styles` | POST | 스타일 생성 (학습 요청) | 작가 |
-| `/api/styles/:id` | PATCH | 스타일 메타데이터 수정 | 소유자 |
-| `/api/styles/:id/progress` | GET | 학습 진행 상황 조회 | 소유자 |
-| `/api/styles/me` | GET | 내 스타일 목록 | 작가 |
+#### 6.5.1 핵심 엔드포인트
+- `GET /api/styles` - 스타일 목록 (필터, 정렬, 페이지네이션)
+- `GET /api/styles/:id` - 스타일 상세 + 학습 진행 상황
+- `POST /api/styles` - 스타일 생성 (학습 요청)
+- `PATCH /api/styles/:id` - 메타데이터 수정
+- `GET /api/styles/me` - 내 스타일 목록
 
 #### 6.5.2 스타일 생성 규칙
-- **이미지 수**: 10~100장 필수
-- **파일 형식**: JPG, PNG만 허용
-- **해상도**: 최소 512×512px
-- **파일 크기**: 최대 10MB/장
-- **태그**: 영어만 허용 (Stable Diffusion 호환)
+- **이미지**: 10~100장 (JPG, PNG, 최소 512×512px, 최대 10MB/장)
+- **태그**: 영어만 허용
 - **MVP 제한**: 작가당 1개 스타일만 생성 가능
+- **학습 시간**: 30분~2시간 (이미지 수에 따라)
 
 #### 6.5.3 학습 상태
-- `pending`: 업로드 완료, 검증 대기
-- `training`: 학습 진행 중 (30분~2시간)
-- `completed`: 학습 완료, 사용 가능
-- `failed`: 학습 실패, 재시도 가능
+- `pending` - 업로드 완료, 검증 대기
+- `training` - 학습 진행 중 (진행률 표시)
+- `completed` - 학습 완료, 사용 가능
+- `failed` - 학습 실패
 
-#### 6.5.4 학습 진행 상황 조회
+#### 6.5.4 진행 상황 조회 (중요 변경사항)
+**별도 `/progress` 엔드포인트 제거**, 메인 리소스에서 통합 조회:
 
-**엔드포인트**: `GET /api/styles/:id/progress`
-
-**응답 예시** (학습 중):
 ```json
+GET /api/styles/:id
 {
-  "success": true,
-  "data": {
-    "id": 10,
-    "name": "My Style",
-    "training_status": "training",
-    "progress": {
-      "current_epoch": 50,
-      "total_epochs": 100,
-      "progress_percent": 50,
-      "estimated_seconds": 900,
-      "last_updated": "2025-01-15T12:00:00Z"
-    }
+  "id": 10,
+  "name": "My Style",
+  "training_status": "training",
+  "progress": {
+    "current_epoch": 50,
+    "total_epochs": 100,
+    "progress_percent": 50,
+    "estimated_seconds": 900,
+    "last_updated": "2025-01-15T12:00:00Z"
   }
 }
 ```
 
-**업데이트 주기**:
-- Training Server가 30초마다 Backend에 진행 상황 전송
-- 프론트엔드는 5초마다 폴링 권장 (최대 30초 지연 발생 가능)
-- `training_status='training'`일 때만 `progress` 객체 반환
+- `training_status='training'`일 때만 `progress` 객체 존재
 - 완료/실패 시 `progress=null`
+- Training Server는 30초마다 Backend에 진행 상황 전송
+- 프론트엔드는 동적 폴링 (queued: 30초, training: 5초)
 
-**상세 명세**: [docs/API.md#8-styles-api](docs/API.md#8-styles-api)
+#### 6.5.5 스타일 정렬 옵션 (명확화)
+```
+GET /api/styles?sort=recent   # created_at DESC (기본값)
+GET /api/styles?sort=popular  # 실제 사용 횟수 DESC → created_at DESC
+```
+
+**popular 정렬 기준**:
+1. 1차: 실제 생성 횟수 (`generations_count`)
+2. 2차: 최신순 (`created_at DESC`)
+
+**상세 명세**: [docs/API.md#styles-api](docs/API.md#styles-api)
 
 ---
 
-### 6.6 이미지 생성 API
+### 6.6 이미지 생성 시스템
 
-#### 6.6.1 생성 요청 & 조회
+#### 6.6.1 핵심 엔드포인트
+- `POST /api/generations` - 이미지 생성 요청
+- `GET /api/generations/:id` - 생성 상태 + 결과 조회
+- `GET /api/generations/feed` - 공개 피드
+- `GET /api/generations/me` - 내 생성 이미지 목록
+- `PATCH /api/generations/:id` - 공개 여부, 설명 수정
 
-| 엔드포인트 | 메서드 | 설명 |
-|----------|--------|------|
-| `/api/generations` | POST | 이미지 생성 요청 |
-| `/api/generations/:id` | GET | 생성 상태 & 결과 조회 |
-| `/api/generations/:id/progress` | GET | 생성 진행 상황 조회 |
-| `/api/generations/feed` | GET | 공개 피드 (페이지네이션) |
-| `/api/generations/me` | GET | 내 생성 이미지 목록 |
-| `/api/generations/:id` | PATCH | 공개 여부, 설명 수정 |
-| `/api/generations/:id` | DELETE | 이미지 삭제 (소프트) |
+**MVP 제한**: 이미지 삭제 불가, 비공개 전환(`is_public=false`)으로 대체
 
 #### 6.6.2 생성 요청 파라미터
 ```json
+POST /api/generations
 {
   "style_id": 10,
   "prompt_tags": ["woman", "portrait", "sunset"],
   "description": "노을 배경의 여성 초상화",
-  "aspect_ratio": "1:1",
+  "aspect_ratio": "1:1",  // 1:1, 2:2, 1:2
   "seed": 42
 }
 ```
 
-#### 6.6.3 지원 비율
-- `1:1` (512×512px): 기본형
-- `2:2` (1024×1024px): 고해상도
-- `1:2` (512×1024px): 세로형 (스토리)
-
-#### 6.6.4 생성 플로우
+#### 6.6.3 생성 플로우
 ```
 1. 토큰 차감 (원자적 트랜잭션)
-2. RabbitMQ 큐에 작업 전송 (status='queued')
+2. RabbitMQ 큐 전송 (status='queued')
 3. Inference Server 처리 (status='processing')
 4. 이미지 생성 + 서명 삽입
-5. S3 업로드 + result_url 저장 (status='completed')
-6. 사용자 알림
+5. S3 업로드 (status='completed')
+6. 알림 전송
 ```
 
-#### 6.6.5 생성 진행 상황 조회
+#### 6.6.4 진행 상황 조회 (중요 변경사항)
+**별도 `/progress` 엔드포인트 제거**, 메인 리소스에서 통합 조회:
 
-**엔드포인트**: `GET /api/generations/:id/progress`
-
-**응답 예시** (생성 중):
 ```json
+GET /api/generations/:id
 {
-  "success": true,
-  "data": {
-    "id": 500,
-    "status": "processing",
-    "progress": {
-      "progress_percent": 75,
-      "current_step": 38,
-      "total_steps": 50,
-      "estimated_seconds": 3,
-      "last_updated": "2025-01-15T12:00:05Z"
-    }
+  "id": 500,
+  "status": "processing",
+  "progress": {
+    "current_step": 38,
+    "total_steps": 50,
+    "progress_percent": 76,
+    "estimated_seconds": 3,
+    "last_updated": "2025-01-15T12:00:05Z"
   }
 }
 ```
 
-**응답 예시** (완료):
-```json
-{
-  "success": true,
-  "data": {
-    "id": 500,
-    "status": "completed",
-    "result_url": "https://s3.../generated_500.jpg",
-    "progress": null,
-    "completed_at": "2025-01-15T12:00:10Z"
-  }
-}
-```
-
-**업데이트 방식**:
-- Inference Server가 주요 단계마다 Backend에 진행 상황 전송
-- 프론트엔드는 5초마다 폴링 권장
-- `status='processing'`일 때만 `progress` 객체 반환
+- `status='processing'`일 때만 `progress` 객체 존재
 - 완료/실패 시 `progress=null`
 
-**실패 처리**: 최대 3회 재시도, 모두 실패 시 토큰 환불
+#### 6.6.5 실패 처리 (상세화)
+**재시도 전략**:
+1. **재시도 대상 오류**:
+   - GPU OOM, 타임아웃, 네트워크 오류 → 자동 재시도
+   - 잘못된 프롬프트, 모델 없음 → 즉시 실패
 
-**상세 명세**: [docs/API.md#9-generations-api](docs/API.md#9-generations-api)
+2. **재시도 로직**:
+   - 최대 3회, 지수 백오프 (0초, 30초, 120초)
+   - `status='retrying'` 표시
+   - 토큰은 최초 1회만 차감, 재시도 비용은 플랫폼 부담
+
+3. **최종 실패 시**:
+   - 토큰 전액 환불
+   - `status='failed'` + 에러 알림
+
+**상세 명세**: [docs/API.md#generations-api](docs/API.md#generations-api)
 
 ---
 
-### 6.7 커뮤니티 API
+### 6.7 커뮤니티 기능
 
-#### 6.7.1 소셜 기능
+#### 6.7.1 소셜 기능 엔드포인트
 
 | 기능 | 엔드포인트 | 메서드 |
 |------|-----------|--------|
 | 팔로우 | `/api/users/:id/follow` | POST |
 | 언팔로우 | `/api/users/:id/follow` | DELETE |
-| 팔로워 목록 | `/api/users/:id/followers` | GET |
-| 팔로잉 목록 | `/api/users/:id/following` | GET |
+| 팔로잉 목록 | `/api/users/me/following` | GET |
 | 좋아요 | `/api/generations/:id/like` | POST |
 | 좋아요 취소 | `/api/generations/:id/like` | DELETE |
 | 댓글 목록 | `/api/generations/:id/comments` | GET |
@@ -705,234 +709,217 @@ tags ──── styles/artworks/generations (M:N)
 | 댓글 수정 | `/api/comments/:id` | PATCH |
 | 댓글 삭제 | `/api/comments/:id` | DELETE |
 
-#### 6.7.2 댓글 구조
-- **일반 댓글**: `parent_id=null`
-- **대댓글**: `parent_id={댓글_ID}`
-- **MVP 제한**: 1단계 대댓글만 허용 (대댓글의 대댓글 불가)
+#### 6.7.2 MVP 제한사항
+- **팔로워 목록 조회 불가**: 내가 팔로잉하는 목록만 조회 가능
+- **1단계 대댓글만**: 대댓글의 대댓글 불가 (`parent_id` 1단계만)
+- **댓글 좋아요 없음**: 생성물 좋아요만 지원
 
-**상세 명세**: [docs/API.md#10-community-api](docs/API.md#10-community-api)
-
----
-
-### 6.8 태그 & 검색 API
-
-#### 6.8.1 태그 시스템
-
-| 엔드포인트 | 메서드 | 설명 |
-|----------|--------|------|
-| `/api/tags/popular` | GET | 인기 태그 (사용 빈도순) |
-| `/api/tags/autocomplete` | GET | 태그 자동완성 |
-| `/api/search` | GET | 통합 검색 (스타일, 생성물, 작가) |
-
-#### 6.8.2 검색 필터
-- **스타일 검색**: `GET /api/styles?search=watercolor&tags=portrait,anime`
-- **통합 검색**: `GET /api/search?q=watercolor&type=all`
-- **태그 조합**: AND 조건 (모든 태그 포함)
-
-**상세 명세**: [docs/API.md#11-tags-api](docs/API.md#11-tags-api)
+**상세 명세**: [docs/API.md#community-api](docs/API.md#community-api)
 
 ---
 
-### 6.9 알림 API
+### 6.8 검색 시스템 (단순화)
+
+#### 6.8.1 통합 검색 엔드포인트
+```
+GET /api/search?q=watercolor&type=all
+```
+
+**type 파라미터**:
+- `all` (기본값) - 스타일 + 작가 통합 검색
+- `styles` - 스타일만 (태그 + 스타일 이름)
+- `artists` - 작가만 (작가명 + 유저명)
+
+#### 6.8.2 응답 구조
+```json
+{
+  "success": true,
+  "data": {
+    "styles": [
+      {
+        "id": 10,
+        "name": "Watercolor Dreams",
+        "thumbnail_url": "...",
+        "artist": { "id": 5, "artist_name": "John" },
+        "matched_by": "tag"  // "tag" | "name"
+      }
+    ],
+    "artists": [
+      {
+        "id": 5,
+        "username": "watercolor_master",
+        "artist_name": "Watercolor Master",
+        "follower_count": 1234,
+        "matched_by": "name"
+      }
+    ]
+  }
+}
+```
+
+#### 6.8.3 검색 로직
+- **스타일**: 태그 검색 + 스타일 이름 검색 (자동 태그 포함)
+- **작가**: `artists.artist_name` + `users.username` 검색
+- **MVP 제외**: 인기 태그 API, 자동완성 API
+
+**상세 명세**: [docs/API.md#search-api](docs/API.md#search-api)
+
+---
+
+### 6.9 알림 시스템
 
 #### 6.9.1 알림 타입
+- `follow` - 팔로우 알림
+- `like` - 좋아요 알림
+- `comment` - 댓글 알림
+- `generation_complete` - 생성 완료 (시스템)
+- `generation_failed` - 생성 실패 (시스템)
+- `style_training_complete` - 학습 완료 (시스템)
+- `style_training_failed` - 학습 실패 (시스템)
 
-| 타입 | 설명 | 트리거 |
-|------|------|--------|
-| `follow` | 팔로우 알림 | 누군가 나를 팔로우 |
-| `like` | 좋아요 알림 | 내 이미지에 좋아요 |
-| `comment` | 댓글 알림 | 내 이미지에 댓글 |
-| `generation_complete` | 생성 완료 | 이미지 생성 완료 (시스템) |
-| `style_training_complete` | 학습 완료 | 스타일 학습 완료 (시스템) |
+#### 6.9.2 핵심 엔드포인트
+- `GET /api/notifications` - 알림 목록 (페이지네이션)
+- `PATCH /api/notifications/:id/read` - 읽음 처리
+- `POST /api/notifications/read-all` - 모든 알림 읽음
 
-#### 6.9.2 알림 API
-
-| 엔드포인트 | 메서드 | 설명 |
-|----------|--------|------|
-| `/api/notifications` | GET | 알림 목록 (페이지네이션) |
-| `/api/notifications/:id/read` | PATCH | 알림 읽음 처리 |
-| `/api/notifications/read-all` | POST | 모든 알림 읽음 처리 |
-
-**상세 명세**: [docs/API.md#12-notifications-api](docs/API.md#12-notifications-api)
+**상세 명세**: [docs/API.md#notifications-api](docs/API.md#notifications-api)
 
 ---
 
-### 6.10 Webhook API
+### 6.10 Webhook API (내부 전용)
 
-#### 6.10.1 결제 웹훅 (토스 페이먼츠)
-
+#### 6.10.1 인증 방식 (강화)
 ```http
+Authorization: Bearer <INTERNAL_API_TOKEN>
+X-Request-Source: training-server | inference-server
+```
+
+**보안 설정**:
+- 환경변수로 관리: `INTERNAL_API_TOKEN` (긴 UUID)
+- IP 화이트리스트: AI 서버 IP만 허용
+- 토큰 Rotation: 월 1회
+
+#### 6.10.2 주요 Webhook
+
+**결제 완료** (토스):
+```
 POST /api/webhooks/toss/payment
 ```
 
-**처리 로직**:
-1. `paymentKey`로 멱등성 검증 (중복 처리 방지)
-2. `purchases.status` 업데이트: `pending` → `paid`
-3. `users.token_balance` 증가
-4. `transactions` 레코드 생성
+**스타일 학습 완료/실패**:
+```
+POST /api/webhooks/training/complete
+POST /api/webhooks/training/failed
+```
 
-#### 6.10.2 AI 서버 콜백
+**이미지 생성 완료/실패**:
+```
+POST /api/webhooks/inference/complete
+POST /api/webhooks/inference/failed
+```
 
 **진행 상황 업데이트**:
+- Training Server → `PATCH /api/styles/:id` (progress JSONB 업데이트)
+- Inference Server → `PATCH /api/generations/:id` (progress JSONB 업데이트)
 
-Training Server:
-```http
-PATCH /api/styles/:id/progress
-Authorization: Bearer <internal_token>
-
-{
-  "current_epoch": 50,
-  "total_epochs": 100,
-  "progress_percent": 50,
-  "estimated_seconds": 900
-}
-```
-
-Inference Server:
-```http
-PATCH /api/generations/:id/progress
-Authorization: Bearer <internal_token>
-
-{
-  "progress_percent": 75,
-  "current_step": 38,
-  "total_steps": 50,
-  "estimated_seconds": 3
-}
-```
-
-**완료 알림**:
-
-이미지 생성 완료:
-```http
-POST /api/webhooks/inference/complete
-Authorization: Bearer <internal_token>
-```
-
-스타일 학습 완료:
-```http
-POST /api/webhooks/training/complete
-Authorization: Bearer <internal_token>
-```
-
-**처리 로직**:
-1. 진행 상황: `styles.training_progress` 또는 `generations.generation_progress` JSONB 필드 업데이트
-2. 완료 시: `progress=null` 설정 + 알림 전송
-3. 실패 시: 토큰 환불 (생성의 경우) + 에러 알림
-
-**보안**: 내부 토큰으로 인증, 외부 접근 차단
-
-**상세 명세**: [docs/API.md#13-webhooks](docs/API.md#13-webhooks)
+**상세 명세**: [docs/API.md#webhooks](docs/API.md#webhooks)
 
 ---
 
-### 6.11 Rate Limiting
+### 6.11 Rate Limiting (재설계)
 
-| 엔드포인트 유형 | 제한 |
-|--------------|------|
-| 로그인 시도 | 5회 / 5분 (IP 기준) |
-| 이미지 생성 | 10회 / 분 (사용자 기준) |
-| 기타 모든 API | 100회 / 분 (사용자 기준) |
+#### 6.11.1 제한 정책
 
-**초과 시**: `429 Too Many Requests` 반환
+| 엔드포인트 유형 | 제한 | 식별 기준 |
+|--------------|------|----------|
+| 로그인 시도 | 5회 / 5분 | IP |
+| 이미지 생성 | 6회 / 분 | User ID (GPU 처리 속도 고려) |
+| 기타 인증 API | 100회 / 분 | User ID |
+| 비인증 API | 50회 / 분 | IP |
+
+#### 6.11.2 초과 시 처리
+- HTTP 429 반환
+- `Retry-After` 헤더 포함 (초 단위)
+
+#### 6.11.3 구현 방식
+- 라이브러리: `django-ratelimit`
+- 슬라이딩 윈도우 방식
+
+**상세 명세**: [docs/API.md#rate-limiting](docs/API.md#rate-limiting)
 
 ---
 
-### 6.12 에러 코드 전체 목록
+### 6.12 에러 코드 체계
 
 #### 6.12.1 HTTP 상태 코드
 
-| 코드 | 의미 | 사용 예시 |
+| 코드 | 의미 | 주요 사용 |
 |------|------|----------|
-| **200** | OK | 성공 |
-| **201** | Created | 리소스 생성 성공 |
-| **400** | Bad Request | 잘못된 요청 파라미터 |
-| **401** | Unauthorized | 인증 필요 (로그인 안 함) |
-| **403** | Forbidden | 권한 없음 (작가 권한 필요 등) |
-| **404** | Not Found | 리소스 없음 |
-| **409** | Conflict | 리소스 충돌 (중복 팔로우 등) |
-| **422** | Unprocessable Entity | 유효성 검증 실패 |
-| **429** | Too Many Requests | Rate Limit 초과 |
-| **500** | Internal Server Error | 서버 내부 오류 |
+| 200 | OK | 성공 |
+| 201 | Created | 리소스 생성 성공 |
+| 400 | Bad Request | 잘못된 요청 |
+| 401 | Unauthorized | 인증 필요 |
+| 402 | Payment Required | 토큰 부족 |
+| 403 | Forbidden | 권한 없음 |
+| 404 | Not Found | 리소스 없음 |
+| 409 | Conflict | 리소스 충돌 |
+| 422 | Unprocessable | 검증 실패 |
+| 429 | Too Many Requests | Rate Limit 초과 |
+| 500 | Server Error | 서버 오류 |
 
-#### 6.12.2 애플리케이션 에러 코드
+#### 6.12.2 주요 애플리케이션 에러 코드
 
-**인증 & 권한**:
-- `UNAUTHORIZED` (401): 로그인 필요
-- `FORBIDDEN` (403): 접근 권한 없음
-- `ARTIST_ONLY` (403): 작가 권한 필요
+**인증/권한**:
+- `UNAUTHORIZED` (401)
+- `FORBIDDEN` (403)
+- `ARTIST_ONLY` (403)
 
-**토큰 관련**:
-- `INSUFFICIENT_TOKENS` (402): 토큰 잔액 부족
-- `PAYMENT_FAILED` (402): 결제 실패
-- `INVALID_TOKEN_AMOUNT` (400): 유효하지 않은 토큰 수량
+**토큰**:
+- `INSUFFICIENT_TOKENS` (402)
+- `PAYMENT_FAILED` (402)
 
-**스타일 관련**:
-- `STYLE_LIMIT_REACHED` (403): 스타일 생성 한도 초과 (MVP: 1개)
-- `STYLE_NOT_FOUND` (404): 스타일 없음
-- `STYLE_NOT_READY` (422): 학습 미완료 스타일
-- `TRAINING_IN_PROGRESS` (409): 이미 학습 진행 중
-- `TRAINING_FAILED` (500): 모델 학습 실패
+**스타일**:
+- `STYLE_LIMIT_REACHED` (403) - MVP: 1개 제한
+- `STYLE_NOT_READY` (422) - 학습 미완료
+- `TRAINING_FAILED` (500)
 
-**이미지 업로드**:
-- `INVALID_IMAGE_FORMAT` (422): 지원하지 않는 형식 (JPG, PNG만)
-- `IMAGE_SIZE_EXCEEDED` (422): 파일 크기 초과 (10MB)
-- `IMAGE_RESOLUTION_TOO_LOW` (422): 해상도 부족 (최소 512×512)
-- `INSUFFICIENT_IMAGES` (422): 이미지 수 부족 (최소 10장)
-- `TOO_MANY_IMAGES` (422): 이미지 수 초과 (최대 100장)
-
-**이미지 생성**:
-- `GENERATION_FAILED` (500): 이미지 생성 실패
-- `GENERATION_NOT_FOUND` (404): 생성 요청 없음
-- `GENERATION_STILL_PROCESSING` (409): 아직 처리 중
-
-**진행 상황 조회**:
-- `PROGRESS_UNAVAILABLE` (404): 진행 상황 정보 없음 (대기/완료 상태)
+**이미지**:
+- `INVALID_IMAGE_FORMAT` (422)
+- `IMAGE_SIZE_EXCEEDED` (422)
+- `GENERATION_FAILED` (500)
 
 **커뮤니티**:
-- `DUPLICATE_FOLLOW` (409): 이미 팔로우 중
-- `SELF_FOLLOW_NOT_ALLOWED` (400): 자기 자신 팔로우 불가
-- `DUPLICATE_LIKE` (409): 이미 좋아요함
-- `COMMENT_NOT_FOUND` (404): 댓글 없음
-- `REPLY_DEPTH_EXCEEDED` (422): 대댓글 깊이 초과 (MVP: 1단계)
+- `DUPLICATE_FOLLOW` (409)
+- `SELF_FOLLOW_NOT_ALLOWED` (400)
+- `REPLY_DEPTH_EXCEEDED` (422)
 
-**태그**:
-- `TAG_NOT_FOUND` (404): 태그 없음
-- `INVALID_TAG_LANGUAGE` (422): 영어가 아닌 태그
-
-**기타**:
-- `RATE_LIMIT_EXCEEDED` (429): 요청 횟수 초과
-- `RESOURCE_NOT_FOUND` (404): 일반 리소스 없음
-- `VALIDATION_ERROR` (422): 입력 검증 실패
-- `INTERNAL_SERVER_ERROR` (500): 서버 내부 오류
+**전체 목록**: [docs/API.md#error-codes](docs/API.md#error-codes)
 
 ---
 
 ### 6.13 보안 고려사항
 
 #### 6.13.1 CSRF 보호
-- 모든 `POST`, `PUT`, `PATCH`, `DELETE` 요청에 CSRF 토큰 필수
-- Django 기본 제공 미들웨어 사용
-- 프론트엔드: 쿠키에서 자동 추출하여 헤더에 포함
+- 모든 변경 요청 (`POST`, `PUT`, `PATCH`, `DELETE`)에 CSRF 토큰 필수
+- Django 기본 미들웨어 사용
 
 #### 6.13.2 세션 보안
-- `httponly` 쿠키: JavaScript 접근 차단
-- `secure` 쿠키: HTTPS 전송만 허용 (프로덕션)
+- `httponly` 쿠키: XSS 방어
+- `secure` 쿠키: HTTPS 전송만 (프로덕션)
 - `samesite=lax`: CSRF 추가 방어
 
 #### 6.13.3 입력 검증
-- 모든 입력값은 서버에서 재검증
-- DRF Serializer 기본 검증 + 커스텀 검증
+- 모든 입력값 서버 재검증 (DRF Serializer)
 - SQL Injection, XSS 방어
 
 **상세 보안 정책**: [docs/SECURITY.md](docs/SECURITY.md)
 
 ---
 
-### 6.14 API 문서 참조
+### 6.14 참조 문서
 
-완전한 API 명세는 별도 문서에서 확인:
-- **전체 API 명세**: [docs/API.md](docs/API.md)
+완전한 API 명세 및 관련 문서:
+- **전체 API 명세**: [docs/API.md](docs/API.md) ← 구현 시 필수 참조
 - **데이터베이스 스키마**: [docs/database/README.md](docs/database/README.md)
 - **쿼리 예제**: [docs/database/guides/QUERIES.md](docs/database/guides/QUERIES.md)
 - **보안 정책**: [docs/SECURITY.md](docs/SECURITY.md)
@@ -958,10 +945,16 @@ Authorization: Bearer <internal_token>
 - **Feed Detail Page**: 개별 피드(이미지)의 상세보기
   - **Comment Modal**: 댓글 목록보기
 - **Search & Following Artist Page**: 스타일 검색 및 팔로우 목록 조회
+  - **상단**: 검색창 (태그 기반 스타일 검색, 작가 이름 검색)
+  - **정렬 옵션**: 최신순(recent), 인기순(popular - 팔로워 많은 작가 우선)
+  - **팔로잉 섹션**: 내가 팔로잉한 작가들의 스타일 목록 (고정 영역)
+    - 팔로잉한 작가가 없으면 빈 상태 표시
+  - **전체 스타일 그리드**: 검색 결과 또는 전체 스타일 목록
 - **Style Detail Page**: 특정 스타일(작가)의 상세 정보 및 이미지 생성 화면
-- **My Page**: 
+- **My Page**: 정보 수정, 스타일 관리 페이지, 결제 페이지 이동 버튼 / 공개, 비공개 피드 그리드 
 - **Edit / Create Style Page**: 새로운 화풍(모델) 생성 / 업로드 / 가격, 설명 수정
 - **Edit Profile**: 사용자 프로필 및 정보 수정
+- **Payment Page**: 토큰 결제 내역, 토큰 사용 내역 조회, 토큰 구매
 - **Notification Page**: 알림 내역 조회 및 읽음 처리
 
 ---
@@ -1003,6 +996,8 @@ Authorization: Bearer <internal_token>
 - 이미지 해상도: 512x512 이상
 - 지원 형식: JPG, PNG
 - 학습 시간: 약 30분 ~ 2시간 (이미지 수에 따라)
+- **스타일 이름 자동 태그화**: 스타일 생성 시 스타일 이름(title)이 자동으로 모든 학습 이미지에 소문자 태그로 등록됨
+  - 예: "Watercolor Dreams" → "watercolor dreams" 태그 자동 생성
 
 ### 8.2 이미지 생성 및 서명 삽입
 
@@ -1029,9 +1024,25 @@ Authorization: Bearer <internal_token>
 - 작가가 모델 등록 시 1장당 토큰 가격 설정 (1 ~ 10000 범위)
 - 플랫폼 수수료: 없음 (MVP에서는 작가가 100% 수취)
 
+#### 웰컴 토큰 (신규 가입 보너스)
+- **지급 시점**: Google OAuth 최초 가입 시 자동 지급
+- **지급 수량**: 100 토큰
+- **거래 기록**: `transactions` 테이블에 기록
+  - `sender_id`: NULL (플랫폼에서 지급)
+  - `receiver_id`: 신규 사용자 ID
+  - `amount`: 100
+  - `status`: 'completed'
+  - `memo`: 'Welcome Bonus'
+  - `related_generation_id`: NULL
+- **목적**: 신규 사용자가 토큰 구매 없이 플랫폼 체험 가능
+
 #### 토큰 구매
-- 결제 수단: 신용카드, 간편결제 (토스페이먼츠/스트라이프) ( 해외 결제 고려 )
-- 토큰 패키지: 100개(₩10,000), 500개(₩45,000), 1000개(₩80,000)
+- **결제 수단**: 신용카드, 간편결제 (토스페이먼츠) (해외 결제 고려)
+- **토큰 패키지** (서버에서 정의, 클라이언트 조작 불가):
+  - `basic_100`: 100 토큰, ₩10,000 (₩100/토큰)
+  - `standard_500`: 500 토큰, ₩45,000 (₩90/토큰, 10% 할인)
+  - `premium_1000`: 1000 토큰, ₩80,000 (₩80/토큰, 20% 할인)
+- **보안**: 가격은 서버 측 패키지 정의에서만 조회, 클라이언트는 package_id만 전달
 
 #### 토큰 소비
 - 이미지 생성 요청 시 즉시 차감
@@ -1062,15 +1073,19 @@ Authorization: Bearer <internal_token>
 ### 8.5 태그 시스템
 
 #### 태그 등록
-- 모델 학습 시 작가가 태그 입력 (예: "watercolor", "portrait", "anime")
-- 개별 학습 이미지마다 태그 설정 가능 
+- **자동 등록**: 스타일 생성 시 스타일 이름이 학습 이미지마다 자동으로 태그로 등록됨
+  - 예: 스타일 이름 "Watercolor Dreams" → 태그 "watercolor dreams" 생성
+- **수동 등록**: 모델 학습 시 작가가 추가 태그 입력 (예: "portrait", "anime")
+- 개별 학습 이미지마다 태그 설정 가능
+- 모든 태그는 소문자로 정규화되어 저장
 
 #### 태그 기반 검색
-- 모델 검색: `GET /models?tags=watercolor,portrait` (AND 조건)
-- 인기 태그: 사용 횟수 상위 20개
+- 통합 검색 API: 태그 기반 스타일 검색 + 작가 이름 검색
+- 스타일 이름 자체가 태그이므로 별도의 스타일 이름 검색 불필요
 
 #### 태그 기반 프롬프트
 - 사용자가 이미지 생성 시 태그 입력 (예: "watercolor woman portrait")
+- ⚠ 영어만 허용 (Stable Diffusion 프롬프트 호환성)
 
 ---
 
@@ -1121,6 +1136,24 @@ project-root/
 - 모든 API는 인증 필수 (로그인 페이지 제외)
 - 작가 전용 API는 `user_type === 'artist'` 검증
 - CSRF 토큰 검증 (Django 기본 제공)
+
+#### 사용자 탈퇴 정책
+- **일반 사용자 (스타일 미생성)**:
+  - 즉시 탈퇴 가능
+  - `users` 삭제 시 CASCADE로 관련 데이터 자동 삭제
+  - 생성물, 댓글, 좋아요 등 모두 삭제됨
+
+- **작가 (스타일 생성, 사용 내역 있음)**:
+  - **물리 삭제 불가** (DB 제약조건: `styles → generations RESTRICT`)
+  - 계정 비활성화 방식 사용:
+    - `users.is_active = false` (소프트 삭제)
+    - 로그인 차단, 프로필 숨김
+    - 스타일 및 생성 이력 보존 (저작권 추적용)
+  - 이유: 다른 사용자가 해당 스타일로 생성한 이미지의 메타데이터 보존 필요
+
+- **작가 (스타일 미사용)**:
+  - 스타일에 연결된 `generations`가 없으면 즉시 삭제 가능
+  - Backend에서 `generations` COUNT 확인 후 처리
 
 ### 10.2 데이터 보호
 
