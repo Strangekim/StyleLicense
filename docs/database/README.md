@@ -173,6 +173,15 @@ erDiagram
 - 모든 테이블: `created_at TIMESTAMPTZ`
 - 변경 가능 테이블: `updated_at TIMESTAMPTZ` (트리거 자동)
 
+### 진행 상황 추적 
+
+- **실시간 진행률**: JSONB 컬럼으로 유연한 진행 상황 저장
+- **업데이트 주기**: 
+  - Training Server: 30초마다 또는 완료 시
+  - Inference Server: 주요 단계마다 또는 완료 시
+- **폴링 방식**: 프론트엔드가 5초마다 API 호출 (최대 30초 지연)
+- **MVP 규모**: GPU 1대 환경에서 DB 부하 무시 가능 수준 (~2회/분)
+
 ---
 
 ## 5. 빠른 참조
@@ -230,6 +239,20 @@ WHERE style_id = ? AND status = 'completed';
 SELECT u.* FROM users u
 INNER JOIN follows f ON u.id = f.following_id
 WHERE f.follower_id = ?;
+
+-- 학습 진행 상황 확인
+SELECT 
+    training_status, 
+    training_progress 
+FROM styles 
+WHERE id = ?;
+
+-- 생성 진행 상황 확인
+SELECT 
+    status, 
+    generation_progress 
+FROM generations 
+WHERE id = ?;
 ```
 
 ### 트랜잭션 필수 작업
@@ -290,14 +313,15 @@ users → artists 생성 → role='artist' 업데이트
 ### 3. 스타일 학습
 ```
 styles 생성 → artworks 업로드 (10-100장) → 검증 → 학습 큐 전송
-→ Training Server → model_path 저장 → training_status='completed'
+→ Training Server → [NEW] 30초마다 진행 상황 업데이트 → model_path 저장 
+→ training_status='completed'
 ```
 
 ### 4. 이미지 생성
 ```
 토큰 차감 (users.token_balance) → generations 생성 (status='queued')
-→ Inference Server → 이미지 생성 → S3 업로드 → result_url 저장
-→ 작가 수익 증가 (artists.earned_token_balance) → 알림 전송
+→ Inference Server → [NEW] 진행 상황 업데이트 → 이미지 생성 → S3 업로드 
+→ result_url 저장 → 작가 수익 증가 (artists.earned_token_balance) → 알림 전송
 ```
 
 ### 5. 토큰 구매

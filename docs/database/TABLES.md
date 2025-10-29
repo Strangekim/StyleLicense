@@ -197,6 +197,7 @@ CREATE TABLE styles (
                             CHECK (training_status IN ('pending','training','completed','failed')),
     training_log_path       TEXT,
     training_metric         JSONB,
+    training_progress       JSONB,
     license_type            VARCHAR(30) DEFAULT 'personal' NOT NULL 
                             CHECK (license_type IN ('personal','commercial','exclusive')),
     valid_from              DATE DEFAULT CURRENT_DATE NOT NULL,
@@ -220,6 +221,10 @@ CREATE INDEX idx_styles_active ON styles(is_active, created_at DESC)
 
 **주요 컬럼**:
 - `training_status`: 학습 상태 (pending → training → completed)
+- `training_progress`: 학습 진행 상황 (JSONB)
+  - 예시: `{"current_epoch": 50, "total_epochs": 100, "progress_percent": 50, "estimated_seconds": 900, "last_updated": "2025-01-15T12:00:00Z"}`
+  - Training Server가 30초마다 업데이트
+  - NULL이면 진행 정보 없음 (pending 또는 completed 상태)
 - `model_path`: LoRA 모델 파일 경로 (S3)
 - `generation_cost_tokens`: 이미지 1장당 토큰 (작가 설정)
 
@@ -277,6 +282,7 @@ CREATE TABLE generations (
     result_url          TEXT,
     status              VARCHAR(20) DEFAULT 'queued' NOT NULL 
                         CHECK (status IN ('queued','processing','completed','failed')),
+    generation_progress JSONB, 
     description         TEXT,
     like_count          INT DEFAULT 0 NOT NULL,
     comment_count       INT DEFAULT 0 NOT NULL,
@@ -295,6 +301,10 @@ CREATE INDEX idx_generations_public ON generations(is_public, created_at DESC)
 
 **주요 컬럼**:
 - `status`: 처리 상태 (queued → processing → completed/failed)
+- `generation_progress`: 생성 진행 상황 (JSONB)
+  - 예시: `{"progress_percent": 75, "current_step": 38, "total_steps": 50, "last_updated": "2025-01-15T12:00:05Z"}`
+  - Inference Server가 업데이트
+  - NULL이면 진행 정보 없음 (queued 또는 completed 상태)
 - `result_url`: 생성된 이미지 URL (S3)
 - `is_public`: 공개 여부 (기본: false)
 - `like_count`, `comment_count`: 캐싱 컬럼
