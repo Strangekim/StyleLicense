@@ -1,8 +1,8 @@
 # API 명세서 (API.md)
 
-**Project**: Style License  
-**API Version**: v1  
-**Base URL**: `https://api.stylelicense.com/v1`  
+**Project**: Style License
+**API Version**: v1
+**Base URL**: `https://api.stylelicense.com`
 **Last Updated**: 2025-10-29
 
 ---

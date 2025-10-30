@@ -497,6 +497,22 @@ tags ──── styles/artworks/generations (M:N)
 
 ---
 
+### 6.2.1 사용자 시스템
+
+#### 핵심 엔드포인트
+- `GET /api/users/:id` - 사용자 프로필 조회 (공개)
+- `PATCH /api/users/me` - 내 프로필 수정 (인증 필요)
+- `POST /api/users/me/upgrade-to-artist` - 작가 권한 신청 (인증 필요)
+
+#### 주요 기능
+- **프로필 조회**: 다른 사용자의 공개 프로필 확인 (통계 포함)
+- **프로필 수정**: username, bio, profile_image 업데이트
+- **작가 승격**: 일반 사용자가 작가로 전환 (artist_name, verified_email, signature_image 제출)
+
+**상세 명세**: [docs/API.md#3-사용자-api](docs/API.md#3-사용자-api)
+
+---
+
 ### 6.3 인증 시스템
 
 #### 6.3.1 인증 플로우
@@ -540,7 +556,7 @@ tags ──── styles/artworks/generations (M:N)
 ```
 GET /api/tokens/transactions?type=purchase  # 충전만
 GET /api/tokens/transactions?type=usage     # 사용만
-GET /api/tokens/transactions                # 전체
+GET /api/tokens/transactions?type=all       # 전체 (기본값)
 ```
 
 #### 6.4.3 결제 플로우

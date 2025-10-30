@@ -96,7 +96,7 @@ CREATE INDEX idx_artists_user_id ON artists(user_id);
 ```sql
 CREATE TABLE transactions (
     id                      BIGSERIAL PRIMARY KEY,
-    sender_id               BIGINT NOT NULL
+    sender_id               BIGINT
                             REFERENCES users(id) ON DELETE CASCADE,
     receiver_id             BIGINT
                             REFERENCES users(id) ON DELETE CASCADE,
@@ -124,17 +124,18 @@ CREATE INDEX idx_transactions_status ON transactions(status, created_at DESC);
 ```
 
 **주요 컬럼**:
-- `sender_id`: 토큰 차감 대상
-- `receiver_id`: 토큰 증가 대상 (NULL = 플랫폼으로부터 구매)
+- `sender_id`: 토큰 차감 대상 (NULL = 시스템/플랫폼 발행)
+- `receiver_id`: 토큰 증가 대상 (NULL = 플랫폼으로의 지급)
 - `currency_code`: 통화 코드 (기본값: 'KRW')
 - `related_style_id`: 이미지 생성 결제 시 사용한 스타일
 - `related_generation_id`: 이미지 생성 결제 시 생성된 이미지 ID
 - `refunded`: 환불 여부 (true면 잔액 계산 제외)
 
 **거래 유형 판별**:
-- `receiver_id=NULL`: 토큰 구매 (플랫폼에서 지급)
-- `receiver_id!=NULL, related_generation_id=NULL`: 송금 또는 웰컴 보너스
-- `receiver_id!=NULL, related_generation_id!=NULL`: 이미지 생성 결제
+- `sender_id=NULL, receiver_id!=NULL`: 시스템 발행 (웰컴 보너스 등)
+- `sender_id!=NULL, receiver_id=NULL`: 토큰 구매 (플랫폼에 지급)
+- `sender_id!=NULL, receiver_id!=NULL, related_generation_id=NULL`: 사용자 간 송금
+- `sender_id!=NULL, receiver_id!=NULL, related_generation_id!=NULL`: 이미지 생성 결제
 
 **비즈니스 규칙**:
 - **토큰 잔액 관리**: `users.token_balance`가 단일 진실 공급원(Single Source of Truth)
