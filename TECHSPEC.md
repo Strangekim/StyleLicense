@@ -282,6 +282,7 @@
 - Google OAuth 로그인 처리
 - 이미지 업로드/다운로드
 - 실시간 생성 상태 폴링
+- **(운영 환경)** 정적 파일로 빌드되어 백엔드 EC2에서 함께 서빙
 
 #### Backend (Django)
 - REST API 서버
@@ -289,11 +290,13 @@
 - 비즈니스 로직 처리
 - RabbitMQ 작업 전송
 - 토큰 트랜잭션 관리
+- **(운영 환경)** Frontend 정적 파일 서빙
 
 #### PostgreSQL
 - 사용자, 모델, 이미지 메타데이터 저장
 - 토큰 트랜잭션 기록
 - ACID 트랜잭션 보장
+- **(운영 환경)** 백엔드 EC2 인스턴스에 로컬로 설치 및 운영
 
 #### RabbitMQ
 - 비동기 작업 큐
@@ -301,11 +304,13 @@
 - `image_generation` 큐: 이미지 생성 작업
 
 #### Training Server
+- **(운영 환경)** 외부 임대 GPU 서버에서 실행
 - Stable Diffusion 기반 LoRA Fine-tuning
 - 학습 완료 시 Backend Webhook 호출
 - 모델 파일 S3 저장
 
 #### Inference Server
+- **(운영 환경)** 외부 임대 GPU 서버에서 실행
 - LoRA 가중치 로드 후 이미지 생성
 - 서명 자동 삽입 (PIL)
 - 생성 이미지 S3 저장
@@ -440,8 +445,8 @@ tags ──── styles/artworks/generations (M:N)
 - **개발**: `http://localhost:8000`
 - **프로덕션**: `https://api.stylelicense.com`
 
-**엔드포인트**: 모든 API는 `/api/v1/...` 형식으로 시작
-**전체 URL**: Base URL + 엔드포인트 (예: `http://localhost:8000/api/v1/auth/me`)
+**엔드포인트**: 모든 API는 `/api/...` 형식으로 시작 (버전 번호 미포함)
+**전체 URL**: Base URL + 엔드포인트 (예: `http://localhost:8000/api/auth/me`)
 
 #### 6.1.3 공통 응답 형식
 
@@ -1175,7 +1180,9 @@ project-root/
 
 #### 민감 정보 암호화
 - 환경 변수로 관리: `DATABASE_URL`, `SECRET_KEY`, `OAUTH_CLIENT_SECRET`
-- S3 Access Key는 IAM Role 사용 (EC2)
+- **S3 Access**: 
+  - **Backend EC2**: IAM Role을 사용하여 EC2 인스턴스에 S3 접근 권한 부여
+  - **외부 AI 서버**: 전용 IAM 사용자를 생성하고, 발급된 Access Key를 환경 변수로 사용하여 S3에 접근
 
 #### 이미지 저장
 - 학습 이미지: S3 Private Bucket (작가만 접근)
@@ -1400,12 +1407,13 @@ services:
 
 ### 14.2 프로덕션 환경
 
-#### 인프라 (AWS 기준)
-- **Backend**: EC2 (t3.medium) + Application Load Balancer
-- **Frontend**: S3 + CloudFront (정적 호스팅)
-- **Database**: RDS PostgreSQL (db.t3.small)
-- **Queue**: RabbitMQ on EC2 (t3.small)
-- **AI Servers**: EC2 with GPU (g4dn.xlarge)
+#### 인프라 (단일 서버 + 외부 GPU 서버 기준)
+- **Application Server**: EC2 (t3.medium 이상)
+  - **Backend (Django)**, **Frontend (정적 파일)**, **PostgreSQL (로컬 DB)**, **RabbitMQ**가 함께 실행됩니다.
+  - Nginx를 Reverse Proxy 및 정적 파일 서빙에 사용합니다.
+- **AI Servers**: 외부 임대 GPU 서버 (예: another-provider.com)
+  - **Training Server** 및 **Inference Server**가 실행됩니다.
+  - Backend 서버와는 Public IP로 통신합니다.
 - **Storage**: S3 (이미지, 모델 파일)
 
 ### 14.3 CI/CD 파이프라인
@@ -1553,7 +1561,7 @@ project-root/
 
 | 위험 | 발생 확률 | 영향도 | 완화 전략 |
 |------|-----------|--------|-----------|
-| 데이터베이스 장애 | 낮음 | 치명적 | RDS 자동 백업, Multi-AZ 배포 |
+| 데이터베이스 장애 | 중간 | 치명적 | 정기적인 `pg_dump` 실행 및 백업 파일 S3 업로드 |
 | GPU 서버 다운 | 중간 | 높음 | Health Check, 자동 재시작, 예비 서버 |
 | 보안 침해 | 낮음 | 치명적 | 정기 보안 감사, HTTPS 강제, Rate Limiting |
 

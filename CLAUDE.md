@@ -40,22 +40,22 @@
 **작업이 Backend인 경우:**
 1. **[apps/backend/README.md](apps/backend/README.md)** - Backend 아키텍처 이해
 2. **[apps/backend/PLAN.md](apps/backend/PLAN.md)** - 세부 Subtask 확인
-3. **[apps/backend/GUIDE.md](apps/backend/GUIDE.md)** - 코드 작성 패턴 학습
+3. **[apps/backend/CODE_GUIDE.md](apps/backend/CODE_GUIDE.md)** - 코드 작성 패턴 학습
 
 **작업이 Frontend인 경우:**
 1. **[apps/frontend/README.md](apps/frontend/README.md)** - Frontend 아키텍처 이해
 2. **[apps/frontend/PLAN.md](apps/frontend/PLAN.md)** - 세부 Subtask 확인
-3. **[apps/frontend/GUIDE.md](apps/frontend/GUIDE.md)** - 코드 작성 패턴 학습
+3. **[apps/frontend/CODE_GUIDE.md](apps/frontend/CODE_GUIDE.md)** - 코드 작성 패턴 학습
 
 **작업이 Training Server인 경우:**
 1. **[apps/training-server/README.md](apps/training-server/README.md)** - 학습 파이프라인 이해
 2. **[apps/training-server/PLAN.md](apps/training-server/PLAN.md)** - 세부 Subtask 확인
-3. **[apps/training-server/GUIDE.md](apps/training-server/GUIDE.md)** - 코드 작성 패턴 학습
+3. **[apps/training-server/CODE_GUIDE.md](apps/training-server/CODE_GUIDE.md)** - 코드 작성 패턴 학습
 
 **작업이 Inference Server인 경우:**
 1. **[apps/inference-server/README.md](apps/inference-server/README.md)** - 추론 파이프라인 이해
 2. **[apps/inference-server/PLAN.md](apps/inference-server/PLAN.md)** - 세부 Subtask 확인
-3. **[apps/inference-server/GUIDE.md](apps/inference-server/GUIDE.md)** - 코드 작성 패턴 학습
+3. **[apps/inference-server/CODE_GUIDE.md](apps/inference-server/CODE_GUIDE.md)** - 코드 작성 패턴 학습
 
 ### Step 3: Implement
 
@@ -69,7 +69,7 @@
    - Training/Inference: `apps/*/tests/test_*.py`
 
 3. **Implement Code**
-   - **GUIDE.md**의 패턴을 따라 코드 작성
+   - **CODE_GUIDE.md**의 패턴을 따라 코드 작성
    - **PATTERNS.md**의 공통 규칙 준수
    - 파일 위치는 **해당 앱의 README.md**의 Directory Structure 참고
      - Backend: [apps/backend/README.md](apps/backend/README.md)

@@ -54,13 +54,14 @@
 - **프로덕션**: `https://api.stylelicense.com`
 
 #### 엔드포인트 경로
-모든 엔드포인트는 `/api/v1/...` 형식으로 시작합니다.
+모든 엔드포인트는 `/api/...` 형식으로 시작합니다.
+(현재 버전은 경로에 포함하지 않음. 향후 버저닝은 Accept 헤더 방식 사용 예정)
 
 **전체 URL = Base URL + 엔드포인트 경로**
 
 예시:
-- 개발: `http://localhost:8000/api/v1/auth/me`
-- 프로덕션: `https://api.stylelicense.com/api/v1/auth/me`
+- 개발: `http://localhost:8000/api/auth/me`
+- 프로덕션: `https://api.stylelicense.com/api/auth/me`
 
 #### 인증
 - **방식**: 세션 쿠키 기반
@@ -447,11 +448,13 @@ GET /api/tokens/transactions?type=all&cursor=...&limit=20
 ```
 
 #### 거래 타입 판별 규칙
-거래 타입은 DB에 저장되지 않으며, 다음 필드 조합으로 프론트엔드에서 판별:
-- `purchase` (토큰 구매): `sender` 존재, `receiver=null`, `related_generation_id=null`
-- `welcome` (웰컴 보너스): `sender=null`, `receiver` 존재, `memo='Welcome Bonus'`
-- `usage` (이미지 생성 결제): `sender` 존재, `receiver` 존재, `related_generation_id` 존재
-- `transfer` (송금, MVP 제외): `sender` 존재, `receiver` 존재, `related_generation_id=null`
+거래 타입(`type`)은 다음 필드 조합으로 백엔드에서 계산하여 응답에 포함됩니다:
+- `purchase` (토큰 구매): `sender_id!=null`, `receiver_id=null`, `related_generation_id=null`
+- `welcome` (웰컴 보너스): `sender_id=null`, `receiver_id!=null`, `memo='Welcome Bonus'`
+- `usage` (이미지 생성 결제): `sender_id!=null`, `receiver_id!=null`, `related_generation_id!=null`
+- `transfer` (송금, MVP 제외): `sender_id!=null`, `receiver_id!=null`, `related_generation_id=null`
+
+**주의**: DB의 transactions 테이블에는 type 컬럼이 없으며, 조회 시 Serializer에서 동적으로 계산합니다.
 
 ---
 
