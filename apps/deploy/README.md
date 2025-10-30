@@ -1,16 +1,40 @@
-# Deploy Configuration
+# Deploy Project
 
 ## Overview
 
-Style License 프로젝트의 배포 구성 및 인프라 관리 저장소입니다. Docker Compose를 통한 로컬 개발 환경과 AWS 기반 프로덕션 배포 설정을 포함합니다.
+Style License 프로젝트의 **EC2 배포 전용 독립 프로젝트**입니다. Backend 코드 전문과 Frontend 빌드 결과물, 그리고 모든 설정 파일을 포함하여 EC2에서 이 폴더만 clone/pull하면 전체 스택을 실행할 수 있습니다.
 
 **핵심 역할:**
-- Docker Compose로 전체 스택 로컬 실행
-- GitHub Actions CI/CD 워크플로우
-- AWS 인프라 구성 문서
-- 환경변수 관리 템플릿
+- **Backend 전문**: Django 코드 (`apps/backend/` 전체)
+- **Frontend 빌드 결과물**: Vite 빌드 산출물 (`frontend/dist/`)
+- **인프라 설정**: Docker Compose, Nginx, PostgreSQL, RabbitMQ 설정
+- **배포 스크립트**: `deploy.sh` 반자동 배포 스크립트
+- **환경변수 관리**: `.env.example` 템플릿
 
-> **참고**: 이 폴더는 코드가 아닌 **배포 설정**을 관리합니다. 각 앱의 개발 방법은 해당 앱의 README를 참조하세요.
+## 폴더 구조
+
+```
+apps/deploy/
+├── backend/                    # Backend 전문 (Django 코드)
+│   ├── app/                   # Django 애플리케이션
+│   ├── config/                # Django 설정
+│   ├── manage.py
+│   └── requirements.txt
+│
+├── frontend/                   # Frontend 빌드 결과물
+│   └── dist/                  # Vite 빌드 산출물 (index.html, assets/)
+│
+├── docker-compose.yml          # Docker Compose 설정
+├── nginx.conf                 # Nginx 설정 파일
+├── .env.example               # 환경변수 템플릿
+├── deploy.sh                  # 배포 스크립트
+├── scripts/                   # 유틸리티 스크립트
+│   ├── setup.sh              # 초기 설정
+│   └── backup.sh             # DB 백업
+└── README.md                  # 이 파일
+```
+
+> **중요**: 이 폴더는 **배포 전용**입니다. 개발은 `apps/backend/`, `apps/frontend/`에서 하고, 변경사항을 이 폴더로 복사하여 배포합니다.
 
 ---
 
@@ -95,40 +119,67 @@ docker-compose up -d training-server inference-server
 
 ```
 사용자 (브라우저)
+  ↓ HTTPS (DNS: stylelicense.com)
   ↓
-CloudFront (CDN) → S3 (Frontend 정적 파일)
-  ↓
-Application Load Balancer
-  ↓
-EC2 (Backend) ← RabbitMQ (EC2) ← GPU EC2 (Training/Inference)
-  ↓
-RDS (PostgreSQL)
-  ↓
-S3 (이미지/모델 파일)
+Backend EC2 (t3.medium)
+  ├── Nginx (포트 80, 443)
+  │   ├── SSL 종료 (Let's Encrypt)
+  │   ├── Frontend 정적 파일 서빙
+  │   └── Gunicorn Reverse Proxy
+  ├── Django Backend (Gunicorn :8000)
+  ├── PostgreSQL 15 (로컬 :5432)
+  └── RabbitMQ (Docker :5672)
+        ↓ (작업 큐)
+        ↓
+  RunPod GPU Pods (RTX 4090 24GB)
+  ├── Training Server (1대)
+  └── Inference Server (1대)
+        ↓ Webhook (Public IP + INTERNAL_API_TOKEN)
+        ↑
+  AWS S3 (이미지/모델 파일 저장)
 ```
 
 ### 인스턴스 구성
 
 | 서비스 | 인스턴스 타입 | 수량 | 설명 |
 |--------|--------------|------|------|
-| **Backend** | EC2 t3.medium | 1~2 | Django + Gunicorn |
-| **Frontend** | S3 + CloudFront | - | 정적 호스팅 (CDN) |
-| **Database** | RDS db.t3.small | 1 | PostgreSQL 15 |
-| **Queue** | EC2 t3.small | 1 | RabbitMQ |
-| **Training Server** | EC2 g4dn.xlarge | 1 | GPU (NVIDIA T4) |
-| **Inference Server** | EC2 g4dn.xlarge | 1~2 | GPU (NVIDIA T4) |
-| **Storage** | S3 | - | 이미지/모델 저장 |
+| **Backend** | EC2 t3.medium | 1 | Django + Gunicorn + Nginx + PostgreSQL + RabbitMQ |
+| **Frontend** | (Backend에 포함) | - | Nginx에서 정적 파일 서빙 |
+| **Database** | PostgreSQL 15 (로컬) | 1 | Backend EC2 로컬 설치 |
+| **Queue** | RabbitMQ (Docker) | 1 | Backend EC2에 함께 실행 |
+| **Training Server** | RunPod RTX 4090 24GB | 1 | LoRA Fine-tuning 전용 GPU Pod |
+| **Inference Server** | RunPod RTX 4090 24GB | 1 | 이미지 생성 전용 GPU Pod |
+| **Storage** | S3 | - | 이미지/모델 저장 (IAM Role/Access Key) |
+| **DNS** | 별도 구매 예정 | - | 도메인 (예: stylelicense.com) |
+| **SSL** | Let's Encrypt | - | Certbot 자동 갱신 |
 
 ### 네트워크 구성
 
-- **VPC**: Private Subnet (Backend, RDS, RabbitMQ, GPU)
-- **Public Subnet**: ALB (Application Load Balancer)
-- **Security Groups**:
-  - ALB: 80, 443 포트 허용 (Public)
-  - Backend: 8000 포트 (ALB에서만)
-  - RabbitMQ: 5672 포트 (Backend, GPU 서버만)
-  - RDS: 5432 포트 (Backend만)
-  - GPU Servers: Webhook 송신용 (Backend API로만)
+- **Backend EC2 Security Group**:
+  - Inbound: 80 (HTTP), 443 (HTTPS) - 전체 허용 (0.0.0.0/0)
+  - Inbound: 22 (SSH) - 관리자 IP만 허용
+  - Outbound: 전체 허용 (S3, RabbitMQ, RunPod 접근)
+
+- **RunPod GPU Pods**:
+  - Inbound: RabbitMQ 큐 소비 (Backend 연결)
+  - Outbound: Backend Webhook 호출 (Public IP, HTTPS 443)
+    - 방화벽: Backend 도메인으로만 통신
+    - 인증: `X-Internal-Token: INTERNAL_API_TOKEN` 헤더
+  - Outbound: S3 업로드 (AWS Access Key 사용)
+
+- **DNS 설정**:
+  - 도메인: stylelicense.com (예시)
+  - A 레코드: Backend EC2 Public IP 지정
+  - SSL: Let's Encrypt (Certbot 자동 발급 및 갱신)
+
+- **PostgreSQL**:
+  - 로컬 접근만 (localhost:5432)
+  - 외부 접근 차단
+
+- **RabbitMQ**:
+  - Docker 컨테이너로 실행
+  - Backend Django에서만 접근 (localhost:5672)
+  - Management UI: localhost:15672 (SSH 터널로만 접근)
 
 ---
 
@@ -186,145 +237,294 @@ aws ssm get-parameter \
 
 ---
 
-## CI/CD Pipeline
+## Deployment Process
 
-### GitHub Actions Workflow
+### 배포 방식
 
-각 앱마다 독립적인 CI/CD 파이프라인이 실행됩니다.
+**당분간은 수동/반자동 배포를 사용합니다** (CI/CD는 향후 도입 예정)
 
-#### Backend Pipeline
-
-```
-트리거: push to main (apps/backend/** 변경 시)
-  ↓
-1. Lint (Black, Pylint)
-  ↓
-2. Test (pytest)
-  ↓
-3. Build Docker Image
-  ↓
-4. Push to ECR (AWS Container Registry)
-  ↓
-5. Deploy to EC2 (SSH + Docker)
-  ↓
-6. Health Check (GET /api/health)
-```
-
-**파일**: `.github/workflows/backend.yml`
-
-#### Frontend Pipeline
-
-```
-트리거: push to main (apps/frontend/** 변경 시)
-  ↓
-1. Lint (ESLint)
-  ↓
-2. Test (Vitest, E2E Playwright)
-  ↓
-3. Build (Vite)
-  ↓
-4. Deploy to S3
-  ↓
-5. Invalidate CloudFront Cache
-```
-
-**파일**: `.github/workflows/frontend.yml`
-
-#### AI Servers Pipeline
-
-```
-트리거: push to main (apps/training-server/** 또는 apps/inference-server/** 변경 시)
-  ↓
-1. Lint (Black, Pylint)
-  ↓
-2. Test (pytest)
-  ↓
-3. Build Docker Image
-  ↓
-4. Push to ECR
-  ↓
-5. Deploy to GPU EC2 (Rolling Update)
-  ↓
-6. Health Check (RabbitMQ Consumer 확인)
-```
-
-**파일**: `.github/workflows/training-server.yml`, `.github/workflows/inference-server.yml`
-
----
-
-## Deployment Guide
-
-### 1. Backend Deployment (EC2)
+#### 1. EC2 초기 설정
 
 ```bash
-# EC2 인스턴스 접속
-ssh -i keypair.pem ubuntu@ec2-backend.ap-northeast-2.compute.amazonaws.com
+# 1. EC2 접속
+ssh -i keypair.pem ubuntu@<ec2-public-ip>
 
-# Docker 이미지 Pull
-aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin <ECR_URL>
-docker pull <ECR_URL>/stylelicense-backend:latest
+# 2. 프로젝트 Clone
+git clone <repository-url>
+cd StyleLicense/apps/deploy
 
-# 기존 컨테이너 중지
-docker stop backend
+# 3. 초기 설정 스크립트 실행
+chmod +x scripts/setup.sh
+./scripts/setup.sh
 
-# 새 컨테이너 실행
-docker run -d \
-  --name backend \
-  -p 8000:8000 \
-  -e DATABASE_URL=$(aws ssm get-parameter --name /stylelicense/prod/DATABASE_URL --with-decryption --query Parameter.Value --output text) \
-  -e SECRET_KEY=$(aws ssm get-parameter --name /stylelicense/prod/SECRET_KEY --with-decryption --query Parameter.Value --output text) \
-  <ECR_URL>/stylelicense-backend:latest
+# 4. 환경변수 설정
+cp .env.example .env
+nano .env  # 프로덕션 환경변수 입력
 
-# Health Check
+# 5. 초기 배포
+chmod +x deploy.sh
+./deploy.sh
+```
+
+#### 2. 코드 변경 시 배포
+
+```bash
+# EC2에서 실행
+cd /path/to/StyleLicense/apps/deploy
+
+# 1. 최신 코드 Pull
+git pull origin main
+
+# 2. 배포 스크립트 실행
+./deploy.sh
+```
+
+### deploy.sh 스크립트 역할
+
+`deploy.sh` 스크립트는 다음 작업을 자동으로 수행합니다:
+
+```bash
+#!/bin/bash
+# 1. PostgreSQL 마이그레이션 실행
+cd backend
+python manage.py migrate
+
+# 2. Django Static 파일 수집
+python manage.py collectstatic --noinput
+
+# 3. Frontend 빌드 파일 Nginx 디렉토리로 복사
+cp -r frontend/dist/* /var/www/stylelicense/frontend/
+
+# 4. Gunicorn 재시작
+sudo systemctl restart gunicorn
+
+# 5. RabbitMQ 상태 확인
+docker ps | grep rabbitmq
+
+# 6. Nginx 재시작
+sudo systemctl reload nginx
+
+# 7. Health Check
 curl http://localhost:8000/api/health
 ```
 
-### 2. Frontend Deployment (S3 + CloudFront)
+### 배포 전 체크리스트
+
+- [ ] Backend 변경사항이 있으면 `apps/deploy/backend/`로 복사 완료
+- [ ] Frontend 변경사항이 있으면 `npm run build` 후 `apps/deploy/frontend/dist/`로 복사 완료
+- [ ] `.env` 파일 프로덕션 환경변수 설정 완료
+- [ ] PostgreSQL 백업 완료 (`./scripts/backup.sh`)
+- [ ] 배포 전 로컬에서 테스트 완료
+
+---
+
+## CI/CD (향후 계획)
+
+> **참고**: 현재는 수동 배포를 사용하며, 향후 GitHub Actions 또는 GitLab CI를 도입할 예정입니다.
+
+향후 자동화 예정 항목:
+- Backend 변경 시 자동 테스트 및 배포
+- Frontend 빌드 및 배포 자동화
+- RunPod GPU Pods 자동 업데이트
+- Health Check 및 롤백 자동화
+
+---
+
+## Configuration Guide
+
+### 1. PostgreSQL 설정
 
 ```bash
-# 1. 로컬에서 빌드
-cd apps/frontend
-npm run build
+# PostgreSQL 15 설치
+sudo apt update
+sudo apt install postgresql-15 postgresql-contrib
 
-# 2. S3 업로드
-aws s3 sync dist/ s3://stylelicense-frontend --delete
+# 데이터베이스 생성
+sudo -u postgres createdb style_license_db
+sudo -u postgres createuser stylelicense_user
+sudo -u postgres psql
 
-# 3. CloudFront 캐시 무효화
-aws cloudfront create-invalidation \
-  --distribution-id E1234567890ABC \
-  --paths "/*"
+# PostgreSQL 프롬프트에서
+ALTER USER stylelicense_user WITH PASSWORD 'your_password';
+GRANT ALL PRIVILEGES ON DATABASE style_license_db TO stylelicense_user;
+\q
+
+# 백업 디렉토리 생성
+sudo mkdir -p /var/backups/postgresql
+sudo chown postgres:postgres /var/backups/postgresql
 ```
 
-**자동화**: GitHub Actions에서 자동 실행됨
-
-### 3. Database Migration
+### 2. RabbitMQ 설정
 
 ```bash
-# EC2 Backend 컨테이너에서 실행
-docker exec -it backend python manage.py migrate
+# Docker로 RabbitMQ 실행
+docker run -d \
+  --name rabbitmq \
+  --restart always \
+  -p 5672:5672 \
+  -p 15672:15672 \
+  -e RABBITMQ_DEFAULT_USER=stylelicense \
+  -e RABBITMQ_DEFAULT_PASS=<strong_password> \
+  rabbitmq:3-management
 
-# 또는 SSH로 직접 실행
-ssh -i keypair.pem ubuntu@ec2-backend.ap-northeast-2.compute.amazonaws.com
-cd /home/ubuntu/stylelicense/apps/backend
+# Management UI 접근 (SSH 터널)
+ssh -L 15672:localhost:15672 ubuntu@<ec2-ip>
+# 브라우저에서 http://localhost:15672 접속
+```
+
+### 3. Nginx 설정
+
+**설정 파일**: `/etc/nginx/sites-available/stylelicense`
+```nginx
+server {
+    listen 80;
+    server_name stylelicense.com www.stylelicense.com;
+
+    # HTTP를 HTTPS로 리다이렉트
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name stylelicense.com www.stylelicense.com;
+
+    # Let's Encrypt SSL 인증서
+    ssl_certificate /etc/letsencrypt/live/stylelicense.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/stylelicense.com/privkey.pem;
+
+    # Frontend 정적 파일
+    location / {
+        root /var/www/stylelicense/frontend;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Backend API (Gunicorn Reverse Proxy)
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Django Admin
+    location /admin/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # Django Static Files (collectstatic)
+    location /static/ {
+        alias /home/ubuntu/stylelicense/apps/backend/staticfiles/;
+    }
+}
+```
+
+**Let's Encrypt SSL 설치**:
+```bash
+# Certbot 설치
+sudo apt install certbot python3-certbot-nginx
+
+# SSL 인증서 발급
+sudo certbot --nginx -d stylelicense.com -d www.stylelicense.com
+
+# 자동 갱신 확인
+sudo certbot renew --dry-run
+```
+
+**Nginx 활성화**:
+```bash
+# 설정 파일 심볼릭 링크
+sudo ln -s /etc/nginx/sites-available/stylelicense /etc/nginx/sites-enabled/
+
+# 설정 테스트
+sudo nginx -t
+
+# Nginx 재시작
+sudo systemctl restart nginx
+```
+
+### 4. Gunicorn 설정
+
+**Systemd 서비스 파일**: `/etc/systemd/system/gunicorn.service`
+
+```ini
+[Unit]
+Description=Gunicorn daemon for Style License Backend
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/StyleLicense/apps/deploy/backend
+ExecStart=/home/ubuntu/StyleLicense/apps/deploy/backend/venv/bin/gunicorn \
+          --workers 4 \
+          --bind 127.0.0.1:8000 \
+          --timeout 120 \
+          config.wsgi:application
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Gunicorn 서비스 시작**:
+```bash
+# 서비스 파일 리로드
+sudo systemctl daemon-reload
+
+# Gunicorn 시작 및 자동 시작 설정
+sudo systemctl start gunicorn
+sudo systemctl enable gunicorn
+
+# 상태 확인
+sudo systemctl status gunicorn
+
+# 재시작
+sudo systemctl restart gunicorn
+```
+
+### 5. Database Migration
+
+```bash
+# EC2에서 실행
+cd /home/ubuntu/StyleLicense/apps/deploy/backend
+source venv/bin/activate
 python manage.py migrate
+
+# Static 파일 수집
+python manage.py collectstatic --noinput
 ```
 
-### 4. AI Servers Deployment (Rolling Update)
+### 6. AI Servers Deployment (RunPod GPU Pods)
 
 ```bash
-# Training Server 배포 (순차적으로 1대씩)
-# 1번 서버 업데이트
-ssh gpu-training-1
-docker stop training-server
-docker pull <ECR_URL>/stylelicense-training:latest
-docker run -d --gpus all <ECR_URL>/stylelicense-training:latest
+# RunPod 웹 콘솔 또는 API를 통해 배포
+# 1. Docker 이미지를 Docker Hub 또는 ECR에 Push
+docker tag stylelicense-training:latest <registry>/stylelicense-training:latest
+docker push <registry>/stylelicense-training:latest
 
-# 2번 서버 업데이트 (1번 완료 후)
-ssh gpu-training-2
-...
+# 2. RunPod 콘솔에서 GPU Pod 생성
+# - Template: Custom Docker Image
+# - Image: <registry>/stylelicense-training:latest
+# - GPU: RTX 4090 (24GB VRAM)
+# - 환경변수 설정:
+#   - RABBITMQ_HOST=<Backend-Public-IP>
+#   - BACKEND_API_URL=https://stylelicense.com
+#   - INTERNAL_API_TOKEN=<token>
+#   - AWS_ACCESS_KEY_ID=<key>
+#   - AWS_SECRET_ACCESS_KEY=<secret>
+
+# 3. Pod 재시작 또는 업데이트
+# RunPod 콘솔에서 "Restart Pod" 또는 "Update Template"
 ```
 
 **무중단 배포**: RabbitMQ 큐에 작업이 남아있으면 순차적으로 처리됨
+
+**RunPod 배포 팁**:
+- Pod 템플릿을 저장하여 재사용
+- GPU Pod의 Public IP는 고정되지 않을 수 있으므로 Webhook URL을 도메인으로 설정
+- RabbitMQ 연결을 위해 Backend EC2의 RabbitMQ 포트(5672)를 Public으로 노출하거나 VPN 사용
 
 ---
 
@@ -463,17 +663,20 @@ docker logs backend
 docker exec backend env | grep DATABASE_URL
 ```
 
-**5. CloudFront 캐시 문제**
+**5. Nginx 설정 문제**
 ```bash
-# 캐시 무효화
-aws cloudfront create-invalidation \
-  --distribution-id E1234567890ABC \
-  --paths "/*"
+# Nginx 설정 테스트
+sudo nginx -t
 
-# 특정 파일만 무효화
-aws cloudfront create-invalidation \
-  --distribution-id E1234567890ABC \
-  --paths "/index.html" "/assets/*"
+# Nginx 재시작
+sudo systemctl reload nginx
+
+# Nginx 로그 확인
+sudo tail -f /var/log/nginx/error.log
+sudo tail -f /var/log/nginx/access.log
+
+# SSL 인증서 갱신 문제
+sudo certbot renew --dry-run
 ```
 
 ---
@@ -494,19 +697,28 @@ docker exec backend python manage.py migrate app 0001  # 이전 마이그레이�
 ### Frontend Rollback
 
 ```bash
-# 1. S3에서 이전 버전 복원
-aws s3 sync s3://stylelicense-frontend-backup/previous-version/ s3://stylelicense-frontend/ --delete
+# 1. Git에서 이전 버전 체크아웃
+cd apps/frontend
+git checkout <previous-commit-hash>
 
-# 2. CloudFront 캐시 무효화
-aws cloudfront create-invalidation --distribution-id E1234567890ABC --paths "/*"
+# 2. 재빌드 및 배포
+npm run build
+scp -r dist/* ubuntu@ec2-backend:/var/www/stylelicense/frontend/
+
+# 3. Nginx 재시작
+ssh ubuntu@ec2-backend 'sudo systemctl reload nginx'
 ```
 
 ### AI Servers Rollback
 
 ```bash
-# GPU 서버에서 이전 Docker 이미지로 롤백
-docker stop training-server
-docker run -d --gpus all <ECR_URL>/stylelicense-training:previous-tag
+# RunPod 콘솔에서 이전 Template으로 롤백
+# 1. Pod 중지
+# 2. Template 변경 (이전 Docker 이미지 태그)
+# 3. Pod 재시작
+
+# 또는 CLI를 통한 업데이트
+runpodctl update pod <pod-id> --template <previous-template-id>
 ```
 
 ---
@@ -517,8 +729,8 @@ docker run -d --gpus all <ECR_URL>/stylelicense-training:previous-tag
 
 - [ ] 환경변수를 Parameter Store에 암호화 저장
 - [ ] Security Group 최소 권한 원칙 적용
-- [ ] RDS 백업 활성화 (자동 백업 7일 보관)
-- [ ] S3 버킷 퍼블릭 액세스 차단 (CloudFront만 허용)
+- [ ] PostgreSQL 로컬 백업 스크립트 설정 (pg_dump 일일 자동 백업)
+- [ ] S3 버킷 퍼블릭 액세스 설정 (생성 이미지는 Public, 학습 이미지는 Private)
 - [ ] ALB HTTPS 리스너 설정 (ACM 인증서)
 - [ ] INTERNAL_API_TOKEN 32자 이상 UUID 사용
 - [ ] RabbitMQ 기본 계정 변경
@@ -534,11 +746,11 @@ docker run -d --gpus all <ECR_URL>/stylelicense-training:previous-tag
 
 | 항목 | 최적화 방법 | 예상 절감 |
 |------|------------|----------|
-| **EC2 Reserved Instance** | Training/Inference 서버 RI 구매 (1년) | ~40% |
+| **RunPod Spot Instances** | Spot GPU Pods 사용 (대기 시간 허용 시) | ~50-70% |
 | **S3 Lifecycle Policy** | 오래된 이미지 Glacier로 이동 (90일 후) | ~30% |
-| **RDS Stop/Start** | 개발 환경 야간 자동 중지 | ~50% |
-| **CloudFront** | 압축 활성화, 캐시 TTL 최적화 | ~20% |
-| **Spot Instances** | Training Server에 Spot 사용 (비상용) | ~70% |
+| **Backend EC2 Stop/Start** | 개발 환경 야간 자동 중지 | ~50% |
+| **Nginx Gzip** | 압축 활성화, 정적 파일 캐싱 최적화 | 대역폭 ~20% |
+| **RunPod Auto-Pause** | GPU 미사용 시 자동 일시정지 | ~40% |
 
 ---
 

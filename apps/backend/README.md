@@ -303,15 +303,33 @@ python manage.py migrate app 0002  # 0002로 롤백
 ### Production Checklist
 
 - [ ] `DEBUG = False`
-- [ ] `ALLOWED_HOSTS` 설정
-- [ ] **로컬 PostgreSQL** 연결 설정
-- [ ] RabbitMQ 클러스터 연결
-- [ ] S3 버킷 설정 및 IAM 권한 확인 (EC2 IAM Role 사용)
-- [ ] `SECRET_KEY` 환경변수로 관리
-- [ ] HTTPS 적용 (Reverse Proxy에서 처리)
-- [ ] Static files 수집 (`collectstatic`) 및 **Reverse Proxy(Nginx) 서빙 설정**
-- [ ] Gunicorn/uWSGI 설정
-- [ ] Sentry 에러 모니터링
+- [ ] `ALLOWED_HOSTS` 설정 (도메인 추가: stylelicense.com)
+- [ ] **로컬 PostgreSQL 15.x 설치 및 연결 설정**
+  - `sudo apt install postgresql-15`
+  - 데이터베이스 생성: `createdb stylelicense_db`
+  - `DATABASE_URL=postgresql://user:pass@localhost:5432/stylelicense_db`
+- [ ] **RabbitMQ Docker 설정**
+  - `docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management`
+  - `RABBITMQ_HOST=localhost`
+  - Management UI는 SSH 터널로만 접근
+- [ ] S3 버킷 설정 및 IAM 권한 확인 (**EC2 IAM Role 사용**)
+  - EC2에 S3 Full Access IAM Role 부여
+  - 학습 이미지: Private Bucket
+  - 생성 이미지: Public Bucket
+- [ ] `SECRET_KEY` 환경변수로 관리 (32자 이상 랜덤 문자열)
+- [ ] **Nginx 설정**
+  - Reverse Proxy: Gunicorn (:8000) 프록시
+  - Frontend 정적 파일 서빙 (/var/www/stylelicense/frontend/)
+  - Django Static files 서빙 (/home/ubuntu/stylelicense/apps/backend/staticfiles/)
+  - 설정 파일: `/etc/nginx/sites-available/stylelicense`
+- [ ] **Let's Encrypt SSL 인증서 설정**
+  - `sudo certbot --nginx -d stylelicense.com -d www.stylelicense.com`
+  - 자동 갱신 확인: `sudo certbot renew --dry-run`
+- [ ] **DNS 설정**
+  - A 레코드: stylelicense.com → Backend EC2 Public IP
+- [ ] Static files 수집: `python manage.py collectstatic --noinput`
+- [ ] Gunicorn/uWSGI 설정 (workers: CPU 코어 * 2 + 1)
+- [ ] Sentry 에러 모니터링 (`SENTRY_DSN` 환경변수)
 
 ### Running in Production
 

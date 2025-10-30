@@ -580,32 +580,57 @@ describe('useAuth', () => {
 
 ### Production Checklist
 
-- [ ] 환경변수 설정 (`VITE_API_BASE_URL` 프로덕션 URL)
+- [ ] 환경변수 설정 (`VITE_API_BASE_URL=https://stylelicense.com`)
 - [ ] 빌드 오류 없음 (`npm run build`)
 - [ ] E2E 테스트 통과 (`npm run test:e2e`)
 - [ ] Lint 통과 (`npm run lint`)
-- [ ] S3 버킷 생성 (stylelicense-frontend)
-- [ ] CloudFront 배포 설정 (CDN)
-- [ ] Route 53 도메인 연결 (선택사항)
+- [ ] Backend EC2 Nginx 디렉토리 생성 (`/var/www/stylelicense/frontend/`)
+- [ ] DNS 설정 확인 (A 레코드: stylelicense.com → EC2 Public IP)
 - [ ] CORS 설정 확인 (Backend)
-- [ ] CSP 헤더 설정 (CloudFront)
+- [ ] CSP 헤더 설정 (Nginx)
 
-### Deployment to S3 + CloudFront
+### Deployment to Backend EC2 (Nginx Static Files)
 
 ```bash
 # 1. 프로덕션 빌드
 npm run build
 
-# 2. S3 업로드 (AWS CLI 사용)
-aws s3 sync dist/ s3://stylelicense-frontend --delete
+# 2. Backend EC2로 전송 (SCP)
+scp -r dist/* ubuntu@stylelicense.com:/var/www/stylelicense/frontend/
 
-# 3. CloudFront 캐시 무효화
-aws cloudfront create-invalidation \
-  --distribution-id E1234567890ABC \
-  --paths "/*"
+# 3. Nginx 재시작 (필요 시)
+ssh ubuntu@stylelicense.com 'sudo systemctl reload nginx'
 ```
 
 **빌드 결과**: `dist/` 폴더 (정적 파일)
+
+**Nginx 설정 예시** (Backend EC2의 `/etc/nginx/sites-available/stylelicense`):
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name stylelicense.com;
+
+    # Frontend 정적 파일 (SPA)
+    location / {
+        root /var/www/stylelicense/frontend;
+        try_files $uri $uri/ /index.html;
+
+        # 캐싱 설정 (정적 파일 최적화)
+        location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+    }
+
+    # Backend API 프록시
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+    }
+}
+```
+
+**자동화**: GitHub Actions에서 자동 실행됨 (`.github/workflows/frontend.yml`)
 
 ---
 
@@ -622,7 +647,7 @@ aws cloudfront create-invalidation \
 
 - **Google Analytics**: 페이지뷰, 사용자 행동
 - **Sentry**: JavaScript 에러 추적
-- **CloudWatch**: S3/CloudFront 로그 분석
+- **Nginx 로그**: Backend EC2의 `/var/log/nginx/access.log` 분석
 
 ---
 

@@ -312,17 +312,61 @@ pg_restore -U postgres -d style_license_db -t users backup.dump
 psql -U postgres style_license_db < backup.sql
 ```
 
-### AWS RDS 스냅샷
+### PostgreSQL 로컬 백업 전략
+
+**운영 환경: Backend EC2 로컬 PostgreSQL 15**
+
+#### 수동 백업
 
 ```bash
-# 스냅샷 생성
-aws rds create-db-snapshot \
-    --db-instance-identifier style-license-db \
-    --db-snapshot-identifier manual-snapshot-$(date +%Y%m%d)
+# 전체 DB 백업 (압축)
+pg_dump -U postgres -Fc style_license_db > /var/backups/postgresql/backup_$(date +%Y%m%d_%H%M%S).dump
 
-# 스냅샷 목록
-aws rds describe-db-snapshots \
-    --db-instance-identifier style-license-db
+# SQL 파일로 백업 (가독성 좋음)
+pg_dump -U postgres style_license_db > /var/backups/postgresql/backup_$(date +%Y%m%d).sql
+
+# 특정 테이블만 백업
+pg_dump -U postgres -t users -t styles style_license_db > users_styles_backup.sql
+```
+
+#### 자동 백업 스크립트 (Cron)
+
+**백업 스크립트** (`/usr/local/bin/postgres_backup.sh`):
+```bash
+#!/bin/bash
+DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR="/var/backups/postgresql"
+DB_NAME="style_license_db"
+S3_BUCKET="s3://stylelicense-db-backups"
+
+# 1. 로컬 백업
+pg_dump -U postgres -Fc $DB_NAME > $BACKUP_DIR/backup_$DATE.dump
+
+# 2. S3 업로드 (선택사항)
+aws s3 cp $BACKUP_DIR/backup_$DATE.dump $S3_BUCKET/
+
+# 3. 로컬 파일 7일 이상 된 백업 삭제
+find $BACKUP_DIR -name "backup_*.dump" -mtime +7 -delete
+
+echo "Backup completed: backup_$DATE.dump"
+```
+
+**Crontab 설정** (매일 새벽 3시):
+```bash
+0 3 * * * /usr/local/bin/postgres_backup.sh >> /var/log/postgres_backup.log 2>&1
+```
+
+#### 백업 검증
+
+```bash
+# 백업 파일 리스트
+ls -lh /var/backups/postgresql/
+
+# 백업 파일 무결성 확인
+pg_restore --list /var/backups/postgresql/backup_20250130.dump
+
+# S3 백업 확인 (선택사항)
+aws s3 ls s3://stylelicense-db-backups/
 ```
 
 ---

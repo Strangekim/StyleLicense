@@ -282,7 +282,7 @@
 - Google OAuth 로그인 처리
 - 이미지 업로드/다운로드
 - 실시간 생성 상태 폴링
-- **(운영 환경)** 정적 파일로 빌드되어 백엔드 EC2에서 함께 서빙
+- **(운영 환경)** Vite로 정적 파일 빌드 → Backend EC2의 Nginx에서 서빙
 
 #### Backend (Django)
 - REST API 서버
@@ -290,7 +290,8 @@
 - 비즈니스 로직 처리
 - RabbitMQ 작업 전송
 - 토큰 트랜잭션 관리
-- **(운영 환경)** Frontend 정적 파일 서빙
+- **(운영 환경)** Gunicorn으로 실행, Nginx Reverse Proxy 구성
+  - Nginx: Frontend 정적 파일 서빙 + Gunicorn 프록시 + Let's Encrypt SSL 종료
 
 #### PostgreSQL
 - 사용자, 모델, 이미지 메타데이터 저장
@@ -302,18 +303,28 @@
 - 비동기 작업 큐
 - `model_training` 큐: 모델 학습 작업
 - `image_generation` 큐: 이미지 생성 작업
+- **(운영 환경)** Backend EC2 인스턴스에서 Docker로 함께 실행
 
 #### Training Server
-- **(운영 환경)** 외부 임대 GPU 서버에서 실행
+- **(운영 환경)** RunPod RTX 4090 24GB VRAM GPU 서버 (1대)
+  - 인스턴스: RunPod GPU Pod (RTX 4090)
+  - 네트워크: Public IP를 통해 Backend API Webhook 호출
+  - 인증: INTERNAL_API_TOKEN 헤더로 인증
 - Stable Diffusion 기반 LoRA Fine-tuning
-- 학습 완료 시 Backend Webhook 호출
-- 모델 파일 S3 저장
+- 학습 진행 상황 30초마다 Backend API로 전송
+- 학습 완료 시 Backend Webhook 호출 (POST /api/styles/:id/callback)
+- 모델 파일 S3 저장 (AWS Access Key 사용)
 
 #### Inference Server
-- **(운영 환경)** 외부 임대 GPU 서버에서 실행
-- LoRA 가중치 로드 후 이미지 생성
-- 서명 자동 삽입 (PIL)
-- 생성 이미지 S3 저장
+- **(운영 환경)** RunPod RTX 4090 24GB VRAM GPU 서버 (1대)
+  - 인스턴스: RunPod GPU Pod (RTX 4090)
+  - 네트워크: Public IP를 통해 Backend API Webhook 호출
+  - 인증: INTERNAL_API_TOKEN 헤더로 인증
+- LoRA 가중치 로드 후 이미지 생성 (5~10초)
+- 생성 진행 상황 실시간 Backend API로 전송
+- 서명 자동 삽입 (PIL) - 작가 시그니처 워터마크
+- 생성 이미지 S3 저장 (AWS Access Key 사용)
+- 생성 완료 시 Backend Webhook 호출 (PATCH /api/generations/:id/callback)
 
 #### S3 (또는 호환 스토리지)
 - 학습 이미지 저장
@@ -1116,14 +1127,19 @@ POST /api/webhooks/inference/failed
 ```
 project-root/
 ├── apps/
-│   ├── backend/          # Django API 서버
-│   ├── frontend/         # Vue 3 SPA
+│   ├── backend/          # 개발용 Django API 서버
+│   ├── frontend/         # 개발용 Vue 3 SPA
 │   ├── training-server/  # LoRA 학습 서버
-│   ├── deploy/           # EC2 배포 서버
-│   └── inference-server/ # 이미지 생성 서버
+│   ├── inference-server/ # 이미지 생성 서버
+│   └── deploy/           # 🚀 EC2 배포 전용 독립 프로젝트
+│                         #    (backend 전문 + frontend 빌드 결과물)
 ├── docs/                 # 공통 문서
 └── design/               # 디자인 리소스
 ```
+
+**개발 vs 배포**:
+- `apps/backend/`, `apps/frontend/`: 개발용 코드 (이곳에서 개발)
+- `apps/deploy/`: 배포용 프로젝트 (EC2에 배포, backend 전문 + frontend/dist/ 포함)
 
 ### 9.2 공통 패턴
 - API 응답 형식: [docs/PATTERNS.md](docs/PATTERNS.md)
@@ -1409,37 +1425,90 @@ services:
 
 #### 인프라 (단일 서버 + 외부 GPU 서버 기준)
 - **Application Server**: EC2 (t3.medium 이상)
-  - **Backend (Django)**, **Frontend (정적 파일)**, **PostgreSQL (로컬 DB)**, **RabbitMQ**가 함께 실행됩니다.
-  - Nginx를 Reverse Proxy 및 정적 파일 서빙에 사용합니다.
-- **AI Servers**: 외부 임대 GPU 서버 (예: another-provider.com)
-  - **Training Server** 및 **Inference Server**가 실행됩니다.
-  - Backend 서버와는 Public IP로 통신합니다.
-- **Storage**: S3 (이미지, 모델 파일)
+  - **Backend (Django)**: Gunicorn으로 실행 (포트 8000)
+  - **Frontend (정적 파일)**: Vite 빌드 결과물 (dist/)
+  - **PostgreSQL (로컬 DB)**: 15.x, 로컬 설치 (포트 5432)
+  - **RabbitMQ**: Docker로 실행 (포트 5672)
+  - **Nginx**: Reverse Proxy + Frontend 정적 파일 서빙 + SSL 종료 (포트 80, 443)
+    - Let's Encrypt SSL 인증서 (Certbot 자동 갱신)
+    - 도메인: 별도 구매 예정 (예: stylelicense.com)
+- **AI Servers**: RunPod RTX 4090 24GB GPU Pod (2대)
+  - **Training Server** (1대): LoRA Fine-tuning 전용
+  - **Inference Server** (1대): 이미지 생성 전용
+  - Backend 서버와는 **Public IP + 방화벽 + INTERNAL_API_TOKEN**으로 통신
+    - Backend 도메인으로 Webhook 호출 (예: https://api.stylelicense.com)
+    - 방화벽: Backend EC2 Security Group에서 RunPod IP 허용 (포트 443)
+- **Storage**: AWS S3 (이미지, 모델 파일)
+  - Backend EC2: IAM Role로 S3 접근
+  - RunPod GPU: Access Key로 S3 접근
 
-### 14.3 CI/CD 파이프라인
+### 14.3 배포 프로젝트 (apps/deploy)
 
-#### GitHub Actions Workflow
+**apps/deploy**는 EC2 배포 전용 독립 프로젝트입니다. 이 폴더만 EC2에 clone/pull하면 전체 스택을 실행할 수 있습니다.
 
-**Backend**:
+#### 폴더 구조
 ```
-Push → Lint (Black, Pylint) → Test (pytest) → Build Docker → Deploy to EC2
+apps/deploy/
+├── backend/                    # Backend 전문 (Django 코드)
+├── frontend/dist/             # Frontend 빌드 결과물
+├── docker-compose.yml         # 로컬 개발용
+├── nginx.conf                 # Nginx 설정
+├── deploy.sh                  # 배포 스크립트
+└── scripts/
+    ├── setup.sh              # 초기 설정
+    └── backup.sh             # DB 백업
 ```
 
-**Frontend**:
-```
-Push → Lint (ESLint) → Test (Vitest) → Build (Vite) → Deploy to S3
+#### 배포 프로세스
+
+**초기 배포**:
+```bash
+# EC2에서
+git clone <repository-url>
+cd StyleLicense/apps/deploy
+./scripts/setup.sh  # PostgreSQL, RabbitMQ, Nginx, Gunicorn 설정
+./deploy.sh         # 초기 배포
 ```
 
-**AI Servers**:
-```
-Push → Lint (Black) → Test (pytest) → Build Docker → Deploy to EC2
+**코드 변경 시 배포**:
+```bash
+# 개발자 로컬에서
+# 1. Backend 변경 시: apps/backend/ 코드 수정 후 apps/deploy/backend/로 복사
+# 2. Frontend 변경 시: apps/frontend/ 코드 수정, 빌드 후 apps/deploy/frontend/dist/로 복사
+git add apps/deploy/
+git commit -m "배포: 변경사항"
+git push origin main
+
+# EC2에서
+cd /path/to/StyleLicense/apps/deploy
+git pull origin main
+./deploy.sh  # 자동으로 마이그레이션, Static 수집, 서비스 재시작
 ```
 
-#### 배포 전략
-- **Blue-Green Deployment**: Backend (향후)
-- **Rolling Update**: AI Servers (Worker 순차 재시작)
+#### deploy.sh 스크립트 역할
+```bash
+1. PostgreSQL 마이그레이션 실행 (python manage.py migrate)
+2. Django Static 파일 수집 (collectstatic)
+3. Frontend 빌드 파일 Nginx 디렉토리로 복사
+4. Gunicorn 재시작
+5. RabbitMQ 상태 확인
+6. Nginx 재시작
+7. Health Check
+```
 
-### 14.4 환경 변수 관리
+### 14.4 CI/CD (향후 계획)
+
+**현재**: 수동/반자동 배포 (`deploy.sh` 스크립트 사용)
+
+**향후 도입 예정**:
+- GitHub Actions 또는 GitLab CI
+- Backend: Lint → Test → Build → Deploy to EC2
+- Frontend: Lint → Test → Build → Deploy to EC2
+- AI Servers: Lint → Test → Build → Deploy to RunPod
+- Blue-Green Deployment (Backend)
+- Rolling Update (AI Servers)
+
+### 14.5 환경 변수 관리
 
 #### Development
 - `.env.example` 템플릿 제공
@@ -1472,22 +1541,32 @@ project-root/
 │   ├── DEPLOYMENT.md      # 배포 가이드
 │   └── PATTERNS.md        # 코드 패턴
 └── apps/
-    ├── backend/
+    ├── backend/           # 개발용 Backend 코드
     │   ├── README.md      # Backend 아키텍처
     │   ├── PLAN.md        # Backend 작업 계획
     │   └── CODE_GUIDE.md  # Backend 코드 가이드
-    ├── frontend/
+    ├── frontend/          # 개발용 Frontend 코드
     │   ├── README.md
     │   ├── PLAN.md
     │   └── CODE_GUIDE.md
-    ├── training-server/
+    ├── training-server/   # 학습 서버 코드
     │   ├── README.md
     │   ├── PLAN.md
     │   └── CODE_GUIDE.md
-    └── inference-server/
-        ├── README.md
-        ├── PLAN.md
-        └── CODE_GUIDE.md
+    ├── inference-server/  # 추론 서버 코드
+    │   ├── README.md
+    │   ├── PLAN.md
+    │   └── CODE_GUIDE.md
+    └── deploy/            # 🚀 EC2 배포 전용 프로젝트
+        ├── README.md      # 배포 가이드 (초기 설정, deploy.sh 설명)
+        ├── backend/       # Backend 코드 전문 (apps/backend/ 복사본)
+        ├── frontend/      # Frontend 빌드 결과물 (dist/)
+        ├── docker-compose.yml
+        ├── nginx.conf
+        ├── deploy.sh      # 배포 스크립트
+        └── scripts/
+            ├── setup.sh   # 초기 설정 (PostgreSQL, RabbitMQ, Nginx)
+            └── backup.sh  # DB 백업
 ```
 
 ### 15.2 문서 작성 규칙

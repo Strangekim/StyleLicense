@@ -188,9 +188,9 @@ AWS_SECRET_ACCESS_KEY=your_secret
 AWS_STORAGE_BUCKET_NAME=stylelicense-media
 AWS_S3_REGION_NAME=ap-northeast-2
 
-# Backend API (운영 서버의 Public IP 또는 도메인)
-BACKEND_API_URL=http://<your-backend-server-ip>:8000
-INTERNAL_API_TOKEN=your_internal_token
+# Backend API (운영 서버의 도메인 - HTTPS 사용)
+BACKEND_API_URL=https://stylelicense.com
+INTERNAL_API_TOKEN=your_internal_token  # 32자 이상 랜덤 UUID
 
 # GPU
 CUDA_VISIBLE_DEVICES=0
@@ -250,13 +250,28 @@ pylint inference/ services/ consumer/ watermark/
 
 ### Production Checklist
 
-- [ ] CUDA 11.8+ 설치
-- [ ] NVIDIA Docker runtime 설정
-- [ ] RabbitMQ 클러스터 연결
-- [ ] S3 버킷 설정 및 접근을 위한 **AWS Access Key 환경변수** 확인
-- [ ] `INTERNAL_API_TOKEN` 환경변수 설정
-- [ ] GPU 메모리 프로파일링
-- [ ] Font 파일 설치 (워터마크용)
+**GPU 서버: RunPod RTX 4090 24GB**
+
+- [ ] **RunPod GPU Pod 생성**
+  - GPU: RTX 4090 (24GB VRAM)
+  - Template: Custom Docker Image
+  - Image: `<registry>/stylelicense-inference:latest`
+- [ ] CUDA 11.8+ 포함된 Docker 이미지 사용
+- [ ] **RabbitMQ 연결 설정**
+  - `RABBITMQ_HOST=<Backend-EC2-Public-IP>`
+  - Backend EC2의 RabbitMQ 포트(5672)를 Public으로 노출 또는 VPN 사용
+  - 방화벽: RunPod Pod IP를 Backend EC2 Security Group에 허용
+- [ ] **S3 버킷 설정**
+  - 생성 이미지: Public Bucket (`stylelicense-generations`)
+  - **AWS Access Key 환경변수** 설정 (RunPod Pod에서 S3 접근)
+- [ ] **Backend API 연결 설정**
+  - `BACKEND_API_URL=https://stylelicense.com` (도메인 사용)
+  - `INTERNAL_API_TOKEN=<32자-UUID>` (Webhook 인증용)
+  - Backend EC2 Security Group: 443 포트 허용 (RunPod IP 또는 전체)
+- [ ] GPU 메모리 프로파일링 (24GB 이내 사용)
+- [ ] 로깅 설정 (RunPod 콘솔 또는 CloudWatch)
+- [ ] Font 파일 설치 (워터마크용 - Docker 이미지에 포함)
+- [ ] 동시 생성 제한 설정 (`MAX_CONCURRENT_GENERATIONS=10`)
 - [ ] 로그 수집 (CloudWatch, Sentry)
 - [ ] Model caching 전략 수립
 
