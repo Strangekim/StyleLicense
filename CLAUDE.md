@@ -162,7 +162,7 @@ CP-M2-3 → Reference: apps/backend/PLAN.md#m2-token-service
 ```
 apps/backend/README.md (아키텍처 파악)
 apps/backend/PLAN.md#m2-token-service (세부 Task)
-apps/backend/GUIDE.md (코드 패턴)
+apps/backend/CODE_GUIDE.md (코드 패턴)
 ```
 
 #### 4. Find Subtask
@@ -222,12 +222,12 @@ python manage.py test app.tests.test_token_service
 
 ### 🎯 Token Efficiency
 - **Always start with TECHSPEC.md** (한 번만 읽기)
-- **Load GUIDE.md once per app** (여러 Task에 재사용)
+- **Load CODE_GUIDE.md once per app** (여러 Task에 재사용)
 - **Lazy load docs/** (필요할 때만 읽기)
-- **Don't load cross-app context** (Backend 작업 시 Frontend GUIDE 읽지 않기)
+- **Don't load cross-app context** (Backend 작업 시 Frontend CODE_GUIDE 읽지 않기)
 
 ### 📏 Code Quality
-1. **Follow GUIDE.md patterns** - 일관된 코드 스타일
+1. **Follow CODE_GUIDE.md patterns** - 일관된 코드 스타일
 2. **Run format & lint** - 코드 품질 보장
 3. **Write tests first** - TDD 방식 (해당하는 경우)
 4. **Check exit criteria** - Task 완료 조건 확인

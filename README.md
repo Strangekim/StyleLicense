@@ -20,22 +20,22 @@ project-root/
     ├── backend/
     │   ├── README.md                # Backend 개요
     │   ├── PLAN.md                  # Backend Task 추적
-    │   └── GUIDE.md                 # Backend 코드 가이드
+    │   └── CODE_GUIDE.md            # Backend 코드 가이드
     │
     ├── frontend/
     │   ├── README.md                # Frontend 개요
     │   ├── PLAN.md                  # Frontend Task 추적
-    │   └── GUIDE.md                 # Frontend 코드 가이드
+    │   └── CODE_GUIDE.md            # Frontend 코드 가이드
     │
     ├── training-server/
     │   ├── README.md                # Training Server 개요
     │   ├── PLAN.md                  # Training Task 추적
-    │   └── GUIDE.md                 # Training 코드 가이드
+    │   └── CODE_GUIDE.md            # Training 코드 가이드
     │
     ├── inference-server/
     │   ├── README.md                # Inference Server 개요
     │   ├── PLAN.md                  # Inference Task 추적
-    │   └── GUIDE.md                 # Inference 코드 가이드
+    │   └── CODE_GUIDE.md            # Inference 코드 가이드
     │
     └── deploy/
         ├── README.md                # 배포 가이드

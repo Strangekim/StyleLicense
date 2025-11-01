@@ -268,9 +268,9 @@
 ```
 ┌─────────────┐    HTTPS    ┌──────────────┐
 │  Frontend   │───────────  │  API Gateway │──┬──▶ Backend Server (Session)
-│   (Vue)     │             │   (Django)   │  ├──▶ Model Server (AI API)
-└─────────────┘             └──────────────┘  ├──▶ RabbitMQ
-                                              ├──▶ GPU Worker (LoRA)
+│   (Vue)     │             │   (Django)   │  ├──▶ Training Server
+└─────────────┘             └──────────────┘  ├──▶ Inference Server
+                                              ├──▶ RabbitMQ
                                               └──▶ PostgreSQL / S3
 
 ```
@@ -297,7 +297,11 @@
 - 사용자, 모델, 이미지 메타데이터 저장
 - 토큰 트랜잭션 기록
 - ACID 트랜잭션 보장
-- **(운영 환경)** 백엔드 EC2 인스턴스에 로컬로 설치 및 운영
+- **(운영 환경)** Backend EC2 인스턴스에서 Docker 컨테이너로 실행
+  - 이미지: postgres:15
+  - 볼륨 마운트: 데이터 영속성 보장
+  - 네트워크: Backend와 동일 Docker 네트워크로 격리
+  - 포트: 5432 (내부 통신)
 
 #### RabbitMQ
 - 비동기 작업 큐
@@ -312,7 +316,7 @@
   - 인증: INTERNAL_API_TOKEN 헤더로 인증
 - Stable Diffusion 기반 LoRA Fine-tuning
 - 학습 진행 상황 30초마다 Backend API로 전송
-- 학습 완료 시 Backend Webhook 호출 (POST /api/styles/:id/callback)
+- 학습 완료 시 Backend Webhook 호출 (POST /api/webhooks/training/complete)
 - 모델 파일 S3 저장 (AWS Access Key 사용)
 
 #### Inference Server
@@ -324,7 +328,7 @@
 - 생성 진행 상황 실시간 Backend API로 전송
 - 서명 자동 삽입 (PIL) - 작가 시그니처 워터마크
 - 생성 이미지 S3 저장 (AWS Access Key 사용)
-- 생성 완료 시 Backend Webhook 호출 (PATCH /api/generations/:id/callback)
+- 생성 완료 시 Backend Webhook 호출 (POST /api/webhooks/inference/complete)
 
 #### S3 (또는 호환 스토리지)
 - 학습 이미지 저장
@@ -1147,10 +1151,10 @@ project-root/
 - 에러 코드 규칙: [docs/PATTERNS.md](docs/PATTERNS.md)
 
 > **상세 코드 가이드**:
-> - Backend: [apps/backend/GUIDE.md](apps/backend/GUIDE.md)
-> - Frontend: [apps/frontend/GUIDE.md](apps/frontend/GUIDE.md)
-> - Training: [apps/training-server/GUIDE.md](apps/training-server/GUIDE.md)
-> - Inference: [apps/inference-server/GUIDE.md](apps/inference-server/GUIDE.md)
+> - Backend: [apps/backend/CODE_GUIDE.md](apps/backend/CODE_GUIDE.md)
+> - Frontend: [apps/frontend/CODE_GUIDE.md](apps/frontend/CODE_GUIDE.md)
+> - Training: [apps/training-server/CODE_GUIDE.md](apps/training-server/CODE_GUIDE.md)
+> - Inference: [apps/inference-server/CODE_GUIDE.md](apps/inference-server/CODE_GUIDE.md)
 
 
 ---
@@ -1427,7 +1431,9 @@ services:
 - **Application Server**: EC2 (t3.medium 이상)
   - **Backend (Django)**: Gunicorn으로 실행 (포트 8000)
   - **Frontend (정적 파일)**: Vite 빌드 결과물 (dist/)
-  - **PostgreSQL (로컬 DB)**: 15.x, 로컬 설치 (포트 5432)
+  - **PostgreSQL**: Docker 컨테이너로 실행 (이미지: postgres:15, 포트 5432)
+    - 볼륨 마운트: `/var/lib/postgresql/data` (데이터 영속성)
+    - 네트워크: Backend와 동일 Docker 네트워크 격리
   - **RabbitMQ**: Docker로 실행 (포트 5672)
   - **Nginx**: Reverse Proxy + Frontend 정적 파일 서빙 + SSL 종료 (포트 80, 443)
     - Let's Encrypt SSL 인증서 (Certbot 자동 갱신)
@@ -1466,7 +1472,7 @@ apps/deploy/
 # EC2에서
 git clone <repository-url>
 cd StyleLicense/apps/deploy
-./scripts/setup.sh  # PostgreSQL, RabbitMQ, Nginx, Gunicorn 설정
+./scripts/setup.sh  # PostgreSQL(Docker), RabbitMQ(Docker), Nginx, Gunicorn 설정
 ./deploy.sh         # 초기 배포
 ```
 
@@ -1565,7 +1571,7 @@ project-root/
         ├── nginx.conf
         ├── deploy.sh      # 배포 스크립트
         └── scripts/
-            ├── setup.sh   # 초기 설정 (PostgreSQL, RabbitMQ, Nginx)
+            ├── setup.sh   # 초기 설정 (PostgreSQL(Docker), RabbitMQ(Docker), Nginx)
             └── backup.sh  # DB 백업
 ```
 

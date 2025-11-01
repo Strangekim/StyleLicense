@@ -141,7 +141,7 @@ Backend → RabbitMQ: 생성 작업 발행
 RabbitMQ → Inference Server: 작업 수신
 Inference Server: 이미지 생성 + 서명 삽입
 Inference Server → S3: 이미지 저장
-Inference Server → Backend: POST /api/webhooks/generation/complete
+Inference Server → Backend: POST /api/webhooks/inference/complete
 Backend → Frontend: 이미지 URL 반환
 ```
 

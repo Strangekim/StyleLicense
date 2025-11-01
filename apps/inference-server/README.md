@@ -99,8 +99,8 @@ Image Generator (이미지 생성)
   ├─ 이미지 생성 (50 steps)
   └─ 진행률 리포팅
   ↓
-Watermark Inserter (서명 삽입)
-  ├─ 아티스트 이름 추가
+Watermark Inserter (워터마크 삽입)
+  ├─ 작가 서명(시그니처) 추가
   ├─ 위치/투명도 설정
   └─ 이미지 합성
   ↓
@@ -112,7 +112,7 @@ Webhook Service (생성 완료 통보)
 **주요 컴포넌트:**
 - `GenerationConsumer`: RabbitMQ에서 생성 태스크 수신 (최대 10개 동시)
 - `ImageGenerator`: Stable Diffusion v1.5 + LoRA 추론
-- `WatermarkInserter`: PIL 기반 시그니처 삽입
+- `WatermarkInserter`: PIL 기반 작가 서명(시그니처) 워터마크 삽입
 - `S3Service`: LoRA 모델/이미지 다운로드/업로드
 - `WebhookService`: Backend API로 진행률/결과 전송
 
@@ -124,14 +124,16 @@ Backend → RabbitMQ: 생성 태스크 발행
 RabbitMQ → Inference Server: 태스크 수신
 Inference Server → S3: LoRA weights 다운로드
 Inference Server: Stable Diffusion 추론 (50 steps)
-Inference Server → Backend: 진행률 리포팅 (0%, 25%, 50%, 75%, 90%)
-Inference Server: 워터마크 삽입 (아티스트 서명)
+Inference Server → Backend: 진행률 리포팅 (0%, 25%, 50%, 75%, 90%, PATCH /api/webhooks/inference/progress)
+Inference Server: 작가 서명(워터마크) 자동 삽입
 Inference Server → S3: 생성된 이미지 업로드 (.png)
-Inference Server → Backend: POST /api/webhooks/generation/complete
+Inference Server → Backend: POST /api/webhooks/inference/complete
 Backend → Frontend: 이미지 URL 반환
 ```
 
-**생성 파라미터 (TECHSPEC.md 기반):**
+**상세 API 명세**: [docs/API.md#10-webhook-api](../../docs/API.md#10-webhook-api)
+
+**생성 파라미터 (TECHSPEC.md 및 PLAN.md 기반):**
 - Base Model: Stable Diffusion v1.5
 - Sampling Steps: 50
 - Guidance Scale: 7.5

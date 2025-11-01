@@ -45,9 +45,9 @@
 
 ---
 
-## 1. 개요
+## 1. 개요 (Overview)
 
-### 1.1 공통 규칙
+### 1.1 공통 규칙 (Common Rules)
 
 #### Base URL (호스트만 포함)
 - **개발**: `http://localhost:8000`
@@ -128,7 +128,7 @@ Content-Type: application/json
 
 ---
 
-## 2. 인증 API
+## 2. 인증 API (Authentication)
 
 ### 2.1 Google OAuth 로그인 시작
 
@@ -241,7 +241,7 @@ X-CSRFToken: xyz789...
 
 ---
 
-## 3. 사용자 API
+## 3. 사용자 API (Users)
 
 ### 3.1 사용자 프로필 조회
 
@@ -353,7 +353,7 @@ X-CSRFToken: xyz789...
 
 ---
 
-## 4. 토큰 API
+## 4. 토큰 API (Tokens)
 
 ### 4.1 토큰 잔액 조회
 
@@ -509,7 +509,7 @@ X-CSRFToken: xyz789...
 
 ---
 
-## 5. 스타일 API
+## 5. 스타일 API (Styles)
 
 ### 5.1 스타일 목록 조회
 
@@ -790,7 +790,7 @@ GET /api/styles/me
 
 ---
 
-## 6. 생성 API
+## 6. 생성 API (Generations)
 
 ### 6.1 이미지 생성 요청
 
@@ -1076,7 +1076,7 @@ X-CSRFToken: xyz789...
 
 ---
 
-## 7. 커뮤니티 API
+## 7. 커뮤니티 API (Community)
 
 ### 7.1 팔로우/언팔로우
 
@@ -1336,7 +1336,7 @@ X-CSRFToken: xyz789...
 
 ---
 
-## 8. 검색 API
+## 8. 검색 API (Search)
 
 ### 8.1 통합 검색
 
@@ -1405,7 +1405,7 @@ GET /api/search?q=watercolor&type=all     # 통합 (기본값)
 
 ---
 
-## 9. 알림 API
+## 9. 알림 API (Notifications)
 
 ### 9.1 알림 목록 조회
 
@@ -1510,7 +1510,7 @@ X-CSRFToken: xyz789...
 
 ---
 
-## 10. Webhook API
+## 10. Webhook API (Internal)
 
 **⚠️ 내부 서버 간 통신 전용, 외부 접근 차단**
 
@@ -1707,12 +1707,13 @@ Content-Type: application/json
 
 #### 스타일 학습 진행
 ```http
-PATCH /api/styles/:id
+PATCH /api/webhooks/training/progress
 Authorization: Bearer <INTERNAL_API_TOKEN>
 X-Request-Source: training-server
 Content-Type: application/json
 
 {
+  "style_id": 10,
   "progress": {
     "current_epoch": 50,
     "total_epochs": 100,
@@ -1724,12 +1725,13 @@ Content-Type: application/json
 
 #### 이미지 생성 진행
 ```http
-PATCH /api/generations/:id
+PATCH /api/webhooks/inference/progress
 Authorization: Bearer <INTERNAL_API_TOKEN>
 X-Request-Source: inference-server
 Content-Type: application/json
 
 {
+  "generation_id": 500,
   "progress": {
     "current_step": 38,
     "total_steps": 50,
@@ -1755,7 +1757,7 @@ Content-Type: application/json
 
 ---
 
-## 11. 에러 코드
+## 11. 에러 코드 (Error Codes)
 
 ### 11.1 HTTP 상태 코드
 
@@ -1827,7 +1829,7 @@ Content-Type: application/json
 
 ---
 
-## 12. Rate Limiting
+## 12. Rate Limiting (요청 제한)
 
 ### 12.1 제한 정책
 

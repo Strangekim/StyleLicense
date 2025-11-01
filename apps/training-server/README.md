@@ -115,14 +115,16 @@ Backend → RabbitMQ: 학습 태스크 발행
 RabbitMQ → Training Server: 태스크 수신
 Training Server → S3: 이미지 다운로드 (10-30장)
 Training Server: LoRA Fine-tuning (100-500 epochs)
-Training Server → Backend: 진행률 리포팅 (30초마다)
+Training Server → Backend: 진행률 리포팅 (30초마다, PATCH /api/webhooks/training/progress)
 Training Server → S3: 체크포인트 저장 (10 epoch마다)
 Training Server → S3: 최종 모델 업로드 (.safetensors)
 Training Server → Backend: POST /api/webhooks/training/complete
 Backend → Frontend: 학습 완료 알림
 ```
 
-**학습 파라미터 (TECHSPEC.md 기반):**
+**상세 API 명세**: [docs/API.md#10-webhook-api](../../docs/API.md#10-webhook-api)
+
+**학습 파라미터 (TECHSPEC.md 및 PLAN.md 기반):**
 - Base Model: Stable Diffusion v1.5
 - LoRA Rank: 8
 - Learning Rate: 1e-4
