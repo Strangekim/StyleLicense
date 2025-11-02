@@ -855,8 +855,8 @@ POST /api/webhooks/inference/failed
 ```
 
 **진행 상황 업데이트**:
-- Training Server → `PATCH /api/styles/:id` (progress JSONB 업데이트)
-- Inference Server → `PATCH /api/generations/:id` (progress JSONB 업데이트)
+- Training Server → `PATCH /api/webhooks/training/progress` (progress JSONB 업데이트)
+- Inference Server → `PATCH /api/webhooks/inference/progress` (progress JSONB 업데이트)
 
 **상세 명세**: [docs/API.md#webhooks](docs/API.md#webhooks)
 

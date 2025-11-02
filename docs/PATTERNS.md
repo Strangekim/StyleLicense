@@ -59,7 +59,7 @@
     "name": "Watercolor Dreams",
     "description": "A beautiful watercolor style",
     "status": "COMPLETED",
-    "price_per_image": 100,
+    "generation_cost_tokens": 100,
     "artist_name": "John Doe",
     "created_at": "2025-01-15T10:30:00.000Z",
     "updated_at": "2025-01-20T14:45:00.000Z"
@@ -145,7 +145,7 @@ HTTP/1.1 422 Unprocessable Entity
     "code": "VALIDATION_ERROR",
     "message": "입력값 검증에 실패했습니다",
     "details": {
-      "price_per_image": "이미지당 가격은 최소 10토큰이어야 합니다",
+      "generation_cost_tokens": "이미지당 가격은 최소 10토큰이어야 합니다",
       "name": "스타일 이름은 필수입니다"
     }
   }
@@ -277,7 +277,7 @@ Content-Type: application/json
 
 ```
 ✅ Good:
-first_name, last_name, price_per_image, created_at
+first_name, last_name, generation_cost_tokens, created_at
 
 ❌ Bad:
 firstName, FirstName, pricePerImage, createdAt
@@ -663,7 +663,7 @@ CREATE TABLE styles (
     artist_id UUID NOT NULL,
     name VARCHAR(200) NOT NULL,
     description TEXT,
-    price_per_image INTEGER DEFAULT 100,
+    generation_cost_tokens INTEGER DEFAULT 100,
     is_active BOOLEAN DEFAULT TRUE,
     is_public BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL,
@@ -713,7 +713,7 @@ CONSTRAINT uk_users_provider_userid UNIQUE (provider, provider_user_id)
 
 -- Check: ck_{table}_{column}_{condition}
 CONSTRAINT ck_styles_price_positive
-    CHECK (price_per_image > 0)
+    CHECK (generation_cost_tokens > 0)
 ```
 
 ---

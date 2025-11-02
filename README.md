@@ -8,7 +8,8 @@ project-root/
 ├── TECHSPEC.md                       # 전체 시스템 Context (요약본)
 ├── PLAN.md                          # 전체 Milestone 추적
 ├── docs/
-│   ├── DATABASE.md                  # DB 스키마 상세
+│   ├── database/
+│   │   └── README.md                # DB 스키마 상세
 │   ├── API.md                       # API 명세
 │   ├── SECURITY.md                  # 보안 정책
 │   ├── DEPLOYMENT.md                # 배포 가이드

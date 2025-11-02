@@ -164,7 +164,7 @@ Backend EC2 (t3.medium)
   - Inbound: RabbitMQ 큐 소비 (Backend 연결)
   - Outbound: Backend Webhook 호출 (Public IP, HTTPS 443)
     - 방화벽: Backend 도메인으로만 통신
-    - 인증: `X-Internal-Token: INTERNAL_API_TOKEN` 헤더
+    - 인증: `Authorization: Bearer <INTERNAL_API_TOKEN>` 헤더
   - Outbound: S3 업로드 (AWS Access Key 사용)
 
 - **DNS 설정**:

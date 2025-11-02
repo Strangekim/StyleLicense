@@ -273,13 +273,19 @@ python manage.py migrate app 0002  # 0002로 롤백
 
 전체 스키마는 **[docs/database/README.md](../../docs/database/README.md)** 참조.
 
-**주요 모델 (13개):**
-- **Auth**: User, UserProfile
-- **Token**: TokenPackage, TokenTransaction
-- **Style**: StyleModel, TrainingDataset, TrainingImage
-- **Generation**: GenerationRequest, GeneratedImage
-- **Community**: CommunityPost, PostLike, Comment
-- **System**: Notification
+**주요 모델 (15개 테이블):**
+- **Auth**: users, artists
+- **Token**: transactions, purchases
+- **Style**: styles, artworks
+- **Generation**: generations
+- **Community**: follows, likes, comments
+- **Tagging**: tags, style_tags, artwork_tags, generation_tags
+- **System**: notifications
+
+**중요 필드 설명**:
+- `users.role`: 'user' 또는 'artist' (작가 권한 구분)
+- `styles.generation_cost_tokens`: 이미지 1장당 토큰 비용
+- `transactions`: sender_id/receiver_id/related_generation_id 조합으로 거래 유형 판별 (transaction_type 컬럼 없음)
 
 ---
 

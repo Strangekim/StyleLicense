@@ -87,7 +87,7 @@ CP-M1-1 → CP-M1-2 → CP-M1-3
   - `python manage.py migrate` succeeds
   - All models visible in Django admin
   - Can create/read/update/delete via admin panel
-- **Reference**: [docs/DATABASE.md](docs/DATABASE.md)
+- **Reference**: [docs/database/README.md](docs/database/README.md)
 
 #### CP-M1-3: Authentication Flow
 - **Status**: IN_PROGRESS

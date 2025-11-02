@@ -5,7 +5,10 @@
       "mcp__context7__get-library-docs",
       "Bash(python:*)",
       "Bash(rm:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(iconv:*)",
+      "Bash(CODE_GUIDE_utf8.md)",
+      "Bash(test:*)"
     ],
     "deny": [],
     "ask": []

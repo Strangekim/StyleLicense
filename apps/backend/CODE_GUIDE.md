@@ -112,7 +112,7 @@ class StyleModel(models.Model):
         default='DRAFT',
         db_index=True  # 자주 필터링
     )
-    price_per_image = models.IntegerField(default=100)  # 토큰 단위
+    generation_cost_tokens = models.IntegerField(default=100)  # 토큰 단위
     model_file_url = models.URLField(blank=True, null=True)
     
     # Timestamps
@@ -169,9 +169,20 @@ class TokenTransaction(models.Model):
         return balance
     
     def is_refundable(self):
-        """환불 가능 여부 확인"""
+        """
+        환불 가능 여부 확인
+
+        Note: transaction_type은 DB 컬럼이 아닌 Serializer에서 동적 계산하는 필드입니다.
+        실제 구현 시에는 sender_id, receiver_id, related_generation_id 조합으로 판별합니다.
+        """
+        # 이미지 생성 결제 건만 환불 가능
+        is_generation_payment = (
+            self.sender_id is not None and
+            self.receiver_id is not None and
+            self.related_generation_id is not None
+        )
         return (
-            self.transaction_type == 'CONSUME' and
+            is_generation_payment and
             (datetime.now() - self.created_at).days < 7
         )
 ```
@@ -207,14 +218,14 @@ class StyleModelSerializer(serializers.ModelSerializer):
             'name',
             'description',
             'status',
-            'price_per_image',
+            'generation_cost_tokens',
             'artist_name',  # read-only
             'training_images',  # write-only
             'created_at',
         ]
         read_only_fields = ['id', 'status', 'created_at']
-    
-    def validate_price_per_image(self, value):
+
+    def validate_generation_cost_tokens(self, value):
         """가격 검증"""
         if value < 10:
             raise serializers.ValidationError(
@@ -301,7 +312,7 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
             for field_name in existing - allowed:
                 self.fields.pop(field_name)
 
-# Usage: GET /api/styles/?fields=id,name,price_per_image
+# Usage: GET /api/styles/?fields=id,name,generation_cost_tokens
 class StyleModelSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = StyleModel
@@ -336,11 +347,11 @@ class StyleViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """사용자별 필터링"""
         queryset = super().get_queryset()
-        
+
         # 작가는 자신의 스타일 전체 조회
-        if self.request.user.is_artist:
+        if self.request.user.role == 'artist':
             return queryset.filter(artist=self.request.user)
-        
+
         # 일반 사용자는 완료된 스타일만 조회
         return queryset.filter(status='COMPLETED')
     
@@ -504,15 +515,17 @@ class TokenService:
         # 차감
         user.token_balance -= amount
         user.save()
-        
+
         # 거래 기록
+        # Note: transaction_type 컬럼은 DB에 없으며,
+        # sender_id/receiver_id/related_generation_id 조합으로 유형을 판별합니다.
         TokenTransaction.objects.create(
-            user=user,
-            amount=-amount,
-            transaction_type='CONSUME',
-            description=reason
+            sender_id=user_id,
+            receiver_id=None,  # 플랫폼으로 지급
+            amount=amount,
+            memo=reason
         )
-        
+
         return True
     
     @staticmethod
@@ -523,12 +536,14 @@ class TokenService:
         
         user.token_balance += amount
         user.save()
-        
+
+        # 환불 거래 기록
         TokenTransaction.objects.create(
-            user=user,
+            sender_id=None,  # 플랫폼에서 발행
+            receiver_id=user_id,
             amount=amount,
-            transaction_type='REFUND',
-            description=reason
+            memo=reason,
+            refunded=True
         )
 ```
 
@@ -543,11 +558,11 @@ class GenerationViewSet(viewsets.ModelViewSet):
     def create(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         style_id = serializer.validated_data['style_id']
         style = StyleModel.objects.get(id=style_id)
-        cost = style.price_per_image
-        
+        cost = style.generation_cost_tokens
+
         # 1. 토큰 차감 (Service)
         token_service = TokenService()
         if not token_service.consume_tokens(
@@ -763,14 +778,21 @@ class WebhookAuthMiddleware:
     def __call__(self, request):
         # Webhook 경로만 검증
         if request.path.startswith('/api/webhooks/'):
-            token = request.headers.get('X-Internal-Token')
-            
+            # Authorization: Bearer <TOKEN> 파싱
+            auth_header = request.headers.get('Authorization', '')
+            if not auth_header.startswith('Bearer '):
+                return JsonResponse(
+                    {'error': 'Unauthorized'},
+                    status=401
+                )
+
+            token = auth_header.replace('Bearer ', '')
             if token != settings.INTERNAL_API_TOKEN:
                 return JsonResponse(
                     {'error': 'Unauthorized'},
                     status=401
                 )
-        
+
         return self.get_response(request)
 ```
 
@@ -793,7 +815,7 @@ class IsArtist(permissions.BasePermission):
         return (
             request.user and
             request.user.is_authenticated and
-            request.user.is_artist
+            request.user.role == 'artist'
         )
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
@@ -1039,7 +1061,7 @@ def artist(db):
         username='artist',
         email='artist@example.com',
         password='password123',
-        is_artist=True,
+        role='artist',
         token_balance=5000
     )
 
@@ -1051,7 +1073,7 @@ def style_model(db, artist):
         name='Test Style',
         description='Test description',
         status='COMPLETED',
-        price_per_image=100,
+        generation_cost_tokens=100,
         model_file_url='https://s3.amazonaws.com/test.safetensors'
     )
 
@@ -1148,21 +1170,21 @@ class TestStyleAPI:
         data = {
             'name': 'New Style',
             'description': 'Description',
-            'price_per_image': 150
+            'generation_cost_tokens': 150
         }
-        
+
         response = api_client.post('/api/styles/', data)
-        
+
         assert response.status_code == status.HTTP_403_FORBIDDEN
-    
+
     def test_create_style_success(self, api_client, artist):
         """작가는 스타일 생성 가능"""
         api_client.force_authenticate(user=artist)
-        
+
         data = {
             'name': 'New Style',
             'description': 'Description',
-            'price_per_image': 150
+            'generation_cost_tokens': 150
         }
         
         response = api_client.post('/api/styles/', data)

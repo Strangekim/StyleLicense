@@ -15,7 +15,7 @@
 3. **Read [PLAN.md](PLAN.md)** - 현재 진행 중인 Milestone 확인
 
 **항상 참조:**
-- [docs/DATABASE.md](docs/DATABASE.md) - DB 스키마 확인 시
+- [docs/database/README.md](docs/database/README.md) - DB 스키마 확인 시
 - [docs/API.md](docs/API.md) - API 엔드포인트 구현 시
 - [docs/PATTERNS.md](docs/PATTERNS.md) - 공통 코드 패턴 확인 시
 
