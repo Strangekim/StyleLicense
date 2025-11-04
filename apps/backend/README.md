@@ -2,14 +2,14 @@
 
 ## Overview
 
-Django REST Framework 기반의 Style License API 서버입니다. 사용자 인증, 스타일 모델 관리, 이미지 생성 요청, 토큰 시스템, 커뮤니티 기능을 제공하며, RabbitMQ를 통해 AI 서버들과 비동기 통신합니다.
+Style License API server based on Django REST Framework. Provides user authentication, style model management, image generation requests, token system, and community features, communicating asynchronously with AI servers via RabbitMQ.
 
-**핵심 역할:**
-- RESTful API 제공 (9개 API 그룹)
-- RabbitMQ Producer (학습/생성 태스크 전송)
-- Webhook Receiver (AI 서버로부터 진행상황/결과 수신)
-- PostgreSQL 데이터 관리
-- 세션 기반 인증 (Google OAuth)
+**Core Responsibilities:**
+- Provide RESTful API (9 API groups)
+- RabbitMQ Producer (send training/generation tasks)
+- Webhook Receiver (receive progress/results from AI servers)
+- PostgreSQL data management
+- Session-based authentication (Google OAuth)
 
 ---
 
@@ -100,50 +100,50 @@ apps/backend/
 
 ### Service Layer Pattern
 
-비즈니스 로직을 View에서 분리하여 `services/` 디렉토리에 위치시킵니다.
+Business logic is separated from Views and placed in the `services/` directory.
 
 ```
-View (HTTP Request/Response) 
+View (HTTP Request/Response)
   ↓
 Service (Business Logic)
   ↓
 Model (Data Access)
 ```
 
-**주요 Service:**
-- `TokenService`: 토큰 소비/환불 (원자성 보장)
-- `RabbitMQService`: AI 서버로 태스크 전송
-- `S3Service`: 이미지/모델 파일 업로드/다운로드
-- `NotificationService`: 알림 생성/전송
+**Main Services:**
+- `TokenService`: Token consumption/refund (atomicity guaranteed)
+- `RabbitMQService`: Send tasks to AI servers
+- `S3Service`: Image/model file upload/download
+- `NotificationService`: Notification creation/delivery
 
 ### Data Flow
 
-#### 1. 모델 학습 플로우
+#### 1. Model Training Flow
 ```
-작가 → Frontend: 이미지 업로드
+Artist → Frontend: Upload images
 Frontend → Backend: POST /api/styles/
-Backend → S3: 이미지 저장
-Backend → RabbitMQ: 학습 작업 발행
-RabbitMQ → Training Server: 작업 수신
+Backend → S3: Store images
+Backend → RabbitMQ: Publish training task
+RabbitMQ → Training Server: Receive task
 Training Server: LoRA Fine-tuning
 Training Server → Backend: PATCH /api/webhooks/training/progress
-Backend → Frontend: 학습 진행률 폴링
-Training Server → S3: 모델 파일 저장
+Backend → Frontend: Poll training progress
+Training Server → S3: Store model file
 Training Server → Backend: POST /api/webhooks/training/complete
-Backend → NotificationService: 알림 생성
+Backend → NotificationService: Create notification
 ```
 
-#### 2. 이미지 생성 플로우
+#### 2. Image Generation Flow
 ```
-사용자 → Frontend: 프롬프트 입력
+User → Frontend: Enter prompt
 Frontend → Backend: POST /api/generations/
-Backend → TokenService: 토큰 차감
-Backend → RabbitMQ: 생성 작업 발행
-RabbitMQ → Inference Server: 작업 수신
-Inference Server: 이미지 생성 + 서명 삽입
-Inference Server → S3: 이미지 저장
+Backend → TokenService: Deduct tokens
+Backend → RabbitMQ: Publish generation task
+RabbitMQ → Inference Server: Receive task
+Inference Server: Generate image + Insert signature
+Inference Server → S3: Store image
 Inference Server → Backend: POST /api/webhooks/inference/complete
-Backend → Frontend: 이미지 URL 반환
+Backend → Frontend: Return image URL
 ```
 
 ---
@@ -158,25 +158,25 @@ Backend → Frontend: 이미지 URL 반환
 ### Installation
 
 ```bash
-# 1. Virtual environment 생성
+# 1. Create virtual environment
 cd apps/backend
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# 2. Dependencies 설치
+# 2. Install dependencies
 pip install -r requirements/development.txt
 
-# 3. 환경변수 설정
+# 3. Set environment variables
 cp .env.example .env
-# .env 파일 수정 (DATABASE_URL, RABBITMQ_HOST, AWS_* 등)
+# Edit .env file (DATABASE_URL, RABBITMQ_HOST, AWS_* etc.)
 
-# 4. Database 마이그레이션
+# 4. Run database migrations
 python manage.py migrate
 
-# 5. 슈퍼유저 생성 (선택사항)
+# 5. Create superuser (optional)
 python manage.py createsuperuser
 
-# 6. 개발 서버 실행
+# 6. Run development server
 python manage.py runserver
 ```
 
@@ -192,13 +192,13 @@ RABBITMQ_PORT=5672
 RABBITMQ_USER=guest
 RABBITMQ_PASS=guest
 
-# AWS S3 (로컬 개발 시)
+# AWS S3 (for local development)
 AWS_ACCESS_KEY_ID=your_key
 AWS_SECRET_ACCESS_KEY=your_secret
 AWS_STORAGE_BUCKET_NAME=stylelicense-media
 AWS_S3_REGION_NAME=ap-northeast-2
 
-# 프로덕션: EC2 IAM Role 사용 (환경변수 불필요)
+# Production: Use EC2 IAM Role (no environment variables needed)
 
 # OAuth
 GOOGLE_CLIENT_ID=your_client_id
@@ -206,7 +206,7 @@ GOOGLE_CLIENT_SECRET=your_client_secret
 
 # Security
 SECRET_KEY=your_django_secret_key
-INTERNAL_API_TOKEN=your_internal_token  # AI 서버 webhook 인증용
+INTERNAL_API_TOKEN=your_internal_token  # For AI server webhook authentication
 
 # CORS
 CORS_ALLOWED_ORIGINS=http://localhost:5173
@@ -219,15 +219,15 @@ CORS_ALLOWED_ORIGINS=http://localhost:5173
 ### Running Tests
 
 ```bash
-# 전체 테스트 실행
+# Run all tests
 pytest
 
-# Coverage 리포트
+# Coverage report
 pytest --cov=app --cov-report=html
 
-# 특정 마커만 실행
-pytest -m "unit"  # 유닛 테스트만
-pytest -m "integration"  # 통합 테스트만
+# Run specific markers only
+pytest -m "unit"  # Unit tests only
+pytest -m "integration"  # Integration tests only
 ```
 
 ### Code Quality
@@ -243,23 +243,23 @@ pylint app/
 ### Migrations
 
 ```bash
-# 마이그레이션 파일 생성
+# Create migration files
 python manage.py makemigrations
 
-# 마이그레이션 적용
+# Apply migrations
 python manage.py migrate
 
-# 마이그레이션 롤백
-python manage.py migrate app 0002  # 0002로 롤백
+# Rollback migrations
+python manage.py migrate app 0002  # Rollback to 0002
 ```
 
 ---
 
 ## API Documentation
 
-전체 API 명세는 **[docs/API.md](../../docs/API.md)** 참조.
+For complete API specification, refer to **[docs/API.md](../../docs/API.md)**.
 
-**주요 엔드포인트 그룹:**
+**Main Endpoint Groups:**
 - **Authentication**: `/api/auth/google/login`, `/api/auth/me`, `/api/auth/logout`
 - **User**: `/api/users/:id`, `/api/users/me`, `/api/users/me/upgrade-to-artist`
 - **Token**: `/api/tokens/balance`, `/api/tokens/transactions`, `/api/tokens/purchase`
@@ -274,9 +274,9 @@ python manage.py migrate app 0002  # 0002로 롤백
 
 ## Database Schema
 
-전체 스키마는 **[docs/database/README.md](../../docs/database/README.md)** 참조.
+For complete schema, refer to **[docs/database/README.md](../../docs/database/README.md)**.
 
-**주요 모델 (15개 테이블):**
+**Main Models (15 tables):**
 - **Auth**: users, artists
 - **Token**: transactions, purchases
 - **Style**: styles, artworks
@@ -285,10 +285,10 @@ python manage.py migrate app 0002  # 0002로 롤백
 - **Tagging**: tags, style_tags, artwork_tags, generation_tags
 - **System**: notifications
 
-**중요 필드 설명**:
-- `users.role`: 'user' 또는 'artist' (작가 권한 구분)
-- `styles.generation_cost_tokens`: 이미지 1장당 토큰 비용
-- `transactions.transaction_type`: 거래 유형 ('purchase', 'generation', 'withdrawal', 'transfer')
+**Important Field Descriptions**:
+- `users.role`: 'user' or 'artist' (artist permission distinction)
+- `styles.generation_cost_tokens`: Token cost per image
+- `transactions.transaction_type`: Transaction type ('purchase', 'generation', 'withdrawal', 'transfer')
 
 ---
 
@@ -302,7 +302,7 @@ python manage.py migrate app 0002  # 0002로 롤백
 | Integration Tests | 20% | DRF APIClient |
 | Performance Tests | 10% | pytest-benchmark |
 
-**Test Fixtures**: `app/tests/conftest.py`  
+**Test Fixtures**: `app/tests/conftest.py`
 **Coverage Goal**: 80%
 
 ---
@@ -312,48 +312,48 @@ python manage.py migrate app 0002  # 0002로 롤백
 ### Production Checklist
 
 - [ ] `DEBUG = False`
-- [ ] `ALLOWED_HOSTS` 설정 (도메인 추가: stylelicense.com)
-- [ ] **PostgreSQL 15.x 설정 (Docker 권장)**
-  - **Docker 사용 (권장)**:
+- [ ] Set `ALLOWED_HOSTS` (add domain: stylelicense.com)
+- [ ] **PostgreSQL 15.x setup (Docker recommended)**
+  - **Using Docker (recommended)**:
     ```bash
     docker run -d --name postgres \
       -e POSTGRES_PASSWORD=your_password \
       -v /var/lib/postgresql/data:/var/lib/postgresql/data \
       -p 5432:5432 postgres:15
     ```
-  - **로컬 설치 (대안)**:
+  - **Local installation (alternative)**:
     ```bash
     sudo apt install postgresql-15
     createdb stylelicense_db
     ```
   - `DATABASE_URL=postgresql://user:pass@localhost:5432/stylelicense_db`
-- [ ] **RabbitMQ Docker 설정**
+- [ ] **RabbitMQ Docker setup**
   - `docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management`
   - `RABBITMQ_HOST=localhost`
-  - Management UI는 SSH 터널로만 접근
-- [ ] S3 버킷 설정 및 IAM 권한 확인 (**EC2 IAM Role 사용**)
-  - EC2에 S3 Full Access IAM Role 부여
-  - 학습 이미지: Private Bucket
-  - 생성 이미지: Public Bucket
-- [ ] `SECRET_KEY` 환경변수로 관리 (32자 이상 랜덤 문자열)
-- [ ] **Nginx 설정**
-  - Reverse Proxy: Gunicorn (:8000) 프록시
-  - Frontend 정적 파일 서빙 (/var/www/stylelicense/frontend/)
-  - Django Static files 서빙 (/home/ubuntu/stylelicense/apps/backend/staticfiles/)
-  - 설정 파일: `/etc/nginx/sites-available/stylelicense`
-- [ ] **Let's Encrypt SSL 인증서 설정**
+  - Management UI accessible only via SSH tunnel
+- [ ] S3 bucket setup and IAM permissions (**Use EC2 IAM Role**)
+  - Assign S3 Full Access IAM Role to EC2
+  - Training images: Private Bucket
+  - Generated images: Public Bucket
+- [ ] Manage `SECRET_KEY` via environment variable (32+ random characters)
+- [ ] **Nginx configuration**
+  - Reverse Proxy: Gunicorn (:8000) proxy
+  - Serve Frontend static files (/var/www/stylelicense/frontend/)
+  - Serve Django Static files (/home/ubuntu/stylelicense/apps/backend/staticfiles/)
+  - Config file: `/etc/nginx/sites-available/stylelicense`
+- [ ] **Let's Encrypt SSL certificate setup**
   - `sudo certbot --nginx -d stylelicense.com -d www.stylelicense.com`
-  - 자동 갱신 확인: `sudo certbot renew --dry-run`
-- [ ] **DNS 설정**
-  - A 레코드: stylelicense.com → Backend EC2 Public IP
-- [ ] Static files 수집: `python manage.py collectstatic --noinput`
-- [ ] Gunicorn/uWSGI 설정 (workers: CPU 코어 * 2 + 1)
-- [ ] Sentry 에러 모니터링 (`SENTRY_DSN` 환경변수)
+  - Verify auto-renewal: `sudo certbot renew --dry-run`
+- [ ] **DNS configuration**
+  - A record: stylelicense.com → Backend EC2 Public IP
+- [ ] Collect static files: `python manage.py collectstatic --noinput`
+- [ ] Gunicorn/uWSGI configuration (workers: CPU cores * 2 + 1)
+- [ ] Sentry error monitoring (`SENTRY_DSN` environment variable)
 
 ### Running in Production
 
 ```bash
-# Gunicorn으로 실행
+# Run with Gunicorn
 gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers 4 \
@@ -372,26 +372,26 @@ GET /api/health
 
 ### Metrics to Monitor
 
-- API 응답 시간 (P50, P95, P99)
-- 에러 비율 (4xx, 5xx)
-- Database 쿼리 시간
-- RabbitMQ 큐 길이
-- CPU/메모리 사용률
+- API response time (P50, P95, P99)
+- Error rate (4xx, 5xx)
+- Database query time
+- RabbitMQ queue length
+- CPU/memory usage
 
 ---
 
 ## References
 
-### 필수 문서
-- **[CODE_GUIDE.md](CODE_GUIDE.md)** - 코드 작성 패턴 및 예제 (코드 작성 전 필독)
-- **[PLAN.md](PLAN.md)** - 개발 작업 계획 (다음 작업 확인)
-- **[docs/API.md](../../docs/API.md)** - 전체 API 명세
-- **[docs/database/README.md](../../docs/database/README.md)** - DB 스키마
+### Essential Documents
+- **[CODE_GUIDE.md](CODE_GUIDE.md)** - Code writing patterns and examples (must read before coding)
+- **[PLAN.md](PLAN.md)** - Development task plan (check next task)
+- **[docs/API.md](../../docs/API.md)** - Complete API specification
+- **[docs/database/README.md](../../docs/database/README.md)** - DB schema
 
-### 프로젝트 문서
-- **[TECHSPEC.md](../../TECHSPEC.md)** - 전체 시스템 아키텍처
-- **[docs/PATTERNS.md](../../docs/PATTERNS.md)** - 공통 코드 패턴
-- **[docs/SECURITY.md](../../docs/SECURITY.md)** - 보안 정책
+### Project Documents
+- **[TECHSPEC.md](../../TECHSPEC.md)** - Overall system architecture
+- **[docs/PATTERNS.md](../../docs/PATTERNS.md)** - Common code patterns
+- **[docs/SECURITY.md](../../docs/SECURITY.md)** - Security policies
 
 ---
 
@@ -412,14 +412,14 @@ docker restart rabbitmq
 
 **3. Database locked**
 ```bash
-# PostgreSQL로 전환 권장
-# .env에서 DATABASE_URL 수정
+# Switch to PostgreSQL recommended
+# Modify DATABASE_URL in .env
 ```
 
 ---
 
 ## Support
 
-- **GitHub Issues**: 버그 리포트 및 기능 제안
-- **Team Communication**: Slack #backend 채널
+- **GitHub Issues**: Bug reports and feature requests
+- **Team Communication**: Slack #backend channel
 - **Documentation**: [TECHSPEC.md](../../TECHSPEC.md)

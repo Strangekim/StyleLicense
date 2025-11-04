@@ -1,38 +1,38 @@
 # Backend Code Guide
 
-**Purpose**: Provides code patterns, rules, and examples to follow when developing Backend based on Django REST Framework.
+**목적**: Django REST Framework 기반 Backend 개발 시 따라야 할 코드 패턴, 규칙, 예제를 제공합니다.
 
-**Audience**: Backend developers, Code reviewers
-
----
-
-## Table of Contents
-1. [Code Writing Principles](#1-code-writing-principles)
-2. [Model Patterns](#2-model-patterns)
-3. [Serializer Patterns](#3-serializer-patterns)
-4. [ViewSet Patterns](#4-viewset-patterns)
-5. [Service Layer Patterns](#5-service-layer-patterns)
-6. [RabbitMQ Patterns](#6-rabbitmq-patterns)
-7. [Permission Patterns](#7-permission-patterns)
-8. [Error Handling](#8-error-handling)
-9. [Performance Optimization](#9-performance-optimization)
-10. [Writing Tests](#10-writing-tests)
+**대상**: Backend 개발자, 코드 리뷰어
 
 ---
 
-## 1. Code Writing Principles
+## 목차
+1. [코드 작성 원칙](#1-코드-작성-원칙)
+2. [Model 패턴](#2-model-패턴)
+3. [Serializer 패턴](#3-serializer-패턴)
+4. [ViewSet 패턴](#4-viewset-패턴)
+5. [Service Layer 패턴](#5-service-layer-패턴)
+6. [RabbitMQ 패턴](#6-rabbitmq-패턴)
+7. [Permission 패턴](#7-permission-패턴)
+8. [에러 처리](#8-에러-처리)
+9. [성능 최적화](#9-성능-최적화)
+10. [테스트 작성](#10-테스트-작성)
 
-### 1.1 Django REST Framework Philosophy
+---
 
-- **Serializers for data transformation only** - No business logic
-- **Views for HTTP request/response only** - No business logic
-- **Business logic in Services** - Reusable units
-- **Models for data structure** - No complex logic
+## 1. 코드 작성 원칙
 
-### 1.2 Naming Conventions
+### 1.1 Django REST Framework 철학
+
+- **Serializers는 데이터 변환만** - 비즈니스 로직 금지
+- **Views는 HTTP 요청/응답만** - 비즈니스 로직 금지
+- **Services에 비즈니스 로직** - 재사용 가능한 단위
+- **Models는 데이터 구조** - 복잡한 로직 금지
+
+### 1.2 네이밍 규칙
 
 ```python
-# Models: Singular PascalCase
+# Models: 단수형 PascalCase
 class StyleModel(models.Model):
     pass
 
@@ -48,12 +48,12 @@ class StyleViewSet(viewsets.ModelViewSet):
 class TokenService:
     pass
 
-# Functions: snake_case, start with verb
+# Functions: snake_case, 동사로 시작
 def consume_tokens(user_id, amount):
     pass
 ```
 
-### 1.3 Import Order
+### 1.3 Import 순서
 
 ```python
 # 1. Standard library
@@ -76,9 +76,9 @@ from app.services import token_service
 
 ---
 
-## 2. Model Patterns
+## 2. Model 패턴
 
-### 2.1 Basic Model Structure
+### 2.1 기본 Model 구조
 
 ```python
 # app/models/style.py
@@ -88,7 +88,7 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 class StyleModel(models.Model):
-    """AI model representing artist's style"""
+    """작가의 화풍을 나타내는 AI 모델"""
 
     # Training status choices
     TRAINING_STATUS_CHOICES = [
@@ -101,7 +101,7 @@ class StyleModel(models.Model):
     # Fields
     artist = models.ForeignKey(
         User,
-        on_delete=models.RESTRICT,  # Restrict artist deletion
+        on_delete=models.RESTRICT,  # 작가 삭제 제한
         related_name='styles'
     )
     name = models.CharField(max_length=200)
@@ -110,20 +110,20 @@ class StyleModel(models.Model):
         max_length=20,
         choices=TRAINING_STATUS_CHOICES,
         default='pending',
-        db_index=True  # Frequently filtered
+        db_index=True  # 자주 필터링
     )
-    generation_cost_tokens = models.IntegerField(default=100)  # Token units
-    model_path = models.TextField(blank=True, null=True)  # S3 path
+    generation_cost_tokens = models.IntegerField(default=100)  # 토큰 단위
+    model_path = models.TextField(blank=True, null=True)  # S3 경로
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    
     class Meta:
         db_table = 'styles'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['training_status', 'artist']),  # Composite index
+            models.Index(fields=['training_status', 'artist']),  # 복합 인덱스
             models.Index(fields=['-created_at']),
         ]
 
@@ -131,22 +131,22 @@ class StyleModel(models.Model):
         return f"{self.name} by {self.artist.username}"
 
     def is_ready(self):
-        """Check if ready for generation"""
+        """생성에 사용 가능한 상태인지 확인"""
         return self.training_status == 'completed' and self.model_path
 ```
 
-### 2.2 Related Names Convention
+### 2.2 Related Names 규칙
 
 ```python
-# Foreign Key: plural
+# Foreign Key: 복수형
 class GeneratedImage(models.Model):
     style = models.ForeignKey(
         StyleModel,
         on_delete=models.RESTRICT,
         related_name='generated_images'  # style.generated_images.all()
     )
-
-# Many-to-Many: plural
+    
+# Many-to-Many: 복수형
 class CommunityPost(models.Model):
     liked_by = models.ManyToManyField(
         User,
@@ -160,22 +160,22 @@ class CommunityPost(models.Model):
 ```python
 class TokenTransaction(models.Model):
     # ... fields ...
-
+    
     @classmethod
     def get_user_balance(cls, user):
-        """Calculate user's current token balance"""
+        """사용자의 현재 토큰 잔액 계산"""
         transactions = cls.objects.filter(user=user)
         balance = sum(t.amount for t in transactions)
         return balance
-
+    
     def is_refundable(self):
         """
-        Check if refundable.
+        환불 가능 여부 확인
 
-        Note: transaction_type is not a DB column but dynamically calculated in Serializer.
-        Actual implementation determines by combination of sender_id, receiver_id, related_generation_id.
+        Note: transaction_type은 DB 컬럼이 아닌 Serializer에서 동적 계산하는 필드입니다.
+        실제 구현 시에는 sender_id, receiver_id, related_generation_id 조합으로 판별합니다.
         """
-        # Only image generation payments are refundable
+        # 이미지 생성 결제 건만 환불 가능
         is_generation_payment = (
             self.sender_id is not None and
             self.receiver_id is not None and
@@ -189,9 +189,9 @@ class TokenTransaction(models.Model):
 
 ---
 
-## 3. Serializer Patterns
+## 3. Serializer 패턴
 
-### 3.1 Basic ModelSerializer
+### 3.1 ModelSerializer 기본
 
 ```python
 # app/serializers/style.py
@@ -199,18 +199,18 @@ from rest_framework import serializers
 from app.models import StyleModel
 
 class StyleModelSerializer(serializers.ModelSerializer):
-    # Read-only fields
+    # Read-only 필드
     artist_name = serializers.CharField(
         source='artist.username',
         read_only=True
     )
-
-    # Write-only fields
+    
+    # Write-only 필드
     training_images = serializers.ListField(
         child=serializers.ImageField(),
         write_only=True
     )
-
+    
     class Meta:
         model = StyleModel
         fields = [
@@ -226,7 +226,7 @@ class StyleModelSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'training_status', 'created_at']
 
     def validate_generation_cost_tokens(self, value):
-        """Validate price"""
+        """가격 검증"""
         if value < 10:
             raise serializers.ValidationError(
                 "Price must be at least 10 tokens"
@@ -236,9 +236,9 @@ class StyleModelSerializer(serializers.ModelSerializer):
                 "Price cannot exceed 10,000 tokens"
             )
         return value
-
+    
     def validate(self, attrs):
-        """Validate entire data"""
+        """전체 데이터 검증"""
         training_images = attrs.get('training_images', [])
         if len(training_images) < 10:
             raise serializers.ValidationError({
@@ -254,7 +254,7 @@ class StyleModelSerializer(serializers.ModelSerializer):
 ### 3.2 Nested Serializers
 
 ```python
-# Read-only nested (don't use depth, use explicit serializer)
+# Read-only nested (depth 사용 금지, 명시적 serializer 사용)
 class TrainingImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = TrainingImage
@@ -272,27 +272,27 @@ class StyleModelDetailSerializer(serializers.ModelSerializer):
 
 ```python
 class CommentCreateSerializer(serializers.ModelSerializer):
-    # Receive only parent_id when writing reply
+    # 답글 작성 시 parent_id만 받음
     parent_id = serializers.IntegerField(required=False, allow_null=True)
-
+    
     class Meta:
         model = Comment
         fields = ['content', 'parent_id']
-
+    
     def create(self, validated_data):
         parent_id = validated_data.pop('parent_id', None)
-
+        
         comment = Comment.objects.create(
             post=self.context['post'],
             author=self.context['request'].user,
             **validated_data
         )
-
+        
         if parent_id:
             parent = Comment.objects.get(id=parent_id)
             comment.parent = parent
             comment.save()
-
+        
         return comment
 ```
 
@@ -300,12 +300,12 @@ class CommentCreateSerializer(serializers.ModelSerializer):
 
 ```python
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
-    """Allow client to request only needed fields"""
-
+    """클라이언트가 필요한 필드만 요청 가능"""
+    
     def __init__(self, *args, **kwargs):
         fields = kwargs.pop('fields', None)
         super().__init__(*args, **kwargs)
-
+        
         if fields is not None:
             allowed = set(fields)
             existing = set(self.fields)
@@ -321,9 +321,9 @@ class StyleModelSerializer(DynamicFieldsModelSerializer):
 
 ---
 
-## 4. ViewSet Patterns
+## 4. ViewSet 패턴
 
-### 4.1 Basic ModelViewSet
+### 4.1 ModelViewSet 기본
 
 ```python
 # app/views/style.py
@@ -338,46 +338,46 @@ from app.permissions import IsArtist
 from app.services import rabbitmq_service, token_service
 
 class StyleViewSet(viewsets.ModelViewSet):
-    """Style CRUD and training request"""
-
+    """스타일 CRUD 및 학습 요청"""
+    
     queryset = StyleModel.objects.all()
     serializer_class = StyleModelSerializer
     permission_classes = [IsAuthenticated]
-
+    
     def get_queryset(self):
-        """Filter by user"""
+        """사용자별 필터링"""
         queryset = super().get_queryset()
 
-        # Artist can view all their styles
+        # 작가는 자신의 스타일 전체 조회
         if self.request.user.role == 'artist':
             return queryset.filter(artist=self.request.user)
 
-        # Regular users can only view completed styles
+        # 일반 사용자는 완료된 스타일만 조회
         return queryset.filter(training_status='completed')
-
+    
     def get_permissions(self):
-        """Set permissions by action"""
+        """Action별 권한 설정"""
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsArtist()]
         return super().get_permissions()
-
+    
     def perform_create(self, serializer):
-        """Auto-assign artist on creation"""
+        """생성 시 artist 자동 할당"""
         serializer.save(artist=self.request.user)
-
+    
     @action(detail=True, methods=['post'], permission_classes=[IsArtist])
     def train(self, request, pk=None):
-        """Start training custom action"""
+        """학습 시작 커스텀 액션"""
         style = self.get_object()
 
-        # Reject if already training
+        # 이미 학습 중이면 거부
         if style.training_status == 'training':
             return Response(
                 {'error': 'Training already in progress'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-        # Deduct training cost (100 tokens)
+        
+        # 학습 비용 차감 (100 토큰)
         if not token_service.consume_tokens(
             user_id=request.user.id,
             amount=100,
@@ -387,15 +387,15 @@ class StyleViewSet(viewsets.ModelViewSet):
                 {'error': 'Insufficient tokens'},
                 status=status.HTTP_402_PAYMENT_REQUIRED
             )
-
-        # Send training task to RabbitMQ
+        
+        # RabbitMQ에 학습 작업 전송
         rabbitmq_service.publish_training_task(
             style_id=pk,
             image_urls=style.get_training_image_urls(),
             params={'epochs': 200, 'learning_rate': 1e-4}
         )
 
-        # Update status
+        # 상태 업데이트
         style.training_status = 'training'
         style.save()
 
@@ -406,44 +406,44 @@ class StyleViewSet(viewsets.ModelViewSet):
         })
 ```
 
-### 4.2 Custom Action Patterns
+### 4.2 Custom Action 패턴
 
 ```python
 class GenerationViewSet(viewsets.ModelViewSet):
-
+    
     @action(detail=True, methods=['get'])
     def progress(self, request, pk=None):
-        """Query generation progress (for polling)"""
+        """생성 진행률 조회 (폴링용)"""
         generation = self.get_object()
         return Response({
-            'status': generation.status,  # generations table uses 'status'
+            'status': generation.status,  # generations 테이블은 'status' 사용
             'progress': generation.progress_percent,
             'estimated_time_remaining': generation.estimated_seconds,
         })
-
+    
     @action(detail=False, methods=['get'])
     def my_generations(self, request):
-        """Query my generation history"""
+        """내 생성 이력 조회"""
         generations = GeneratedImage.objects.filter(
             user=request.user
         ).select_related('style')
-
+        
         page = self.paginate_queryset(generations)
         serializer = self.get_serializer(page, many=True)
         return self.get_paginated_response(serializer.data)
-
+    
     @action(detail=True, methods=['post'])
     def retry(self, request, pk=None):
-        """Retry failed generation"""
+        """생성 실패 시 재시도"""
         generation = self.get_object()
-
+        
         if generation.status != 'FAILED':
             return Response(
                 {'error': 'Only failed generations can be retried'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-        # Retry logic...
+        
+        # 재시도 로직...
         return Response({'message': 'Retry queued'})
 ```
 
@@ -451,9 +451,9 @@ class GenerationViewSet(viewsets.ModelViewSet):
 
 ```python
 class StyleViewSet(viewsets.ModelViewSet):
-
+    
     def get_permissions(self):
-        """Set permissions dynamically by action"""
+        """Action에 따라 동적으로 권한 설정"""
         if self.action == 'list':
             permission_classes = [AllowAny]
         elif self.action in ['retrieve']:
@@ -462,23 +462,23 @@ class StyleViewSet(viewsets.ModelViewSet):
             permission_classes = [IsArtist]
         else:  # custom actions
             permission_classes = [IsAuthenticated]
-
+        
         return [permission() for permission in permission_classes]
-
+    
     def get_serializer_class(self):
-        """Use different serializer by action"""
+        """Action에 따라 다른 serializer 사용"""
         if self.action == 'list':
-            return StyleModelListSerializer  # Simple fields only
+            return StyleModelListSerializer  # 간단한 필드만
         elif self.action == 'retrieve':
-            return StyleModelDetailSerializer  # All fields
-        return StyleModelSerializer  # Default
+            return StyleModelDetailSerializer  # 모든 필드
+        return StyleModelSerializer  # 기본
 ```
 
 ---
 
-## 5. Service Layer Patterns
+## 5. Service Layer 패턴
 
-### 5.1 Basic Service Structure
+### 5.1 Service 기본 구조
 
 ```python
 # app/services/token_service.py
@@ -486,60 +486,60 @@ from django.db import transaction
 from app.models import User, TokenTransaction
 
 class TokenService:
-    """Token-related business logic"""
-
+    """토큰 관련 비즈니스 로직"""
+    
     @staticmethod
     @transaction.atomic
     def consume_tokens(user_id: int, amount: int, reason: str) -> bool:
         """
-        Atomically deduct tokens.
-
+        토큰을 원자적으로 차감합니다.
+        
         Args:
-            user_id: User ID
-            amount: Amount of tokens to deduct
-            reason: Reason for deduction
-
+            user_id: 사용자 ID
+            amount: 차감할 토큰 양
+            reason: 차감 사유
+            
         Returns:
-            Success status
-
+            성공 여부
+            
         Raises:
-            User.DoesNotExist: User doesn't exist
+            User.DoesNotExist: 사용자가 존재하지 않음
         """
-        # Prevent concurrency issues with SELECT FOR UPDATE
+        # SELECT FOR UPDATE로 동시성 문제 방지
         user = User.objects.select_for_update().get(id=user_id)
-
-        # Check balance
+        
+        # 잔액 확인
         if user.token_balance < amount:
             return False
-
-        # Deduct
+        
+        # 차감
         user.token_balance -= amount
         user.save()
 
-        # Record transaction
-        # Note: transaction_type column doesn't exist in DB,
-        # type is determined by combination of sender_id/receiver_id/related_generation_id.
+        # 거래 기록
+        # Note: transaction_type 컬럼은 DB에 없으며,
+        # sender_id/receiver_id/related_generation_id 조합으로 유형을 판별합니다.
         TokenTransaction.objects.create(
             sender_id=user_id,
-            receiver_id=None,  # Paid to platform
+            receiver_id=None,  # 플랫폼으로 지급
             amount=amount,
             memo=reason
         )
 
         return True
-
+    
     @staticmethod
     @transaction.atomic
     def refund_tokens(user_id: int, amount: int, reason: str):
-        """Refund tokens"""
+        """토큰 환불"""
         user = User.objects.select_for_update().get(id=user_id)
-
+        
         user.token_balance += amount
         user.save()
 
-        # Record refund transaction
+        # 환불 거래 기록
         TokenTransaction.objects.create(
-            sender_id=None,  # Issued by platform
+            sender_id=None,  # 플랫폼에서 발행
             receiver_id=user_id,
             amount=amount,
             memo=reason,
@@ -547,14 +547,14 @@ class TokenService:
         )
 ```
 
-### 5.2 Service Invocation Pattern
+### 5.2 Service 호출 패턴
 
 ```python
 # app/views/generation.py
 from app.services import TokenService, RabbitMQService, NotificationService
 
 class GenerationViewSet(viewsets.ModelViewSet):
-
+    
     def create(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -563,7 +563,7 @@ class GenerationViewSet(viewsets.ModelViewSet):
         style = StyleModel.objects.get(id=style_id)
         cost = style.generation_cost_tokens
 
-        # 1. Deduct tokens (Service)
+        # 1. 토큰 차감 (Service)
         token_service = TokenService()
         if not token_service.consume_tokens(
             user_id=request.user.id,
@@ -574,11 +574,11 @@ class GenerationViewSet(viewsets.ModelViewSet):
                 {'error': 'Insufficient tokens'},
                 status=status.HTTP_402_PAYMENT_REQUIRED
             )
-
-        # 2. Save generation request
+        
+        # 2. 생성 요청 저장
         generation = serializer.save(user=request.user, style=style)
-
-        # 3. Send task to RabbitMQ (Service)
+        
+        # 3. RabbitMQ에 작업 전송 (Service)
         rabbitmq_service = RabbitMQService()
         try:
             rabbitmq_service.publish_generation_task(
@@ -588,7 +588,7 @@ class GenerationViewSet(viewsets.ModelViewSet):
                 params={'size': '512x512', 'steps': 50}
             )
         except Exception as e:
-            # Refund tokens on failure
+            # 실패 시 토큰 환불
             token_service.refund_tokens(
                 user_id=request.user.id,
                 amount=cost,
@@ -596,7 +596,7 @@ class GenerationViewSet(viewsets.ModelViewSet):
             )
             generation.delete()
             raise
-
+        
         return Response(
             self.get_serializer(generation).data,
             status=status.HTTP_201_CREATED
@@ -605,7 +605,7 @@ class GenerationViewSet(viewsets.ModelViewSet):
 
 ---
 
-## 6. RabbitMQ Patterns
+## 6. RabbitMQ 패턴
 
 ### 6.1 Publisher (Backend → AI Server)
 
@@ -617,8 +617,8 @@ import uuid
 from django.conf import settings
 
 class RabbitMQService:
-    """RabbitMQ message publishing"""
-
+    """RabbitMQ 메시지 발행"""
+    
     def __init__(self):
         self.connection = pika.BlockingConnection(
             pika.ConnectionParameters(
@@ -631,12 +631,12 @@ class RabbitMQService:
             )
         )
         self.channel = self.connection.channel()
-
+    
     def publish_training_task(self, style_id, image_urls, params):
-        """Publish training task"""
+        """학습 작업 발행"""
         queue_name = 'model_training'
         self.channel.queue_declare(queue=queue_name, durable=True)
-
+        
         message = {
             'task_id': str(uuid.uuid4()),
             'type': 'model_training',
@@ -650,7 +650,7 @@ class RabbitMQService:
                 f'/api/webhooks/training/complete'
             )
         }
-
+        
         self.channel.basic_publish(
             exchange='',
             routing_key=queue_name,
@@ -660,12 +660,12 @@ class RabbitMQService:
                 content_type='application/json'
             )
         )
-
+    
     def publish_generation_task(self, generation_id, style_id, prompt, params):
-        """Publish image generation task"""
+        """이미지 생성 작업 발행"""
         queue_name = 'image_generation'
         self.channel.queue_declare(queue=queue_name, durable=True)
-
+        
         message = {
             'task_id': str(uuid.uuid4()),
             'type': 'image_generation',
@@ -680,7 +680,7 @@ class RabbitMQService:
                 f'/api/webhooks/generation/complete'
             )
         }
-
+        
         self.channel.basic_publish(
             exchange='',
             routing_key=queue_name,
@@ -690,7 +690,7 @@ class RabbitMQService:
                 content_type='application/json'
             )
         )
-
+    
     def __del__(self):
         if hasattr(self, 'connection') and self.connection:
             self.connection.close()
@@ -708,36 +708,36 @@ from django.views.decorators.csrf import csrf_exempt
 from app.models import StyleModel, GeneratedImage
 from app.services import NotificationService
 
-@csrf_exempt  # Exclude CSRF (authenticate with INTERNAL_API_TOKEN)
+@csrf_exempt  # CSRF 제외 (INTERNAL_API_TOKEN으로 인증)
 @api_view(['PATCH'])
-@permission_classes([AllowAny])  # Authenticated in Middleware
+@permission_classes([AllowAny])  # Middleware에서 인증
 def training_progress(request, style_id):
-    """Update training progress"""
+    """학습 진행률 업데이트"""
     style = StyleModel.objects.get(id=style_id)
-
+    
     progress = request.data.get('progress', 0)
     current_epoch = request.data.get('current_epoch')
     total_epochs = request.data.get('total_epochs')
-
+    
     style.training_progress = progress
     style.training_current_epoch = current_epoch
     style.training_total_epochs = total_epochs
     style.save()
-
+    
     return Response({'status': 'ok'})
 
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def training_complete(request):
-    """Training completion notification"""
+    """학습 완료 알림"""
     style_id = request.data.get('style_id')
     model_path = request.data.get('model_path')  # S3 URL
     success = request.data.get('success', True)
     error_message = request.data.get('error')
-
+    
     style = StyleModel.objects.get(id=style_id)
-
+    
     if success:
         style.training_status = 'completed'
         style.model_path = model_path
@@ -745,10 +745,10 @@ def training_complete(request):
     else:
         style.training_status = 'failed'
         notification_type = 'TRAINING_FAILED'
-
+    
     style.save()
-
-    # Notify artist
+    
+    # 작가에게 알림
     NotificationService.create_notification(
         user_id=style.artist_id,
         type=notification_type,
@@ -758,7 +758,7 @@ def training_complete(request):
             'error': error_message
         }
     )
-
+    
     return Response({'status': 'ok'})
 ```
 
@@ -770,15 +770,15 @@ from django.http import JsonResponse
 from django.conf import settings
 
 class WebhookAuthMiddleware:
-    """AI server Webhook authentication middleware"""
-
+    """AI 서버 Webhook 인증 미들웨어"""
+    
     def __init__(self, get_response):
         self.get_response = get_response
-
+    
     def __call__(self, request):
-        # Validate only webhook paths
+        # Webhook 경로만 검증
         if request.path.startswith('/api/webhooks/'):
-            # Parse Authorization: Bearer <TOKEN>
+            # Authorization: Bearer <TOKEN> 파싱
             auth_header = request.headers.get('Authorization', '')
             if not auth_header.startswith('Bearer '):
                 return JsonResponse(
@@ -798,7 +798,7 @@ class WebhookAuthMiddleware:
 
 ---
 
-## 7. Permission Patterns
+## 7. Permission 패턴
 
 ### 7.1 Custom Permissions
 
@@ -807,10 +807,10 @@ class WebhookAuthMiddleware:
 from rest_framework import permissions
 
 class IsArtist(permissions.BasePermission):
-    """Check artist permission"""
-
+    """작가 권한 확인"""
+    
     message = "Only artists can perform this action."
-
+    
     def has_permission(self, request, view):
         return (
             request.user and
@@ -819,33 +819,33 @@ class IsArtist(permissions.BasePermission):
         )
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
-    """Only owner can modify, everyone can read"""
-
+    """소유자만 수정 가능, 읽기는 모두 가능"""
+    
     def has_object_permission(self, request, view, obj):
-        # Allow read permissions for everyone
+        # 읽기 권한은 모두 허용
         if request.method in permissions.SAFE_METHODS:
             return True
-
-        # Write permissions only for owner
+        
+        # 쓰기 권한은 소유자만
         return obj.artist == request.user
 
 class IsOwner(permissions.BasePermission):
-    """Only owner can access"""
-
+    """소유자만 접근 가능"""
+    
     def has_object_permission(self, request, view, obj):
-        # Use obj.user or obj.artist attribute
+        # obj.user 또는 obj.artist 속성 사용
         owner = getattr(obj, 'user', getattr(obj, 'artist', None))
         return owner == request.user
 ```
 
-### 7.2 Permission Composition
+### 7.2 Permission 조합
 
 ```python
 class StyleViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated, IsArtist]  # AND condition
-
+    permission_classes = [IsAuthenticated, IsArtist]  # AND 조건
+    
     def get_permissions(self):
-        """Different permissions by action"""
+        """Action별 다른 권한"""
         if self.action in ['list', 'retrieve']:
             return [AllowAny()]
         elif self.action in ['update', 'partial_update', 'destroy']:
@@ -855,9 +855,9 @@ class StyleViewSet(viewsets.ModelViewSet):
 
 ---
 
-## 8. Error Handling
+## 8. 에러 처리
 
-### 8.1 Standard Error Response Format
+### 8.1 표준 에러 응답 형식
 
 ```python
 # app/exceptions.py
@@ -866,12 +866,12 @@ from rest_framework import status
 
 class InsufficientTokensError(APIException):
     status_code = status.HTTP_402_PAYMENT_REQUIRED
-    default_detail = 'Insufficient tokens.'
+    default_detail = '토큰이 부족합니다.'
     default_code = 'insufficient_tokens'
 
 class TrainingInProgressError(APIException):
     status_code = status.HTTP_400_BAD_REQUEST
-    default_detail = 'Training already in progress.'
+    default_detail = '이미 학습이 진행 중입니다.'
     default_code = 'training_in_progress'
 
 # Usage
@@ -897,11 +897,11 @@ from rest_framework.views import exception_handler
 from rest_framework.response import Response
 
 def custom_exception_handler(exc, context):
-    """Custom error response format"""
+    """커스텀 에러 응답 형식"""
     response = exception_handler(exc, context)
-
+    
     if response is not None:
-        # Convert to standard format
+        # 표준 형식으로 변환
         custom_response_data = {
             'error': {
                 'code': getattr(exc, 'default_code', 'error'),
@@ -910,15 +910,15 @@ def custom_exception_handler(exc, context):
             }
         }
         response.data = custom_response_data
-
+    
     return response
 ```
 
 ---
 
-## 9. Performance Optimization
+## 9. 성능 최적화
 
-### 9.1 Prevent N+1 Queries
+### 9.1 N+1 Query 방지
 
 ```python
 # Bad: N+1 queries
@@ -926,12 +926,12 @@ class StyleViewSet(viewsets.ModelViewSet):
     def list(self, request):
         styles = StyleModel.objects.all()
         for style in styles:
-            print(style.artist.username)  # Query on each iteration
+            print(style.artist.username)  # 각 반복마다 쿼리
 
 # Good: select_related (ForeignKey, OneToOne)
 class StyleViewSet(viewsets.ModelViewSet):
     queryset = StyleModel.objects.select_related('artist')
-
+    
 # Good: prefetch_related (ManyToMany, Reverse ForeignKey)
 class CommunityPostViewSet(viewsets.ModelViewSet):
     queryset = CommunityPost.objects.prefetch_related(
@@ -958,22 +958,22 @@ class StyleViewSet(viewsets.ModelViewSet):
 class StyleModel(models.Model):
     training_status = models.CharField(
         max_length=20,
-        db_index=True  # Single column index
+        db_index=True  # 단일 컬럼 인덱스
     )
 
     class Meta:
         indexes = [
-            # Composite index (training_status + artist)
+            # 복합 인덱스 (training_status + artist)
             models.Index(fields=['training_status', 'artist']),
-
-            # Sorting index
+            
+            # 정렬용 인덱스
             models.Index(fields=['-created_at']),
-
-            # Search index (PostgreSQL)
+            
+            # 검색용 인덱스 (PostgreSQL)
             models.Index(
                 fields=['name'],
                 name='style_name_idx',
-                opclasses=['varchar_pattern_ops']  # LIKE search
+                opclasses=['varchar_pattern_ops']  # LIKE 검색
             ),
         ]
 ```
@@ -986,28 +986,28 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 
 class StyleViewSet(viewsets.ModelViewSet):
-
-    @method_decorator(cache_page(60 * 5))  # 5 minute cache
+    
+    @method_decorator(cache_page(60 * 5))  # 5분 캐싱
     def list(self, request):
         return super().list(request)
-
+    
     def get_queryset(self):
-        # Cache key
+        # 캐시 키
         cache_key = f'popular_styles_{self.request.user.id}'
-
-        # Check cache
+        
+        # 캐시 확인
         cached = cache.get(cache_key)
         if cached:
             return cached
-
-        # DB query
+        
+        # DB 조회
         queryset = StyleModel.objects.filter(
             training_status='completed'
         ).order_by('-view_count')[:10]
-
-        # Save to cache (5 minutes)
+        
+        # 캐시 저장 (5분)
         cache.set(cache_key, queryset, timeout=300)
-
+        
         return queryset
 ```
 
@@ -1019,11 +1019,11 @@ class GenerationViewSet(viewsets.ModelViewSet):
         return GeneratedImage.objects.select_related(
             'user',
             'style',
-            'style__artist'  # Nested relation
+            'style__artist'  # 중첩 관계
         ).prefetch_related(
             'likes',
-            'comments__author'  # Nested relation
-        ).only(  # Only needed fields
+            'comments__author'  # 중첩 관계
+        ).only(  # 필요한 필드만
             'id',
             'image_url',
             'prompt',
@@ -1035,7 +1035,7 @@ class GenerationViewSet(viewsets.ModelViewSet):
 
 ---
 
-## 10. Writing Tests
+## 10. 테스트 작성
 
 ### 10.1 Pytest Fixtures
 
@@ -1046,7 +1046,7 @@ from app.models import User, StyleModel, TokenTransaction
 
 @pytest.fixture
 def user(db):
-    """Regular user"""
+    """일반 사용자"""
     return User.objects.create_user(
         username='testuser',
         email='test@example.com',
@@ -1056,7 +1056,7 @@ def user(db):
 
 @pytest.fixture
 def artist(db):
-    """Artist user"""
+    """작가 사용자"""
     return User.objects.create_user(
         username='artist',
         email='artist@example.com',
@@ -1067,7 +1067,7 @@ def artist(db):
 
 @pytest.fixture
 def style_model(db, artist):
-    """Completed style model"""
+    """완료된 스타일 모델"""
     return StyleModel.objects.create(
         artist=artist,
         name='Test Style',
@@ -1079,7 +1079,7 @@ def style_model(db, artist):
 
 @pytest.fixture
 def api_client():
-    """DRF API client"""
+    """DRF API 클라이언트"""
     from rest_framework.test import APIClient
     return APIClient()
 ```
@@ -1093,54 +1093,54 @@ from app.services.token_service import TokenService
 
 @pytest.mark.django_db
 class TestTokenService:
-
+    
     def test_consume_tokens_success(self, user):
-        """Token consumption success"""
+        """토큰 소비 성공"""
         initial_balance = user.token_balance
-
+        
         result = TokenService.consume_tokens(
             user_id=user.id,
             amount=100,
             reason='Test'
         )
-
+        
         assert result is True
-
+        
         user.refresh_from_db()
         assert user.token_balance == initial_balance - 100
-
+    
     def test_consume_tokens_insufficient(self, user):
-        """Fail on insufficient tokens"""
+        """토큰 부족 시 실패"""
         result = TokenService.consume_tokens(
             user_id=user.id,
-            amount=2000,  # More than balance
+            amount=2000,  # 잔액보다 많음
             reason='Test'
         )
-
+        
         assert result is False
-
+        
         user.refresh_from_db()
-        assert user.token_balance == 1000  # No change
-
+        assert user.token_balance == 1000  # 변경 없음
+    
     @pytest.mark.django_db(transaction=True)
     def test_consume_tokens_concurrency(self, user):
-        """Concurrency test"""
+        """동시성 테스트"""
         from concurrent.futures import ThreadPoolExecutor
-
+        
         def consume():
             return TokenService.consume_tokens(
                 user_id=user.id,
                 amount=100,
                 reason='Concurrent test'
             )
-
-        # 10 concurrent requests
+        
+        # 10개 동시 요청
         with ThreadPoolExecutor(max_workers=10) as executor:
             results = list(executor.map(lambda _: consume(), range(10)))
-
-        # Should succeed 10 times
+        
+        # 10번 성공해야 함
         assert sum(results) == 10
-
+        
         user.refresh_from_db()
         assert user.token_balance == 0
 ```
@@ -1154,19 +1154,19 @@ from rest_framework import status
 
 @pytest.mark.django_db
 class TestStyleAPI:
-
+    
     def test_list_styles(self, api_client, style_model):
-        """List styles"""
+        """스타일 목록 조회"""
         response = api_client.get('/api/styles/')
-
+        
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data['results']) == 1
         assert response.data['results'][0]['name'] == 'Test Style'
-
+    
     def test_create_style_requires_artist(self, api_client, user):
-        """Regular user cannot create style"""
+        """일반 사용자는 스타일 생성 불가"""
         api_client.force_authenticate(user=user)
-
+        
         data = {
             'name': 'New Style',
             'description': 'Description',
@@ -1178,7 +1178,7 @@ class TestStyleAPI:
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_create_style_success(self, api_client, artist):
-        """Artist can create style"""
+        """작가는 스타일 생성 가능"""
         api_client.force_authenticate(user=artist)
 
         data = {
@@ -1186,22 +1186,22 @@ class TestStyleAPI:
             'description': 'Description',
             'generation_cost_tokens': 150
         }
-
+        
         response = api_client.post('/api/styles/', data)
-
+        
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data['name'] == 'New Style'
         assert response.data['artist_name'] == artist.username
-
+    
     def test_train_style(self, api_client, artist, style_model, mocker):
-        """Style training request"""
+        """스타일 학습 요청"""
         api_client.force_authenticate(user=artist)
-
+        
         # RabbitMQ mock
         mock_rabbitmq = mocker.patch(
             'app.services.rabbitmq_service.RabbitMQService.publish_training_task'
         )
-
+        
         response = api_client.post(f'/api/styles/{style_model.id}/train/')
 
         assert response.status_code == status.HTTP_200_OK
@@ -1216,25 +1216,25 @@ import pytest
 from unittest.mock import Mock, patch
 
 def test_generation_with_rabbitmq_mock(api_client, user, style_model, mocker):
-    """Generation test using RabbitMQ mock"""
+    """RabbitMQ mock을 사용한 생성 테스트"""
     api_client.force_authenticate(user=user)
-
+    
     # RabbitMQ publish mock
     mock_publish = mocker.patch(
         'app.services.rabbitmq_service.RabbitMQService.publish_generation_task'
     )
-
+    
     data = {
         'style_id': style_model.id,
         'prompt': 'a beautiful sunset',
     }
-
+    
     response = api_client.post('/api/generations/', data)
-
+    
     assert response.status_code == status.HTTP_201_CREATED
     mock_publish.assert_called_once()
-
-    # Verify call arguments
+    
+    # 호출 인자 확인
     call_args = mock_publish.call_args
     assert call_args[1]['style_id'] == style_model.id
     assert call_args[1]['prompt'] == 'a beautiful sunset'
@@ -1242,10 +1242,10 @@ def test_generation_with_rabbitmq_mock(api_client, user, style_model, mocker):
 
 ---
 
-## References
+## 참고 자료
 
-- **[DRF Official Docs](https://www.django-rest-framework.org/)** - API Guide
-- **[docs/API.md](../../docs/API.md)** - Complete API specification
-- **[docs/database/README.md](../../docs/database/README.md)** - DB schema
-- **[docs/PATTERNS.md](../../docs/PATTERNS.md)** - Common patterns
-- **[PLAN.md](PLAN.md)** - Development plan
+- **[DRF 공식 문서](https://www.django-rest-framework.org/)** - API Guide
+- **[docs/API.md](../../docs/API.md)** - 전체 API 명세
+- **[docs/database/README.md](../../docs/database/README.md)** - DB 스키마
+- **[docs/PATTERNS.md](../../docs/PATTERNS.md)** - 공통 패턴
+- **[PLAN.md](PLAN.md)** - 개발 계획

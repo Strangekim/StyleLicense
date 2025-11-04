@@ -2,14 +2,14 @@
 
 ## Overview
 
-LoRA (Low-Rank Adaptation) 기반의 Stable Diffusion 파인튜닝 서버입니다. RabbitMQ에서 학습 태스크를 수신하여 사용자가 업로드한 이미지로 스타일 모델을 학습하고, 학습 진행률과 결과를 Backend API로 전송합니다.
+LoRA (Low-Rank Adaptation) based Stable Diffusion fine-tuning server. Receives training tasks from RabbitMQ, trains style models with user-uploaded images, and sends training progress and results to Backend API.
 
-**핵심 역할:**
-- RabbitMQ Consumer (`model_training` 큐)
-- LoRA 파인튜닝 실행 (Stable Diffusion v1.5)
-- 학습 진행률 주기적 리포팅
-- 체크포인트 관리 및 S3 업로드
-- 학습 완료/실패 webhook 전송
+**Core Responsibilities:**
+- RabbitMQ Consumer (`model_training` queue)
+- Execute LoRA fine-tuning (Stable Diffusion v1.5)
+- Periodic progress reporting
+- Checkpoint management and S3 upload
+- Send training complete/failed webhooks
 
 ---
 
@@ -80,57 +80,57 @@ apps/training-server/
 
 ### LoRA Training Pipeline
 
-사용자 이미지로 Stable Diffusion 모델을 파인튜닝하는 파이프라인입니다.
+Pipeline for fine-tuning Stable Diffusion model with user images.
 
 ```
 RabbitMQ Queue
   ↓
-Training Consumer (메시지 수신)
+Training Consumer (receive message)
   ↓
-S3 Service (학습 이미지 다운로드)
+S3 Service (download training images)
   ↓
-LoRA Trainer (모델 학습)
-  ├─ Dataset 준비
-  ├─ LoRA Config 적용
-  ├─ Training Loop 실행
-  ├─ Checkpoint 저장 (10 epoch마다)
-  └─ 진행률 리포팅 (30초마다)
+LoRA Trainer (train model)
+  ├─ Prepare dataset
+  ├─ Apply LoRA config
+  ├─ Execute training loop
+  ├─ Save checkpoint (every 10 epochs)
+  └─ Report progress (every 30 seconds)
   ↓
-S3 Service (모델 weights 업로드)
+S3 Service (upload model weights)
   ↓
-Webhook Service (학습 완료 통보)
+Webhook Service (notify training complete)
 ```
 
-**주요 컴포넌트:**
-- `TrainingConsumer`: RabbitMQ에서 학습 태스크 수신
-- `LoRATrainer`: Stable Diffusion v1.5 + LoRA 학습
-- `S3Service`: 이미지/모델 다운로드/업로드
-- `WebhookService`: Backend API로 진행률/결과 전송
+**Main Components:**
+- `TrainingConsumer`: Receive training tasks from RabbitMQ
+- `LoRATrainer`: Stable Diffusion v1.5 + LoRA training
+- `S3Service`: Download/upload images/models
+- `WebhookService`: Send progress/results to Backend API
 
 ### Data Flow
 
-#### 모델 학습 플로우
+#### Model Training Flow
 ```
-Backend → RabbitMQ: 학습 태스크 발행
-RabbitMQ → Training Server: 태스크 수신
-Training Server → S3: 이미지 다운로드 (10-30장)
+Backend → RabbitMQ: Publish training task
+RabbitMQ → Training Server: Receive task
+Training Server → S3: Download images (10-30 images)
 Training Server: LoRA Fine-tuning (100-500 epochs)
-Training Server → Backend: 진행률 리포팅 (30초마다, PATCH /api/webhooks/training/progress)
-Training Server → S3: 체크포인트 저장 (10 epoch마다)
-Training Server → S3: 최종 모델 업로드 (.safetensors)
+Training Server → Backend: Report progress (every 30 seconds, PATCH /api/webhooks/training/progress)
+Training Server → S3: Save checkpoints (every 10 epochs)
+Training Server → S3: Upload final model (.safetensors)
 Training Server → Backend: POST /api/webhooks/training/complete
-Backend → Frontend: 학습 완료 알림
+Backend → Frontend: Training complete notification
 ```
 
-**상세 API 명세**: [docs/API.md#10-webhook-api](../../docs/API.md#10-webhook-api)
+**Detailed API spec**: [docs/API.md#10-webhook-api](../../docs/API.md#10-webhook-api)
 
-**학습 파라미터 (TECHSPEC.md 및 PLAN.md 기반):**
+**Training parameters (based on TECHSPEC.md and PLAN.md):**
 - Base Model: Stable Diffusion v1.5
 - LoRA Rank: 8
 - Learning Rate: 1e-4
-- Epochs: 100-500 (이미지 수에 따라)
+- Epochs: 100-500 (depending on number of images)
 - Batch Size: 1
-- GPU Memory: 8GB+ VRAM 권장
+- GPU Memory: 8GB+ VRAM recommended
 
 ---
 
@@ -139,30 +139,30 @@ Backend → Frontend: 학습 완료 알림
 ### Prerequisites
 - Python 3.11+
 - CUDA 11.8+ (NVIDIA GPU required)
-- GPU Memory: 최소 8GB VRAM (RTX 3060 이상 권장)
+- GPU Memory: Minimum 8GB VRAM (RTX 3060 or higher recommended)
 - RabbitMQ 3.12+
-- AWS S3: 버킷 및 IAM 권한
+- AWS S3: Bucket and IAM permissions
 
 ### Installation
 
 ```bash
-# 1. Virtual environment 생성
+# 1. Create virtual environment
 cd apps/training-server
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# 2. Dependencies 설치
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. CUDA 확인
+# 3. Verify CUDA
 python -c "import torch; print(torch.cuda.is_available())"
-# True 출력되어야 함
+# Should output True
 
-# 4. 환경변수 설정
+# 4. Set environment variables
 cp .env.example .env
-# .env 파일 수정
+# Edit .env file
 
-# 5. 실행
+# 5. Run
 python main.py
 ```
 
@@ -181,9 +181,9 @@ AWS_SECRET_ACCESS_KEY=your_secret
 AWS_STORAGE_BUCKET_NAME=stylelicense-media
 AWS_S3_REGION_NAME=ap-northeast-2
 
-# Backend API (운영 서버의 도메인 - HTTPS 사용)
+# Backend API (production server domain - use HTTPS)
 BACKEND_API_URL=https://api.stylelicense.com
-INTERNAL_API_TOKEN=your_internal_token  # 32자 이상 랜덤 UUID
+INTERNAL_API_TOKEN=your_internal_token  # 32+ character random UUID
 
 # GPU
 CUDA_VISIBLE_DEVICES=0
@@ -199,13 +199,13 @@ LOG_LEVEL=INFO
 ### Running Tests
 
 ```bash
-# 전체 테스트 실행
+# Run all tests
 pytest
 
-# Coverage 리포트
+# Coverage report
 pytest --cov=training --cov-report=html
 
-# GPU 필요한 테스트 스킵 (CPU 환경)
+# Skip GPU tests (CPU environment)
 pytest -m "not gpu"
 ```
 
@@ -240,34 +240,34 @@ pylint training/ services/ consumer/
 
 ### Production Checklist
 
-**GPU 서버: RunPod RTX 4090 24GB**
+**GPU Server: RunPod RTX 4090 24GB**
 
-- [ ] **RunPod GPU Pod 생성**
+- [ ] **Create RunPod GPU Pod**
   - GPU: RTX 4090 (24GB VRAM)
   - Template: Custom Docker Image
   - Image: `<registry>/stylelicense-training:latest`
-- [ ] CUDA 11.8+ 포함된 Docker 이미지 사용
-- [ ] **RabbitMQ 연결 설정**
+- [ ] Use Docker image with CUDA 11.8+
+- [ ] **Configure RabbitMQ connection**
   - `RABBITMQ_HOST=<Backend-EC2-Public-IP>`
-  - Backend EC2의 RabbitMQ 포트(5672)를 Public으로 노출 또는 VPN 사용
-  - 방화벽: RunPod Pod IP를 Backend EC2 Security Group에 허용
-- [ ] **S3 버킷 설정**
-  - 학습 이미지: Private Bucket (`stylelicense-training-data`)
-  - 모델 파일: Private Bucket (`stylelicense-models`)
-  - **AWS Access Key 환경변수** 설정 (RunPod Pod에서 S3 접근)
-- [ ] **Backend API 연결 설정**
-  - `BACKEND_API_URL=https://api.stylelicense.com` (도메인 사용)
-  - `INTERNAL_API_TOKEN=<32자-UUID>` (Webhook 인증용)
-  - Backend EC2 Security Group: 443 포트 허용 (RunPod IP 또는 전체)
-- [ ] GPU 메모리 프로파일링 (24GB 이내 사용)
-- [ ] 로깅 설정 (RunPod 콘솔 또는 CloudWatch)
-- [ ] Checkpoint 저장 경로 설정
-- [ ] 로그 수집 (CloudWatch, Sentry)
+  - Expose Backend EC2's RabbitMQ port (5672) publicly or use VPN
+  - Firewall: Allow RunPod Pod IP in Backend EC2 Security Group
+- [ ] **Configure S3 bucket**
+  - Training images: Private Bucket (`stylelicense-training-data`)
+  - Model files: Private Bucket (`stylelicense-models`)
+  - **Set AWS Access Key environment variables** (for S3 access from RunPod Pod)
+- [ ] **Configure Backend API connection**
+  - `BACKEND_API_URL=https://api.stylelicense.com` (use domain)
+  - `INTERNAL_API_TOKEN=<32-character-UUID>` (for webhook authentication)
+  - Backend EC2 Security Group: Allow port 443 (RunPod IP or all)
+- [ ] GPU memory profiling (within 24GB)
+- [ ] Configure logging (RunPod console or CloudWatch)
+- [ ] Set checkpoint save path
+- [ ] Configure log collection (CloudWatch, Sentry)
 
 ### Running in Production
 
 ```bash
-# Docker 실행 (GPU 사용)
+# Run with Docker (use GPU)
 docker run --gpus all \
     -e RABBITMQ_HOST=rabbitmq \
     -e AWS_ACCESS_KEY_ID=$AWS_KEY \
@@ -282,26 +282,26 @@ docker run --gpus all \
 
 ### Metrics to Monitor
 
-- 학습 진행률 (epoch, loss)
-- GPU 메모리 사용량
-- GPU 활용률 (utilization)
-- RabbitMQ 큐 길이
-- 학습 성공/실패 비율
-- 평균 학습 시간 (per style)
+- Training progress (epoch, loss)
+- GPU memory usage
+- GPU utilization
+- RabbitMQ queue length
+- Training success/failure rate
+- Average training time (per style)
 
 ---
 
 ## References
 
-### 필수 문서
-- **[CODE_GUIDE.md](CODE_GUIDE.md)** - 코드 작성 패턴 및 예제 (코드 작성 전 필독)
-- **[PLAN.md](PLAN.md)** - 개발 작업 계획 (다음 작업 확인)
+### Essential Documents
+- **[CODE_GUIDE.md](CODE_GUIDE.md)** - Code writing patterns and examples (must read before coding)
+- **[PLAN.md](PLAN.md)** - Development task plan (check next task)
 
-### 프로젝트 문서
-- **[TECHSPEC.md](../../TECHSPEC.md)** - 전체 시스템 아키텍처
-- **[docs/PATTERNS.md](../../docs/PATTERNS.md)** - 메시지 포맷 (RabbitMQ)
+### Project Documents
+- **[TECHSPEC.md](../../TECHSPEC.md)** - Overall system architecture
+- **[docs/PATTERNS.md](../../docs/PATTERNS.md)** - Message format (RabbitMQ)
 
-### 외부 문서
+### External Documentation
 - **Diffusers**: https://huggingface.co/docs/diffusers
 - **PEFT (LoRA)**: https://huggingface.co/docs/peft
 - **PyTorch**: https://pytorch.org/docs/stable/
@@ -314,10 +314,10 @@ docker run --gpus all \
 
 **1. CUDA not available**
 ```bash
-# CUDA 설치 확인
+# Verify CUDA installation
 nvidia-smi
 
-# PyTorch CUDA 버전 확인
+# Check PyTorch CUDA version
 python -c "import torch; print(torch.version.cuda)"
 ```
 
@@ -329,15 +329,15 @@ docker restart rabbitmq
 
 **3. Out of memory**
 ```bash
-# Batch size 줄이기 (config.py)
-# Gradient checkpointing 활성화
-# Mixed precision training 사용 (FP16)
+# Reduce batch size (config.py)
+# Enable gradient checkpointing
+# Use mixed precision training (FP16)
 ```
 
 ---
 
 ## Support
 
-- **GitHub Issues**: 버그 리포트 및 기능 제안
-- **Team Communication**: Slack #ai-training 채널
+- **GitHub Issues**: Bug reports and feature requests
+- **Team Communication**: Slack #ai-training channel
 - **Documentation**: [TECHSPEC.md](../../TECHSPEC.md)

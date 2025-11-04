@@ -2,15 +2,15 @@
 
 ## Overview
 
-Stable Diffusion 기반의 이미지 생성 서버입니다. RabbitMQ에서 생성 요청을 수신하여 사용자가 학습한 LoRA 스타일 모델을 적용한 이미지를 생성하고, 워터마크를 삽입하여 S3에 업로드합니다.
+Stable Diffusion-based image generation server. Receives generation requests from RabbitMQ, generates images using user-trained LoRA style models, inserts watermarks, and uploads to S3.
 
-**핵심 역할:**
-- RabbitMQ Consumer (`image_generation` 큐)
-- Stable Diffusion 이미지 생성 (LoRA weights 적용)
-- 워터마크(시그니처) 삽입
-- 배치 처리 (최대 10개 동시 생성)
-- 생성 진행률 리포팅
-- 완료/실패 webhook 전송
+**Core Responsibilities:**
+- RabbitMQ Consumer (`image_generation` queue)
+- Stable Diffusion image generation (apply LoRA weights)
+- Watermark (signature) insertion
+- Batch processing (max 10 simultaneous generations)
+- Generation progress reporting
+- Send complete/failed webhooks
 
 ---
 
@@ -84,62 +84,62 @@ apps/inference-server/
 
 ### Image Generation Pipeline
 
-사용자 프롬프트와 LoRA 스타일을 결합하여 이미지를 생성하는 파이프라인입니다.
+Pipeline that combines user prompts with LoRA style to generate images.
 
 ```
 RabbitMQ Queue
   ↓
-Generation Consumer (메시지 수신)
+Generation Consumer (receive message)
   ↓
-S3 Service (LoRA weights 다운로드)
+S3 Service (download LoRA weights)
   ↓
-Image Generator (이미지 생성)
-  ├─ Stable Diffusion Pipeline 로드
-  ├─ LoRA Weights 적용
-  ├─ 이미지 생성 (50 steps)
-  └─ 진행률 리포팅
+Image Generator (generate image)
+  ├─ Load Stable Diffusion pipeline
+  ├─ Apply LoRA weights
+  ├─ Generate image (50 steps)
+  └─ Report progress
   ↓
-Watermark Inserter (워터마크 삽입)
-  ├─ 작가 서명(시그니처) 추가
-  ├─ 위치/투명도 설정
-  └─ 이미지 합성
+Watermark Inserter (insert watermark)
+  ├─ Add artist signature
+  ├─ Set position/opacity
+  └─ Composite image
   ↓
-S3 Service (이미지 업로드)
+S3 Service (upload image)
   ↓
-Webhook Service (생성 완료 통보)
+Webhook Service (notify generation complete)
 ```
 
-**주요 컴포넌트:**
-- `GenerationConsumer`: RabbitMQ에서 생성 태스크 수신 (최대 10개 동시)
-- `ImageGenerator`: Stable Diffusion v1.5 + LoRA 추론
-- `WatermarkInserter`: PIL 기반 작가 서명(시그니처) 워터마크 삽입
-- `S3Service`: LoRA 모델/이미지 다운로드/업로드
-- `WebhookService`: Backend API로 진행률/결과 전송
+**Main Components:**
+- `GenerationConsumer`: Receive generation tasks from RabbitMQ (max 10 simultaneous)
+- `ImageGenerator`: Stable Diffusion v1.5 + LoRA inference
+- `WatermarkInserter`: PIL-based artist signature watermark insertion
+- `S3Service`: Download/upload LoRA models/images
+- `WebhookService`: Send progress/results to Backend API
 
 ### Data Flow
 
-#### 이미지 생성 플로우
+#### Image Generation Flow
 ```
-Backend → RabbitMQ: 생성 태스크 발행
-RabbitMQ → Inference Server: 태스크 수신
-Inference Server → S3: LoRA weights 다운로드
-Inference Server: Stable Diffusion 추론 (50 steps)
-Inference Server → Backend: 진행률 리포팅 (0%, 25%, 50%, 75%, 90%, PATCH /api/webhooks/inference/progress)
-Inference Server: 작가 서명(워터마크) 자동 삽입
-Inference Server → S3: 생성된 이미지 업로드 (.png)
+Backend → RabbitMQ: Publish generation task
+RabbitMQ → Inference Server: Receive task
+Inference Server → S3: Download LoRA weights
+Inference Server: Stable Diffusion inference (50 steps)
+Inference Server → Backend: Report progress (0%, 25%, 50%, 75%, 90%, PATCH /api/webhooks/inference/progress)
+Inference Server: Automatically insert artist signature (watermark)
+Inference Server → S3: Upload generated image (.png)
 Inference Server → Backend: POST /api/webhooks/inference/complete
-Backend → Frontend: 이미지 URL 반환
+Backend → Frontend: Return image URL
 ```
 
-**상세 API 명세**: [docs/API.md#10-webhook-api](../../docs/API.md#10-webhook-api)
+**Detailed API spec**: [docs/API.md#10-webhook-api](../../docs/API.md#10-webhook-api)
 
-**생성 파라미터 (TECHSPEC.md 및 PLAN.md 기반):**
+**Generation parameters (based on TECHSPEC.md and PLAN.md):**
 - Base Model: Stable Diffusion v1.5
 - Sampling Steps: 50
 - Guidance Scale: 7.5
 - Image Size: 512x512
-- Scheduler: DPM-Solver++ (빠른 추론)
-- Batch Size: 1-4 (동시 생성)
+- Scheduler: DPM-Solver++ (fast inference)
+- Batch Size: 1-4 (simultaneous generation)
 
 ---
 
@@ -148,30 +148,30 @@ Backend → Frontend: 이미지 URL 반환
 ### Prerequisites
 - Python 3.11+
 - CUDA 11.8+ (NVIDIA GPU required)
-- GPU Memory: 최소 6GB VRAM (RTX 3060 이상 권장)
+- GPU Memory: Minimum 6GB VRAM (RTX 3060 or higher recommended)
 - RabbitMQ 3.12+
-- AWS S3: 버킷 및 IAM 권한
+- AWS S3: Bucket and IAM permissions
 
 ### Installation
 
 ```bash
-# 1. Virtual environment 생성
+# 1. Create virtual environment
 cd apps/inference-server
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# 2. Dependencies 설치
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. CUDA 확인
+# 3. Verify CUDA
 python -c "import torch; print(torch.cuda.is_available())"
-# True 출력되어야 함
+# Should output True
 
-# 4. 환경변수 설정
+# 4. Set environment variables
 cp .env.example .env
-# .env 파일 수정
+# Edit .env file
 
-# 5. 실행
+# 5. Run
 python main.py
 ```
 
@@ -190,9 +190,9 @@ AWS_SECRET_ACCESS_KEY=your_secret
 AWS_STORAGE_BUCKET_NAME=stylelicense-media
 AWS_S3_REGION_NAME=ap-northeast-2
 
-# Backend API (운영 서버의 도메인 - HTTPS 사용)
+# Backend API (production server domain - use HTTPS)
 BACKEND_API_URL=https://api.stylelicense.com
-INTERNAL_API_TOKEN=your_internal_token  # 32자 이상 랜덤 UUID
+INTERNAL_API_TOKEN=your_internal_token  # 32+ character random UUID
 
 # GPU
 CUDA_VISIBLE_DEVICES=0
@@ -211,13 +211,13 @@ LOG_LEVEL=INFO
 ### Running Tests
 
 ```bash
-# 전체 테스트 실행
+# Run all tests
 pytest
 
-# Coverage 리포트
+# Coverage report
 pytest --cov=inference --cov-report=html
 
-# GPU 필요한 테스트 스킵 (CPU 환경)
+# Skip GPU tests (CPU environment)
 pytest -m "not gpu"
 ```
 
@@ -252,35 +252,35 @@ pylint inference/ services/ consumer/ watermark/
 
 ### Production Checklist
 
-**GPU 서버: RunPod RTX 4090 24GB**
+**GPU Server: RunPod RTX 4090 24GB**
 
-- [ ] **RunPod GPU Pod 생성**
+- [ ] **Create RunPod GPU Pod**
   - GPU: RTX 4090 (24GB VRAM)
   - Template: Custom Docker Image
   - Image: `<registry>/stylelicense-inference:latest`
-- [ ] CUDA 11.8+ 포함된 Docker 이미지 사용
-- [ ] **RabbitMQ 연결 설정**
+- [ ] Use Docker image with CUDA 11.8+
+- [ ] **Configure RabbitMQ connection**
   - `RABBITMQ_HOST=<Backend-EC2-Public-IP>`
-  - Backend EC2의 RabbitMQ 포트(5672)를 Public으로 노출 또는 VPN 사용
-  - 방화벽: RunPod Pod IP를 Backend EC2 Security Group에 허용
-- [ ] **S3 버킷 설정**
-  - 생성 이미지: Public Bucket (`stylelicense-generations`)
-  - **AWS Access Key 환경변수** 설정 (RunPod Pod에서 S3 접근)
-- [ ] **Backend API 연결 설정**
-  - `BACKEND_API_URL=https://api.stylelicense.com` (도메인 사용)
-  - `INTERNAL_API_TOKEN=<32자-UUID>` (Webhook 인증용)
-  - Backend EC2 Security Group: 443 포트 허용 (RunPod IP 또는 전체)
-- [ ] GPU 메모리 프로파일링 (24GB 이내 사용)
-- [ ] 로깅 설정 (RunPod 콘솔 또는 CloudWatch)
-- [ ] Font 파일 설치 (워터마크용 - Docker 이미지에 포함)
-- [ ] 동시 생성 제한 설정 (`MAX_CONCURRENT_GENERATIONS=10`)
-- [ ] 로그 수집 (CloudWatch, Sentry)
-- [ ] Model caching 전략 수립
+  - Expose Backend EC2's RabbitMQ port (5672) publicly or use VPN
+  - Firewall: Allow RunPod Pod IP in Backend EC2 Security Group
+- [ ] **Configure S3 bucket**
+  - Generated images: Public Bucket (`stylelicense-generations`)
+  - **Set AWS Access Key environment variables** (for S3 access from RunPod Pod)
+- [ ] **Configure Backend API connection**
+  - `BACKEND_API_URL=https://api.stylelicense.com` (use domain)
+  - `INTERNAL_API_TOKEN=<32-character-UUID>` (for webhook authentication)
+  - Backend EC2 Security Group: Allow port 443 (RunPod IP or all)
+- [ ] GPU memory profiling (within 24GB)
+- [ ] Configure logging (RunPod console or CloudWatch)
+- [ ] Install font files (for watermark - include in Docker image)
+- [ ] Set concurrent generation limit (`MAX_CONCURRENT_GENERATIONS=10`)
+- [ ] Configure log collection (CloudWatch, Sentry)
+- [ ] Establish model caching strategy
 
 ### Running in Production
 
 ```bash
-# Docker 실행 (GPU 사용)
+# Run with Docker (use GPU)
 docker run --gpus all \
     -e RABBITMQ_HOST=rabbitmq \
     -e AWS_ACCESS_KEY_ID=$AWS_KEY \
@@ -296,26 +296,26 @@ docker run --gpus all \
 
 ### Metrics to Monitor
 
-- 생성 시간 (per image)
-- GPU 메모리 사용량
-- GPU 활용률 (utilization)
-- RabbitMQ 큐 길이
-- 생성 성공/실패 비율
-- 평균 생성 시간 (steps per second)
+- Generation time (per image)
+- GPU memory usage
+- GPU utilization
+- RabbitMQ queue length
+- Generation success/failure rate
+- Average generation time (steps per second)
 
 ---
 
 ## References
 
-### 필수 문서
-- **[CODE_GUIDE.md](CODE_GUIDE.md)** - 코드 작성 패턴 및 예제 (코드 작성 전 필독)
-- **[PLAN.md](PLAN.md)** - 개발 작업 계획 (다음 작업 확인)
+### Essential Documents
+- **[CODE_GUIDE.md](CODE_GUIDE.md)** - Code writing patterns and examples (must read before coding)
+- **[PLAN.md](PLAN.md)** - Development task plan (check next task)
 
-### 프로젝트 문서
-- **[TECHSPEC.md](../../TECHSPEC.md)** - 전체 시스템 아키텍처
-- **[docs/PATTERNS.md](../../docs/PATTERNS.md)** - 메시지 포맷 (RabbitMQ)
+### Project Documents
+- **[TECHSPEC.md](../../TECHSPEC.md)** - Overall system architecture
+- **[docs/PATTERNS.md](../../docs/PATTERNS.md)** - Message format (RabbitMQ)
 
-### 외부 문서
+### External Documentation
 - **Diffusers**: https://huggingface.co/docs/diffusers
 - **Stable Diffusion**: https://github.com/CompVis/stable-diffusion
 - **PyTorch**: https://pytorch.org/docs/stable/
@@ -329,21 +329,21 @@ docker run --gpus all \
 
 **1. CUDA not available**
 ```bash
-# CUDA 설치 확인
+# Verify CUDA installation
 nvidia-smi
 
-# PyTorch CUDA 버전 확인
+# Check PyTorch CUDA version
 python -c "import torch; print(torch.version.cuda)"
 ```
 
 **2. Out of memory**
 ```bash
-# Attention slicing 활성화 (config.py)
-# Steps 줄이기 (30 steps)
-# Batch size 1로 설정
+# Enable attention slicing (config.py)
+# Reduce steps (30 steps)
+# Set batch size to 1
 ```
 
-**3. Font not found (워터마크)**
+**3. Font not found (watermark)**
 ```bash
 # Debian/Ubuntu
 apt-get install fonts-dejavu-core
@@ -354,15 +354,15 @@ apk add ttf-dejavu
 
 **4. Slow generation**
 ```bash
-# xFormers 활성화
-# DPM-Solver++ scheduler 사용 (기본값)
-# Model caching 활성화
+# Enable xFormers
+# Use DPM-Solver++ scheduler (default)
+# Enable model caching
 ```
 
 ---
 
 ## Support
 
-- **GitHub Issues**: 버그 리포트 및 기능 제안
-- **Team Communication**: Slack #ai-inference 채널
+- **GitHub Issues**: Bug reports and feature requests
+- **Team Communication**: Slack #ai-inference channel
 - **Documentation**: [TECHSPEC.md](../../TECHSPEC.md)

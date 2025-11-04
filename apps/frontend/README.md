@@ -2,13 +2,13 @@
 
 ## Overview
 
-Vue 3 기반의 Style License 클라이언트 애플리케이션입니다. Feature-Sliced Design 패턴을 적용하여 확장 가능한 구조로 설계되었으며, Pinia 상태 관리, Vue Router 기반 라우팅, Tailwind CSS 스타일링을 사용합니다.
+Style License client application based on Vue 3. Designed with a scalable architecture using the Feature-Sliced Design pattern, with Pinia state management, Vue Router-based routing, and Tailwind CSS styling.
 
-**핵심 역할:**
-- 9개 주요 페이지 제공 (메인, 검색, 스타일 상세, 마이페이지 등)
-- RESTful API 통신 (Backend와 세션 기반 인증)
-- 반응형 SPA (Single Page Application)
-- 다국어 지원 (한국어/영어)
+**Core Responsibilities:**
+- Provide 9 main pages (Main, Search, Style Detail, My Page, etc.)
+- RESTful API communication (Session-based authentication with Backend)
+- Responsive SPA (Single Page Application)
+- Multi-language support (Korean/English)
 
 ---
 
@@ -17,18 +17,18 @@ Vue 3 기반의 Style License 클라이언트 애플리케이션입니다. Featu
 | Category | Technology | Version | Purpose |
 |----------|------------|---------|---------|
 | Framework | Vue 3 | 3.3+ | UI Framework (Composition API) |
-| State Management | Pinia | 2.1+ | 상태 관리 |
-| Routing | Vue Router | 4.2+ | 클라이언트 라우팅 |
-| HTTP Client | Axios | 1.6+ | API 통신 |
-| Styling | Tailwind CSS | 3.4+ | 유틸리티 퍼스트 CSS |
-| i18n | Vue I18n | 9.8+ | 다국어 처리 |
-| Build Tool | Vite | 5.0+ | 빌드 및 개발 서버 |
+| State Management | Pinia | 2.1+ | State management |
+| Routing | Vue Router | 4.2+ | Client routing |
+| HTTP Client | Axios | 1.6+ | API communication |
+| Styling | Tailwind CSS | 3.4+ | Utility-first CSS |
+| i18n | Vue I18n | 9.8+ | Multi-language support |
+| Build Tool | Vite | 5.0+ | Build and dev server |
 | Testing | Vitest | 1.0+ | Unit tests |
 | E2E Testing | Playwright | 1.40+ | End-to-end tests |
-| Validation | Zod | 3.22+ | 런타임 데이터 검증 |
+| Validation | Zod | 3.22+ | Runtime data validation |
 | Code Quality | ESLint, Prettier | 8.56+, 3.1+ | Linting, Formatting |
 
-> **참고**: TypeScript를 사용하지 않으며, Zod 런타임 검증과 ESLint로 코드 안정성을 확보합니다.
+> **Note**: TypeScript is not used. Code stability is ensured through Zod runtime validation and ESLint.
 
 ---
 
@@ -36,118 +36,118 @@ Vue 3 기반의 Style License 클라이언트 애플리케이션입니다. Featu
 
 ```
 apps/frontend/
-├── public/                   # 정적 파일
+├── public/                   # Static files
 │   ├── favicon.ico
 │   └── fonts/
 │
 ├── src/
-│   ├── app/                  # 앱 진입점
-│   │   ├── App.vue          # 루트 컴포넌트
+│   ├── app/                  # App entry point
+│   │   ├── App.vue          # Root component
 │   │   ├── main.js          # Entry point
-│   │   └── styles/          # 글로벌 스타일
+│   │   └── styles/          # Global styles
 │   │
-│   ├── pages/               # 페이지 컴포넌트 (라우트 매칭)
-│   │   ├── MainPage.vue     # 메인 (공개 피드)
-│   │   ├── FeedDetailPage.vue  # 피드 상세
-│   │   ├── SearchPage.vue    # 검색 & 팔로잉
-│   │   ├── StyleDetailPage.vue # 스타일 상세 & 생성
-│   │   ├── MyPage.vue        # 마이페이지
-│   │   ├── EditStylePage.vue # 스타일 생성/수정
-│   │   ├── EditProfilePage.vue # 프로필 수정
-│   │   ├── PaymentPage.vue   # 토큰 결제 내역
-│   │   └── NotificationPage.vue # 알림
+│   ├── pages/               # Page components (route matching)
+│   │   ├── MainPage.vue     # Main (public feed)
+│   │   ├── FeedDetailPage.vue  # Feed detail
+│   │   ├── SearchPage.vue    # Search & Following
+│   │   ├── StyleDetailPage.vue # Style detail & generation
+│   │   ├── MyPage.vue        # My page
+│   │   ├── EditStylePage.vue # Create/edit style
+│   │   ├── EditProfilePage.vue # Edit profile
+│   │   ├── PaymentPage.vue   # Token payment history
+│   │   └── NotificationPage.vue # Notifications
 │   │
-│   ├── features/            # Feature 모듈 (Feature-Sliced Design)
+│   ├── features/            # Feature modules (Feature-Sliced Design)
 │   │   ├── auth/
-│   │   │   ├── ui/          # 로그인, 회원가입 컴포넌트
-│   │   │   ├── api/         # 인증 API 함수
+│   │   │   ├── ui/          # Login, signup components
+│   │   │   ├── api/         # Auth API functions
 │   │   │   ├── store.js     # useAuthStore (Pinia)
-│   │   │   └── composables/ # useAuth 훅
+│   │   │   └── composables/ # useAuth hook
 │   │   │
-│   │   ├── styles/          # 스타일 모델 관리
-│   │   │   ├── ui/          # 스타일 카드, 상세, 생성 폼
-│   │   │   ├── api/         # 스타일 CRUD API
+│   │   ├── styles/          # Style model management
+│   │   │   ├── ui/          # Style card, detail, creation form
+│   │   │   ├── api/         # Style CRUD API
 │   │   │   ├── store.js     # useStylesStore
 │   │   │   └── composables/ # useStyleForm, useStyleDetail
 │   │   │
-│   │   ├── generation/      # 이미지 생성
-│   │   │   ├── ui/          # 생성 폼, 진행률, 결과 표시
-│   │   │   ├── api/         # 생성 요청 API
+│   │   ├── generation/      # Image generation
+│   │   │   ├── ui/          # Generation form, progress, results
+│   │   │   ├── api/         # Generation request API
 │   │   │   ├── store.js     # useGenerationStore
 │   │   │   └── composables/ # useGenerationQueue
 │   │   │
-│   │   ├── community/       # 커뮤니티 기능
-│   │   │   ├── ui/          # 좋아요, 댓글, 팔로우 컴포넌트
-│   │   │   ├── api/         # 소셜 기능 API
+│   │   ├── community/       # Community features
+│   │   │   ├── ui/          # Like, comment, follow components
+│   │   │   ├── api/         # Social feature API
 │   │   │   ├── store.js     # useCommunityStore
 │   │   │   └── composables/ # useComments, useFollow
 │   │   │
-│   │   ├── tokens/          # 토큰 시스템
-│   │   │   ├── ui/          # 토큰 잔액, 구매 컴포넌트
-│   │   │   ├── api/         # 토큰 API
+│   │   ├── tokens/          # Token system
+│   │   │   ├── ui/          # Token balance, purchase components
+│   │   │   ├── api/         # Token API
 │   │   │   ├── store.js     # useTokensStore
 │   │   │   └── composables/ # useTokenBalance
 │   │   │
-│   │   ├── search/          # 검색 기능
-│   │   │   ├── ui/          # 검색창, 필터
-│   │   │   ├── api/         # 검색 API
+│   │   ├── search/          # Search functionality
+│   │   │   ├── ui/          # Search bar, filters
+│   │   │   ├── api/         # Search API
 │   │   │   └── composables/ # useSearch
 │   │   │
-│   │   └── notifications/   # 알림 시스템
-│   │       ├── ui/          # 알림 목록, 뱃지
-│   │       ├── api/         # 알림 API
+│   │   └── notifications/   # Notification system
+│   │       ├── ui/          # Notification list, badge
+│   │       ├── api/         # Notification API
 │   │       ├── store.js     # useNotificationsStore
 │   │       └── composables/ # useNotifications
 │   │
-│   ├── shared/              # 공유 리소스
-│   │   ├── ui/              # 공통 컴포넌트
+│   ├── shared/              # Shared resources
+│   │   ├── ui/              # Common components
 │   │   │   ├── Button.vue
 │   │   │   ├── Modal.vue
 │   │   │   ├── Input.vue
 │   │   │   ├── Card.vue
 │   │   │   └── ...
 │   │   │
-│   │   ├── api/             # API 클라이언트
-│   │   │   ├── client.js   # Axios 인스턴스
-│   │   │   └── interceptors.js # 인증, 에러 처리
+│   │   ├── api/             # API client
+│   │   │   ├── client.js   # Axios instance
+│   │   │   └── interceptors.js # Auth, error handling
 │   │   │
-│   │   ├── composables/     # 공통 훅
+│   │   ├── composables/     # Common hooks
 │   │   │   ├── usePagination.js
 │   │   │   ├── useInfiniteScroll.js
 │   │   │   ├── useDebounce.js
 │   │   │   └── useToast.js
 │   │   │
-│   │   ├── i18n/            # 다국어 리소스
+│   │   ├── i18n/            # Multi-language resources
 │   │   │   ├── ko.json
 │   │   │   └── en.json
 │   │   │
-│   │   ├── utils/           # 유틸리티 함수
-│   │   │   ├── format.js   # 날짜, 숫자 포맷팅
-│   │   │   ├── validation.js # Zod 스키마
+│   │   ├── utils/           # Utility functions
+│   │   │   ├── format.js   # Date, number formatting
+│   │   │   ├── validation.js # Zod schemas
 │   │   │   └── constants.js
 │   │   │
-│   │   └── assets/          # 이미지, 아이콘
+│   │   └── assets/          # Images, icons
 │   │
-│   └── router/              # 라우팅 설정
-│       ├── index.js         # 라우터 인스턴스
-│       ├── routes.js        # 라우트 정의
-│       └── guards.js        # 네비게이션 가드
+│   └── router/              # Routing configuration
+│       ├── index.js         # Router instance
+│       ├── routes.js        # Route definitions
+│       └── guards.js        # Navigation guards
 │
-├── tests/                   # 테스트
+├── tests/                   # Tests
 │   ├── unit/                # Unit tests
 │   ├── component/           # Component tests
 │   └── e2e/                 # E2E tests (Playwright)
 │
-├── .env.example             # 환경변수 템플릿
-├── vite.config.js           # Vite 설정
-├── tailwind.config.js       # Tailwind 설정
-├── vitest.config.js         # Vitest 설정
-├── playwright.config.js     # Playwright 설정
-├── eslint.config.js         # ESLint 설정
-├── .prettierrc              # Prettier 설정
+├── .env.example             # Environment variables template
+├── vite.config.js           # Vite configuration
+├── tailwind.config.js       # Tailwind configuration
+├── vitest.config.js         # Vitest configuration
+├── playwright.config.js     # Playwright configuration
+├── eslint.config.js         # ESLint configuration
+├── .prettierrc              # Prettier configuration
 ├── package.json
-├── PLAN.md                  # 개발 작업 계획
-├── CODE_GUIDE.md            # 코드 작성 패턴
+├── PLAN.md                  # Development task plan
+├── CODE_GUIDE.md            # Code writing patterns
 └── README.md                # This file
 ```
 
@@ -155,53 +155,53 @@ apps/frontend/
 
 ## Architecture
 
-### Feature-Sliced Design 패턴
+### Feature-Sliced Design Pattern
 
-각 feature는 독립적인 모듈로 구성되어 확장 가능성을 높입니다.
+Each feature is organized as an independent module to enhance scalability.
 
 ```
-Feature 구조:
+Feature structure:
 feature/
-├── ui/           # Vue 컴포넌트 (presentational)
-├── api/          # HTTP 요청 함수
-├── store.js      # Pinia 스토어 (상태 관리)
-└── composables/  # 재사용 가능한 로직 (hooks)
+├── ui/           # Vue components (presentational)
+├── api/          # HTTP request functions
+├── store.js      # Pinia store (state management)
+└── composables/  # Reusable logic (hooks)
 ```
 
-**장점**:
-- 도메인별 독립성 보장
-- 테스트 용이성
-- 팀 협업 시 충돌 최소화
+**Benefits**:
+- Domain independence guaranteed
+- Easy to test
+- Minimize conflicts during team collaboration
 
 ---
 
-### 주요 페이지 구성
+### Main Page Configuration
 
-| 페이지 | 경로 | 인증 | 설명 |
-|-------|------|------|------|
-| **Main Page** | `/` | 선택 | 공개 피드 그리드 (무한 스크롤) |
-| **Feed Detail** | `/feed/:id` | 선택 | 이미지 상세 + 댓글 모달 |
-| **Search** | `/search` | 선택 | 스타일/작가 검색 + 팔로잉 목록 |
-| **Style Detail** | `/styles/:id` | 선택 | 스타일 정보 + 이미지 생성 폼 |
-| **My Page** | `/me` | 필수 | 정보 수정, 스타일/피드 관리 |
-| **Edit Style** | `/styles/create`, `/styles/:id/edit` | 작가 | 스타일 생성/수정 (이미지 업로드) |
-| **Edit Profile** | `/me/edit` | 필수 | 프로필 정보 수정 |
-| **Payment** | `/me/tokens` | 필수 | 토큰 구매 내역/사용 내역 |
-| **Notification** | `/notifications` | 필수 | 알림 목록 + 읽음 처리 |
+| Page | Route | Auth | Description |
+|------|------|------|-------------|
+| **Main Page** | `/` | Optional | Public feed grid (infinite scroll) |
+| **Feed Detail** | `/feed/:id` | Optional | Image detail + comment modal |
+| **Search** | `/search` | Optional | Style/artist search + following list |
+| **Style Detail** | `/styles/:id` | Optional | Style info + image generation form |
+| **My Page** | `/me` | Required | Edit info, manage styles/feed |
+| **Edit Style** | `/styles/create`, `/styles/:id/edit` | Artist | Create/edit style (image upload) |
+| **Edit Profile** | `/me/edit` | Required | Edit profile information |
+| **Payment** | `/me/tokens` | Required | Token purchase/usage history |
+| **Notification** | `/notifications` | Required | Notification list + mark as read |
 
 ---
 
-### 상태 관리 전략
+### State Management Strategy
 
-Pinia 스토어를 도메인별로 분리하여 관리합니다.
+Pinia stores are separated by domain.
 
-**주요 스토어**:
+**Main Stores**:
 
 ```javascript
-// 1. useAuthStore (인증)
+// 1. useAuthStore (Authentication)
 {
-  user: null,              // 현재 로그인 사용자
-  isAuthenticated: false,  // 인증 여부
+  user: null,              // Current logged-in user
+  isAuthenticated: false,  // Authentication status
   role: 'user',            // 'user' | 'artist'
 
   actions: {
@@ -209,32 +209,32 @@ Pinia 스토어를 도메인별로 분리하여 관리합니다.
   }
 }
 
-// 2. useStylesStore (스타일 모델)
+// 2. useStylesStore (Style models)
 {
-  styles: [],              // 스타일 목록
-  myStyles: [],            // 내 스타일
-  currentStyle: null,      // 상세 페이지 스타일
+  styles: [],              // Style list
+  myStyles: [],            // My styles
+  currentStyle: null,      // Detail page style
 
   actions: {
     fetchStyles(), createStyle(), updateStyle(), deleteStyle()
   }
 }
 
-// 3. useGenerationStore (이미지 생성)
+// 3. useGenerationStore (Image generation)
 {
-  queue: [],               // 생성 대기열
-  history: [],             // 생성 이력
-  currentGeneration: null, // 진행 중인 생성
+  queue: [],               // Generation queue
+  history: [],             // Generation history
+  currentGeneration: null, // Current generation in progress
 
   actions: {
     requestGeneration(), pollProgress(), fetchHistory()
   }
 }
 
-// 4. useCommunityStore (커뮤니티)
+// 4. useCommunityStore (Community)
 {
-  feed: [],                // 공개 피드
-  following: [],           // 팔로잉 목록
+  feed: [],                // Public feed
+  following: [],           // Following list
 
   actions: {
     fetchFeed(), toggleLike(), followUser(), unfollowUser()
@@ -242,27 +242,27 @@ Pinia 스토어를 도메인별로 분리하여 관리합니다.
 }
 ```
 
-**전역 상태 최소화**:
-- 세션 정보(`useAuthStore`)
-- 테마/언어 설정 (필요 시)
-- 그 외는 페이지별 로컬 상태 사용
+**Minimize Global State**:
+- Session info (`useAuthStore`)
+- Theme/language settings (if needed)
+- Everything else uses page-level local state
 
 ---
 
-### 라우팅 전략
+### Routing Strategy
 
-**인증 가드**:
+**Authentication Guards**:
 ```javascript
 // router/guards.js
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
-  // 인증 필요 라우트
+  // Routes requiring authentication
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     return next('/login')
   }
 
-  // 작가 전용 라우트
+  // Artist-only routes
   if (to.meta.requiresArtist && authStore.role !== 'artist') {
     return next('/')
   }
@@ -271,13 +271,13 @@ router.beforeEach((to, from, next) => {
 })
 ```
 
-**지연 로딩**:
+**Lazy Loading**:
 ```javascript
 // router/routes.js
 const routes = [
   {
     path: '/styles/:id',
-    component: () => import('@/pages/StyleDetailPage.vue'), // 지연 로딩
+    component: () => import('@/pages/StyleDetailPage.vue'), // Lazy loading
     meta: { requiresAuth: false }
   },
   {
@@ -290,24 +290,24 @@ const routes = [
 
 ---
 
-### API 통신 패턴
+### API Communication Pattern
 
-**Axios Interceptor** 사용:
+**Using Axios Interceptor**:
 
 ```javascript
 // shared/api/interceptors.js
-// Request Interceptor - 세션 쿠키 자동 포함
+// Request Interceptor - Automatically include session cookie
 axios.interceptors.request.use(config => {
-  config.withCredentials = true  // 세션 쿠키 전송
+  config.withCredentials = true  // Send session cookie
   return config
 })
 
-// Response Interceptor - 에러 처리
+// Response Interceptor - Error handling
 axios.interceptors.response.use(
   response => response.data,
   error => {
     if (error.response?.status === 401) {
-      // 인증 만료 시 로그인 페이지로
+      // Redirect to login on auth expiration
       router.push('/login')
     }
     return Promise.reject(error)
@@ -315,7 +315,7 @@ axios.interceptors.response.use(
 )
 ```
 
-**API 함수 예시**:
+**API Function Example**:
 ```javascript
 // features/styles/api/index.js
 export const fetchStyles = async (params) => {
@@ -333,9 +333,9 @@ export const createStyle = async (data) => {
 
 ### Data Flow
 
-#### 이미지 생성 플로우
+#### Image Generation Flow
 ```
-사용자 (StyleDetailPage)
+User (StyleDetailPage)
   ↓
 useGenerationStore.requestGeneration()
   ↓
@@ -343,28 +343,28 @@ POST /api/generations (Backend)
   ↓
 RabbitMQ → Inference Server
   ↓
-Polling (매 5초): GET /api/generations/:id
+Polling (every 5 seconds): GET /api/generations/:id
   ↓
-진행률 업데이트 (0% → 25% → 50% → 75% → 90% → 100%)
+Progress update (0% → 25% → 50% → 75% → 90% → 100%)
   ↓
-생성 완료 → 이미지 URL 표시
+Generation complete → Display image URL
 ```
 
-#### 스타일 학습 플로우
+#### Style Training Flow
 ```
-작가 (EditStylePage)
+Artist (EditStylePage)
   ↓
-이미지 업로드 (10~100장)
+Upload images (10~100 images)
   ↓
 POST /api/styles (Backend)
   ↓
 RabbitMQ → Training Server
   ↓
-Polling (매 5초): GET /api/styles/:id
+Polling (every 5 seconds): GET /api/styles/:id
   ↓
-진행률 업데이트 (progress JSONB 필드)
+Progress update (progress JSONB field)
   ↓
-학습 완료 (30분~2시간) → 알림 표시
+Training complete (30min~2hours) → Show notification
 ```
 
 ---
@@ -372,23 +372,23 @@ Polling (매 5초): GET /api/styles/:id
 ## Development Setup
 
 ### Prerequisites
-- Node.js 18+ 및 npm
-- Backend 서버 실행 중 (http://localhost:8000)
+- Node.js 18+ and npm
+- Backend server running (http://localhost:8000)
 
 ### Installation
 
 ```bash
-# 1. 프로젝트 이동
+# 1. Navigate to project
 cd apps/frontend
 
-# 2. 의존성 설치
+# 2. Install dependencies
 npm install
 
-# 3. 환경변수 설정
+# 3. Set environment variables
 cp .env.example .env
-# .env 파일 수정
+# Edit .env file
 
-# 4. 개발 서버 실행
+# 4. Run development server
 npm run dev
 ```
 
@@ -398,10 +398,10 @@ npm run dev
 # Backend API URL
 VITE_API_BASE_URL=http://localhost:8000
 
-# S3 이미지 도메인 (선택사항)
+# S3 image domain (optional)
 VITE_S3_BASE_URL=https://stylelicense-media.s3.ap-northeast-2.amazonaws.com
 
-# 기본 언어
+# Default language
 VITE_DEFAULT_LOCALE=ko
 ```
 
@@ -412,20 +412,20 @@ VITE_DEFAULT_LOCALE=ko
 ### Running Dev Server
 
 ```bash
-# 개발 서버 시작 (Hot Module Replacement)
+# Start development server (Hot Module Replacement)
 npm run dev
 
-# 특정 포트 지정
+# Specify port
 npm run dev -- --port 3000
 ```
 
 ### Building
 
 ```bash
-# 프로덕션 빌드
+# Production build
 npm run build
 
-# 빌드 미리보기
+# Preview build
 npm run preview
 ```
 
@@ -438,7 +438,7 @@ npm run test
 # Watch mode
 npm run test:watch
 
-# Coverage 리포트
+# Coverage report
 npm run test:coverage
 
 # E2E tests (Playwright)
@@ -465,60 +465,60 @@ npm run format
 
 ## Page Structure
 
-### 1. Main Page (공개 피드)
-- 모든 공개 생성물 그리드 표시
-- 무한 스크롤 (cursor-based pagination)
-- 태그 필터링
-- 정렬: 최신순, 인기순
+### 1. Main Page (Public Feed)
+- Display all public generations in grid
+- Infinite scroll (cursor-based pagination)
+- Tag filtering
+- Sort: Latest, Popular
 
 ### 2. Feed Detail Page
-- 이미지 상세 보기
-- 댓글 모달 (1단계 대댓글 지원)
-- 좋아요 기능
-- 작가 정보 표시
+- Image detail view
+- Comment modal (1-level reply support)
+- Like feature
+- Artist info display
 
 ### 3. Search & Following Artist Page
-- **검색창**: 태그 기반 스타일 검색, 작가 이름 검색
-- **정렬**: 최신순(recent), 인기순(popular)
-- **팔로잉 섹션**: 내가 팔로잉한 작가들의 스타일 목록 (고정 영역)
-- **전체 스타일 그리드**: 검색 결과 또는 전체 스타일 목록
+- **Search bar**: Tag-based style search, artist name search
+- **Sort**: Latest (recent), Popular (popular)
+- **Following section**: Styles from followed artists (fixed area)
+- **All styles grid**: Search results or all styles list
 
 ### 4. Style Detail Page
-- 스타일 정보 (작가명, 가격, 설명, 샘플 이미지)
-- 이미지 생성 폼 (프롬프트 태그 입력, 비율 선택)
-- 진행률 표시 (폴링)
-- 생성 이력
+- Style info (artist name, price, description, sample images)
+- Image generation form (prompt tag input, aspect ratio selection)
+- Progress display (polling)
+- Generation history
 
 ### 5. My Page
-- 프로필 정보 수정 버튼
-- 내 스타일 관리 (작가인 경우)
-- 공개/비공개 피드 그리드
-- 토큰 결제 페이지 이동 버튼
+- Edit profile button
+- Manage my styles (if artist)
+- Public/private feed grid
+- Navigate to token payment page
 
 ### 6. Edit / Create Style Page
-- 이미지 업로드 (10~100장, 드래그 앤 드롭)
-- 스타일 이름, 설명, 가격 설정
-- 학습 진행률 표시 (폴링)
+- Image upload (10~100 images, drag and drop)
+- Set style name, description, price
+- Display training progress (polling)
 
 ### 7. Edit Profile
-- 사용자 이름, 프로필 이미지 수정
-- 작가 권한 신청 버튼
+- Edit username, profile image
+- Artist permission application button
 
 ### 8. Payment Page
-- 토큰 구매 내역 (결제 성공/실패)
-- 토큰 사용 내역 (이미지 생성 이력)
-- 토큰 구매 버튼 (토스 페이먼츠 연동)
+- Token purchase history (payment success/failure)
+- Token usage history (image generation history)
+- Token purchase button (Toss Payments integration)
 
 ### 9. Notification Page
-- 알림 목록 (팔로우, 좋아요, 댓글, 생성 완료/실패, 학습 완료/실패)
-- 읽음 처리
-- 모든 알림 읽음 버튼
+- Notification list (follow, like, comment, generation complete/failed, training complete/failed)
+- Mark as read
+- Mark all as read button
 
 ---
 
 ## State Management
 
-### Composable 훅 활용
+### Using Composable Hooks
 
 ```javascript
 // features/generation/composables/useGenerationQueue.js
@@ -536,7 +536,7 @@ export function useGenerationQueue() {
       if (result.status === 'completed' || result.status === 'failed') {
         clearInterval(interval)
       }
-    }, 5000) // 5초마다 폴링
+    }, 5000) // Poll every 5 seconds
   }
 
   return { queue, addToQueue, pollProgress }
@@ -549,16 +549,16 @@ export function useGenerationQueue() {
 
 ### Test Types
 
-| Type | Coverage | Tools | 설명 |
-|------|----------|-------|------|
+| Type | Coverage | Tools | Description |
+|------|----------|-------|-------------|
 | Unit Tests | 70% | Vitest | Composables, Stores, Utils |
-| Component Tests | 20% | Vitest + Testing Library | UI 컴포넌트 렌더링/이벤트 |
-| E2E Tests | 10% | Playwright | 핵심 사용자 플로우 |
+| Component Tests | 20% | Vitest + Testing Library | UI component rendering/events |
+| E2E Tests | 10% | Playwright | Core user flows |
 
 **Test Fixtures**: `tests/fixtures/`
 **Coverage Goal**: 80%
 
-### Unit Test 예시
+### Unit Test Example
 
 ```javascript
 // tests/unit/composables/useAuth.test.js
@@ -580,49 +580,49 @@ describe('useAuth', () => {
 
 ### Production Checklist
 
-- [ ] 환경변수 설정 (`VITE_API_BASE_URL=https://stylelicense.com`)
-- [ ] 빌드 오류 없음 (`npm run build`)
-- [ ] E2E 테스트 통과 (`npm run test:e2e`)
-- [ ] Lint 통과 (`npm run lint`)
-- [ ] Backend EC2 Nginx 디렉토리 생성 (`/var/www/stylelicense/frontend/`)
-- [ ] DNS 설정 확인 (A 레코드: stylelicense.com → EC2 Public IP)
-- [ ] CORS 설정 확인 (Backend)
-- [ ] CSP 헤더 설정 (Nginx)
+- [ ] Set environment variables (`VITE_API_BASE_URL=https://stylelicense.com`)
+- [ ] No build errors (`npm run build`)
+- [ ] E2E tests pass (`npm run test:e2e`)
+- [ ] Lint passes (`npm run lint`)
+- [ ] Create Backend EC2 Nginx directory (`/var/www/stylelicense/frontend/`)
+- [ ] Verify DNS configuration (A record: stylelicense.com → EC2 Public IP)
+- [ ] Verify CORS configuration (Backend)
+- [ ] Set CSP headers (Nginx)
 
 ### Deployment to Backend EC2 (Nginx Static Files)
 
 ```bash
-# 1. 프로덕션 빌드
+# 1. Production build
 npm run build
 
-# 2. Backend EC2로 전송 (SCP)
+# 2. Transfer to Backend EC2 (SCP)
 scp -r dist/* ubuntu@stylelicense.com:/var/www/stylelicense/frontend/
 
-# 3. Nginx 재시작 (필요 시)
+# 3. Reload Nginx (if needed)
 ssh ubuntu@stylelicense.com 'sudo systemctl reload nginx'
 ```
 
-**빌드 결과**: `dist/` 폴더 (정적 파일)
+**Build output**: `dist/` folder (static files)
 
-**Nginx 설정 예시** (Backend EC2의 `/etc/nginx/sites-available/stylelicense`):
+**Nginx configuration example** (Backend EC2's `/etc/nginx/sites-available/stylelicense`):
 ```nginx
 server {
     listen 443 ssl http2;
     server_name stylelicense.com;
 
-    # Frontend 정적 파일 (SPA)
+    # Frontend static files (SPA)
     location / {
         root /var/www/stylelicense/frontend;
         try_files $uri $uri/ /index.html;
 
-        # 캐싱 설정 (정적 파일 최적화)
+        # Caching configuration (static file optimization)
         location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$ {
             expires 1y;
             add_header Cache-Control "public, immutable";
         }
     }
 
-    # Backend API 프록시
+    # Backend API proxy
     location /api/ {
         proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
@@ -630,7 +630,7 @@ server {
 }
 ```
 
-**자동화**: GitHub Actions에서 자동 실행됨 (`.github/workflows/frontend.yml`)
+**Automation**: Automatically executed in GitHub Actions (`.github/workflows/frontend.yml`)
 
 ---
 
@@ -638,31 +638,31 @@ server {
 
 ### Metrics to Monitor
 
-- 페이지 로드 시간 (FCP, LCP)
-- API 응답 시간
-- JavaScript 에러 발생 빈도
-- 사용자 플로우 완료율 (회원가입 → 생성 → 결제)
+- Page load time (FCP, LCP)
+- API response time
+- JavaScript error frequency
+- User flow completion rate (signup → generation → payment)
 
 ### Tools
 
-- **Google Analytics**: 페이지뷰, 사용자 행동
-- **Sentry**: JavaScript 에러 추적
-- **Nginx 로그**: Backend EC2의 `/var/log/nginx/access.log` 분석
+- **Google Analytics**: Page views, user behavior
+- **Sentry**: JavaScript error tracking
+- **Nginx logs**: Analyze Backend EC2's `/var/log/nginx/access.log`
 
 ---
 
 ## References
 
-### 필수 문서
-- **[CODE_GUIDE.md](CODE_GUIDE.md)** - 코드 작성 패턴 및 예제 (코드 작성 전 필독)
-- **[PLAN.md](PLAN.md)** - 개발 작업 계획 (다음 작업 확인)
+### Essential Documents
+- **[CODE_GUIDE.md](CODE_GUIDE.md)** - Code writing patterns and examples (must read before coding)
+- **[PLAN.md](PLAN.md)** - Development task plan (check next task)
 
-### 프로젝트 문서
-- **[TECHSPEC.md](../../TECHSPEC.md)** - 전체 시스템 아키텍처
-- **[docs/API.md](../../docs/API.md)** - Backend API 명세
-- **[docs/PATTERNS.md](../../docs/PATTERNS.md)** - 공통 코드 패턴
+### Project Documents
+- **[TECHSPEC.md](../../TECHSPEC.md)** - Overall system architecture
+- **[docs/API.md](../../docs/API.md)** - Backend API specification
+- **[docs/PATTERNS.md](../../docs/PATTERNS.md)** - Common code patterns
 
-### 외부 문서
+### External Documentation
 - **Vue 3**: https://vuejs.org/guide/introduction.html
 - **Pinia**: https://pinia.vuejs.org/
 - **Vue Router**: https://router.vuejs.org/
@@ -675,40 +675,40 @@ server {
 
 ### Common Issues
 
-**1. CORS 오류**
+**1. CORS error**
 ```bash
-# Backend CORS 설정 확인
-# CORS_ALLOWED_ORIGINS에 http://localhost:5173 포함되어 있는지 확인
+# Check Backend CORS configuration
+# Verify CORS_ALLOWED_ORIGINS includes http://localhost:5173
 ```
 
-**2. 세션 쿠키가 전송되지 않음**
+**2. Session cookie not being sent**
 ```javascript
-// Axios 설정 확인
+// Verify Axios configuration
 axios.defaults.withCredentials = true
 ```
 
-**3. Node 버전 오류**
+**3. Node version error**
 ```bash
-# Node.js 버전 확인 (18+ 필요)
+# Check Node.js version (18+ required)
 node -v
 
-# nvm 사용 시
+# If using nvm
 nvm use 18
 ```
 
-**4. Vite 빌드 오류 (메모리 부족)**
+**4. Vite build error (out of memory)**
 ```bash
-# Node 메모리 증가
+# Increase Node memory
 export NODE_OPTIONS=--max-old-space-size=4096
 npm run build
 ```
 
-**5. E2E 테스트 실패**
+**5. E2E test failure**
 ```bash
-# Playwright 브라우저 설치
+# Install Playwright browsers
 npx playwright install
 
-# Headless 모드 비활성화
+# Disable headless mode
 npm run test:e2e -- --headed
 ```
 
@@ -716,6 +716,6 @@ npm run test:e2e -- --headed
 
 ## Support
 
-- **GitHub Issues**: 버그 리포트 및 기능 제안
-- **Team Communication**: Slack #frontend 채널
+- **GitHub Issues**: Bug reports and feature requests
+- **Team Communication**: Slack #frontend channel
 - **Documentation**: [TECHSPEC.md](../../TECHSPEC.md)
