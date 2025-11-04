@@ -1,28 +1,28 @@
 # Training Server CODE_GUIDE
 
-이 문서는 **Training Server**의 코드 작성 패턴과 규칙을 정의합니다.
+This document defines code writing patterns and rules for the **Training Server**.
 
-> **참고**: 공통 패턴(API 응답 형식, 에러 코드 등)은 [docs/PATTERNS.md](../../docs/PATTERNS.md)를 참조하세요.
-
----
-
-## 목차
-
-1. [코드 작성 원칙](#1-코드-작성-원칙)
-2. [Training Pipeline 패턴](#2-training-pipeline-패턴)
-3. [RabbitMQ Integration 패턴](#3-rabbitmq-integration-패턴)
-4. [S3 Storage 패턴](#4-s3-storage-패턴)
-5. [Webhook 패턴](#5-webhook-패턴)
-6. [GPU 최적화](#6-gpu-최적화)
-7. [테스트 작성](#7-테스트-작성)
+> **Note**: For common patterns (API response formats, error codes, etc.), refer to [docs/PATTERNS.md](../../docs/PATTERNS.md).
 
 ---
 
-## 1. 코드 작성 원칙
+## Table of Contents
 
-### 1.1 버전 호환성
+1. [Code Writing Principles](#1-code-writing-principles)
+2. [Training Pipeline Pattern](#2-training-pipeline-pattern)
+3. [RabbitMQ Integration Pattern](#3-rabbitmq-integration-pattern)
+4. [S3 Storage Pattern](#4-s3-storage-pattern)
+5. [Webhook Pattern](#5-webhook-pattern)
+6. [GPU Optimization](#6-gpu-optimization)
+7. [Writing Tests](#7-writing-tests)
 
-**TECHSPEC.md 기준 라이브러리 버전**:
+---
+
+## 1. Code Writing Principles
+
+### 1.1 Version Compatibility
+
+**Library versions based on TECHSPEC.md**:
 ```python
 # requirements.txt
 torch>=2.0.0
@@ -36,16 +36,16 @@ pika>=1.3.0
 requests>=2.31.0
 ```
 
-### 1.2 프로젝트 구조
+### 1.2 Project Structure
 
 ```
 apps/training-server/
-├── train.py              # Training pipeline 진입점
-├── rabbitmq_consumer.py  # RabbitMQ 메시지 수신
-├── s3_uploader.py        # S3 학습 이미지/모델 업로드
-├── webhook_client.py     # Backend Webhook 호출
-├── utils.py              # 공통 유틸리티
-├── config.py             # 환경 변수 로드
+├── train.py              # Training pipeline entry point
+├── rabbitmq_consumer.py  # RabbitMQ message receiver
+├── s3_uploader.py        # S3 training image/model upload
+├── webhook_client.py     # Backend Webhook caller
+├── utils.py              # Common utilities
+├── config.py             # Environment variable loader
 ├── requirements.txt
 └── tests/
     ├── test_train.py
@@ -53,27 +53,27 @@ apps/training-server/
     └── test_webhook.py
 ```
 
-### 1.3 코딩 스타일
+### 1.3 Coding Style
 
-- **포맷터**: Black (line-length=100)
-- **린터**: Pylint, Flake8
-- **타입 힌트**: 모든 함수에 타입 힌트 필수
-- **Docstring**: Google 스타일
+- **Formatter**: Black (line-length=100)
+- **Linter**: Pylint, Flake8
+- **Type Hints**: Required for all functions
+- **Docstring**: Google style
 
 ```python
 def preprocess_images(image_paths: list[str], target_size: int = 512) -> list[Image.Image]:
     """
-    학습 이미지 전처리 (리사이즈, 정규화).
+    Preprocess training images (resize, normalize).
 
     Args:
-        image_paths: 이미지 파일 경로 리스트
-        target_size: 타겟 해상도 (기본값: 512)
+        image_paths: List of image file paths
+        target_size: Target resolution (default: 512)
 
     Returns:
-        전처리된 PIL Image 리스트
+        List of preprocessed PIL Images
 
     Raises:
-        ValueError: 이미지 파일이 손상되었거나 지원하지 않는 포맷일 때
+        ValueError: When image file is corrupted or unsupported format
     """
     processed = []
     for path in image_paths:
@@ -85,15 +85,15 @@ def preprocess_images(image_paths: list[str], target_size: int = 512) -> list[Im
 
 ---
 
-## 2. Training Pipeline 패턴
+## 2. Training Pipeline Pattern
 
-### 2.1 LoRA 학습 파이프라인
+### 2.1 LoRA Training Pipeline
 
-**핵심 원칙**:
-- Stable Diffusion 1.5 기반 Fine-tuning
-- PEFT LoRA 사용 (Rank 16, Alpha 32)
+**Core Principles**:
+- Stable Diffusion 1.5 based Fine-tuning
+- PEFT LoRA usage (Rank 16, Alpha 32)
 - Mixed Precision Training (FP16)
-- 진행률 30초마다 Backend Webhook 전송
+- Send progress to Backend Webhook every 30 seconds
 
 ```python
 import torch
@@ -111,12 +111,12 @@ def train_lora_model(
     learning_rate: float = 1e-4,
     webhook_url: str = None
 ) -> str:
-    """LoRA Fine-tuning 실행."""
+    """Execute LoRA Fine-tuning."""
 
-    # Accelerator 초기화 (Mixed Precision)
+    # Initialize Accelerator (Mixed Precision)
     accelerator = Accelerator(mixed_precision="fp16")
 
-    # Base Model 로드
+    # Load Base Model
     pipeline = StableDiffusionPipeline.from_pretrained(
         "stable-diffusion-v1-5/stable-diffusion-v1-5",
         torch_dtype=torch.float16
@@ -132,14 +132,14 @@ def train_lora_model(
         bias="none"
     )
 
-    # UNet에 LoRA 적용
+    # Apply LoRA to UNet
     unet = get_peft_model(unet, lora_config)
     unet.train()
 
     # Optimizer
     optimizer = torch.optim.AdamW(unet.parameters(), lr=learning_rate)
 
-    # Accelerate로 감싸기
+    # Wrap with Accelerate
     unet, optimizer = accelerator.prepare(unet, optimizer)
 
     # Training Loop
@@ -160,20 +160,20 @@ def train_lora_model(
                 optimizer.step()
                 optimizer.zero_grad()
 
-        # 30초마다 진행률 전송
+        # Send progress every 30 seconds
         current_time = time.time()
         if current_time - last_webhook_time >= 30:
             send_progress(webhook_url, style_id, epoch, num_epochs)
             last_webhook_time = current_time
 
-    # LoRA 가중치 저장
+    # Save LoRA weights
     unet.save_pretrained(output_dir)
     return output_dir
 ```
 
-### 2.2 메모리 최적화
+### 2.2 Memory Optimization
 
-**Gradient Checkpointing 활성화**:
+**Enable Gradient Checkpointing**:
 ```python
 from diffusers import StableDiffusionPipeline
 
@@ -182,30 +182,30 @@ pipeline = StableDiffusionPipeline.from_pretrained(
     torch_dtype=torch.float16
 )
 
-# Gradient Checkpointing 활성화
+# Enable Gradient Checkpointing
 pipeline.unet.enable_gradient_checkpointing()
 ```
 
-**메모리 누수 방지**:
+**Prevent Memory Leaks**:
 ```python
-# ❌ 나쁜 예: Autograd history 축적
+# ❌ Bad: Accumulates autograd history
 total_loss = 0
 for epoch in range(100):
     loss = compute_loss()
-    total_loss += loss  # 계산 그래프 유지됨
+    total_loss += loss  # Computation graph retained
 
-# ✅ 좋은 예: float으로 변환
+# ✅ Good: Convert to float
 total_loss = 0
 for epoch in range(100):
     loss = compute_loss()
-    total_loss += float(loss)  # 계산 그래프 해제
+    total_loss += float(loss)  # Computation graph released
 ```
 
 ---
 
-## 3. RabbitMQ Integration 패턴
+## 3. RabbitMQ Integration Pattern
 
-### 3.1 메시지 수신 및 처리
+### 3.1 Receive and Process Messages
 
 ```python
 import pika
@@ -216,7 +216,7 @@ def start_rabbitmq_consumer(
     queue_name: str = "model_training",
     callback: Callable[[dict], None] = None
 ) -> None:
-    """RabbitMQ Consumer 시작."""
+    """Start RabbitMQ Consumer."""
 
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(host=os.getenv("RABBITMQ_HOST", "localhost"))
@@ -229,7 +229,7 @@ def start_rabbitmq_consumer(
             message = json.loads(body)
             print(f"[RabbitMQ] Received: {message}")
 
-            # 메시지 처리
+            # Process message
             callback(message)
 
             # ACK
@@ -246,21 +246,21 @@ def start_rabbitmq_consumer(
     channel.start_consuming()
 ```
 
-### 3.2 메시지 처리 핸들러
+### 3.2 Message Processing Handler
 
 ```python
 def handle_training_task(message: dict) -> None:
-    """학습 작업 처리."""
+    """Process training task."""
 
     style_id = message["style_id"]
     image_urls = message["image_urls"]
     webhook_base_url = message["webhook_url"]
 
     try:
-        # 1. S3에서 학습 이미지 다운로드
+        # 1. Download training images from S3
         image_paths = download_training_images(image_urls)
 
-        # 2. LoRA 학습 실행
+        # 2. Execute LoRA training
         model_path = train_lora_model(
             style_id=style_id,
             train_image_paths=image_paths,
@@ -268,10 +268,10 @@ def handle_training_task(message: dict) -> None:
             webhook_url=f"{webhook_base_url}/api/webhooks/training/progress"
         )
 
-        # 3. 학습된 모델 S3 업로드
+        # 3. Upload trained model to S3
         model_url = upload_model_to_s3(model_path, style_id)
 
-        # 4. 완료 Webhook 전송
+        # 4. Send completion Webhook
         send_complete_webhook(
             url=f"{webhook_base_url}/api/webhooks/training/complete",
             style_id=style_id,
@@ -279,7 +279,7 @@ def handle_training_task(message: dict) -> None:
         )
 
     except Exception as e:
-        # 5. 실패 Webhook 전송
+        # 5. Send failure Webhook
         send_failed_webhook(
             url=f"{webhook_base_url}/api/webhooks/training/failed",
             style_id=style_id,
@@ -289,16 +289,16 @@ def handle_training_task(message: dict) -> None:
 
 ---
 
-## 4. S3 Storage 패턴
+## 4. S3 Storage Pattern
 
-### 4.1 학습 이미지 다운로드
+### 4.1 Download Training Images
 
 ```python
 import boto3
 from pathlib import Path
 
 def download_training_images(s3_urls: list[str]) -> list[str]:
-    """S3에서 학습 이미지 다운로드."""
+    """Download training images from S3."""
 
     s3_client = boto3.client(
         "s3",
@@ -319,17 +319,17 @@ def download_training_images(s3_urls: list[str]) -> list[str]:
     return local_paths
 ```
 
-### 4.2 모델 업로드
+### 4.2 Upload Model
 
 ```python
 def upload_model_to_s3(model_dir: str, style_id: int) -> str:
-    """학습된 LoRA 모델 S3 업로드."""
+    """Upload trained LoRA model to S3."""
 
     s3_client = boto3.client("s3")
     bucket = os.getenv("S3_BUCKET", "stylelicense-models")
     key = f"models/style_{style_id}/lora_weights.safetensors"
 
-    # 모델 파일 업로드
+    # Upload model file
     model_file = f"{model_dir}/adapter_model.safetensors"
     s3_client.upload_file(model_file, bucket, key)
 
@@ -338,9 +338,9 @@ def upload_model_to_s3(model_dir: str, style_id: int) -> str:
 
 ---
 
-## 5. Webhook 패턴
+## 5. Webhook Pattern
 
-### 5.1 진행률 전송
+### 5.1 Send Progress
 
 ```python
 import requests
@@ -351,10 +351,10 @@ def send_progress(
     current_epoch: int,
     total_epochs: int
 ) -> None:
-    """30초마다 Backend로 진행률 전송."""
+    """Send progress to Backend every 30 seconds."""
 
     progress_percent = int((current_epoch / total_epochs) * 100)
-    estimated_seconds = int((total_epochs - current_epoch) * 36)  # 36초/epoch 가정
+    estimated_seconds = int((total_epochs - current_epoch) * 36)  # Assume 36s/epoch
 
     payload = {
         "style_id": style_id,
@@ -379,11 +379,11 @@ def send_progress(
         print(f"[Webhook] Failed to send progress: {e}")
 ```
 
-### 5.2 완료/실패 Webhook
+### 5.2 Complete/Failure Webhooks
 
 ```python
 def send_complete_webhook(url: str, style_id: int, model_url: str) -> None:
-    """학습 완료 Webhook 전송."""
+    """Send training completion Webhook."""
 
     payload = {
         "style_id": style_id,
@@ -406,7 +406,7 @@ def send_complete_webhook(url: str, style_id: int, model_url: str) -> None:
 
 
 def send_failed_webhook(url: str, style_id: int, error: str) -> None:
-    """학습 실패 Webhook 전송."""
+    """Send training failure Webhook."""
 
     payload = {
         "style_id": style_id,
@@ -426,17 +426,17 @@ def send_failed_webhook(url: str, style_id: int, error: str) -> None:
 
 ---
 
-## 6. GPU 최적화
+## 6. GPU Optimization
 
 ### 6.1 Mixed Precision Training
 
 ```python
 from accelerate import Accelerator
 
-# Accelerator 초기화
+# Initialize Accelerator
 accelerator = Accelerator(mixed_precision="fp16")
 
-# 모델, Optimizer 감싸기
+# Wrap model, Optimizer
 model, optimizer = accelerator.prepare(model, optimizer)
 
 # Forward/Backward
@@ -447,25 +447,25 @@ with accelerator.accumulate(model):
     optimizer.zero_grad()
 ```
 
-### 6.2 GPU 메모리 관리
+### 6.2 GPU Memory Management
 
 ```python
 import torch
 
-# 사용하지 않는 텐서 명시적 삭제
+# Explicitly delete unused tensors
 del intermediate_tensor
 torch.cuda.empty_cache()
 
-# Context Manager로 그래디언트 비활성화
+# Disable gradients with Context Manager
 with torch.no_grad():
     val_loss = model(val_batch)
 ```
 
-### 6.3 VRAM 모니터링
+### 6.3 VRAM Monitoring
 
 ```python
 def log_gpu_memory():
-    """GPU 메모리 사용량 로깅."""
+    """Log GPU memory usage."""
     if torch.cuda.is_available():
         allocated = torch.cuda.memory_allocated() / 1024**3  # GB
         reserved = torch.cuda.memory_reserved() / 1024**3
@@ -474,16 +474,16 @@ def log_gpu_memory():
 
 ---
 
-## 7. 테스트 작성
+## 7. Writing Tests
 
-### 7.1 Unit Test 예시
+### 7.1 Unit Test Example
 
 ```python
 import pytest
 from train import preprocess_images
 
 def test_preprocess_images():
-    """이미지 전처리 테스트."""
+    """Test image preprocessing."""
     image_paths = ["test_data/img1.jpg", "test_data/img2.png"]
 
     processed = preprocess_images(image_paths, target_size=512)
@@ -493,11 +493,11 @@ def test_preprocess_images():
     assert processed[1].mode == "RGB"
 ```
 
-### 7.2 Integration Test 예시
+### 7.2 Integration Test Example
 
 ```python
 def test_webhook_progress(mocker):
-    """진행률 Webhook 전송 테스트."""
+    """Test progress Webhook sending."""
     mock_post = mocker.patch("requests.patch")
 
     send_progress(
@@ -514,11 +514,11 @@ def test_webhook_progress(mocker):
 
 ---
 
-## 참고 문서
+## Reference Documents
 
-- [TECHSPEC.md](../../TECHSPEC.md) - 전체 시스템 명세
-- [docs/API.md](../../docs/API.md) - Backend API 명세
-- [docs/PATTERNS.md](../../docs/PATTERNS.md) - 공통 코드 패턴
+- [TECHSPEC.md](../../TECHSPEC.md) - Overall system specification
+- [docs/API.md](../../docs/API.md) - Backend API specification
+- [docs/PATTERNS.md](../../docs/PATTERNS.md) - Common code patterns
 - [PyTorch Docs](https://pytorch.org/docs/stable/)
 - [Diffusers Docs](https://huggingface.co/docs/diffusers/)
 - [PEFT Docs](https://huggingface.co/docs/peft/)

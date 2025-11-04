@@ -1,28 +1,28 @@
 # Inference Server CODE_GUIDE
 
-이 문서는 **Inference Server**의 코드 작성 패턴과 규칙을 정의합니다.
+This document defines code writing patterns and rules for the **Inference Server**.
 
-> **참고**: 공통 패턴(API 응답 형식, 에러 코드 등)은 [docs/PATTERNS.md](../../docs/PATTERNS.md)를 참조하세요.
-
----
-
-## 목차
-
-1. [코드 작성 원칙](#1-코드-작성-원칙)
-2. [Inference Pipeline 패턴](#2-inference-pipeline-패턴)
-3. [RabbitMQ Integration 패턴](#3-rabbitmq-integration-패턴)
-4. [S3 Storage 패턴](#4-s3-storage-패턴)
-5. [Webhook 패턴](#5-webhook-패턴)
-6. [GPU 최적화](#6-gpu-최적화)
-7. [테스트 작성](#7-테스트-작성)
+> **Note**: For common patterns (API response formats, error codes, etc.), refer to [docs/PATTERNS.md](../../docs/PATTERNS.md).
 
 ---
 
-## 1. 코드 작성 원칙
+## Table of Contents
 
-### 1.1 버전 호환성
+1. [Code Writing Principles](#1-code-writing-principles)
+2. [Inference Pipeline Pattern](#2-inference-pipeline-pattern)
+3. [RabbitMQ Integration Pattern](#3-rabbitmq-integration-pattern)
+4. [S3 Storage Pattern](#4-s3-storage-pattern)
+5. [Webhook Pattern](#5-webhook-pattern)
+6. [GPU Optimization](#6-gpu-optimization)
+7. [Writing Tests](#7-writing-tests)
 
-**TECHSPEC.md 기준 라이브러리 버전**:
+---
+
+## 1. Code Writing Principles
+
+### 1.1 Version Compatibility
+
+**Library versions based on TECHSPEC.md**:
 ```python
 # requirements.txt
 torch>=2.0.0
@@ -35,17 +35,17 @@ pika>=1.3.0
 requests>=2.31.0
 ```
 
-### 1.2 프로젝트 구조
+### 1.2 Project Structure
 
 ```
 apps/inference-server/
 ├── generate.py           # Image generation pipeline
-├── rabbitmq_consumer.py  # RabbitMQ 메시지 수신
-├── s3_uploader.py        # S3 생성 이미지 업로드
-├── webhook_client.py     # Backend Webhook 호출
-├── signature.py          # 작가 서명(시그니처) 워터마크 삽입
-├── utils.py              # 공통 유틸리티
-├── config.py             # 환경 변수 로드
+├── rabbitmq_consumer.py  # RabbitMQ message receiver
+├── s3_uploader.py        # S3 generated image upload
+├── webhook_client.py     # Backend Webhook caller
+├── signature.py          # Artist signature watermark insertion
+├── utils.py              # Common utilities
+├── config.py             # Environment variable loader
 ├── requirements.txt
 └── tests/
     ├── test_generate.py
@@ -53,12 +53,12 @@ apps/inference-server/
     └── test_webhook.py
 ```
 
-### 1.3 코딩 스타일
+### 1.3 Coding Style
 
-- **포맷터**: Black (line-length=100)
-- **린터**: Pylint, Flake8
-- **타입 힌트**: 모든 함수에 타입 힌트 필수
-- **Docstring**: Google 스타일
+- **Formatter**: Black (line-length=100)
+- **Linter**: Pylint, Flake8
+- **Type Hints**: Required for all functions
+- **Docstring**: Google style
 
 ```python
 def add_watermark(
@@ -68,16 +68,16 @@ def add_watermark(
     opacity: int = 128
 ) -> Image.Image:
     """
-    작가 서명(시그니처) 워터마크 삽입.
+    Insert artist signature watermark.
 
     Args:
-        image: 원본 PIL Image
-        artist_name: 작가 이름
-        position: 워터마크 위치 (bottom-right, bottom-left)
-        opacity: 투명도 (0-255)
+        image: Original PIL Image
+        artist_name: Artist name
+        position: Watermark position (bottom-right, bottom-left)
+        opacity: Transparency (0-255)
 
     Returns:
-        워터마크가 삽입된 PIL Image
+        PIL Image with watermark inserted
     """
     watermark = create_text_overlay(artist_name, opacity)
     image.paste(watermark, get_position(image.size, position), watermark)
@@ -86,15 +86,15 @@ def add_watermark(
 
 ---
 
-## 2. Inference Pipeline 패턴
+## 2. Inference Pipeline Pattern
 
-### 2.1 LoRA 기반 이미지 생성
+### 2.1 LoRA-based Image Generation
 
-**핵심 원칙**:
-- Stable Diffusion 1.5 Base Model 사용
-- LoRA 가중치 동적 로드
-- 50 Inference Steps (기본값)
-- 진행률 실시간 Backend Webhook 전송 (0%, 25%, 50%, 75%, 90%)
+**Core Principles**:
+- Use Stable Diffusion 1.5 Base Model
+- Dynamically load LoRA weights
+- 50 Inference Steps (default)
+- Send progress to Backend Webhook in real-time (0%, 25%, 50%, 75%, 90%)
 
 ```python
 import torch
@@ -111,33 +111,33 @@ def generate_image(
     webhook_url: str = None,
     generation_id: int = None
 ) -> Image.Image:
-    """LoRA 기반 이미지 생성."""
+    """Generate image based on LoRA."""
 
-    # Base Model 로드
+    # Load Base Model
     pipeline = StableDiffusionPipeline.from_pretrained(
         "stable-diffusion-v1-5/stable-diffusion-v1-5",
         torch_dtype=torch.float16
     )
     pipeline = pipeline.to("cuda")
 
-    # Scheduler 최적화
+    # Optimize Scheduler
     pipeline.scheduler = DPMSolverMultistepScheduler.from_config(
         pipeline.scheduler.config
     )
 
-    # LoRA 가중치 로드
+    # Load LoRA weights
     pipeline.load_lora_weights(lora_model_path)
 
-    # 해상도 계산
+    # Calculate resolution
     width, height = get_resolution(aspect_ratio)
 
-    # Prompt 생성
+    # Generate Prompt
     prompt = " ".join(prompt_tags)
 
-    # Generator (Seed 재현성)
+    # Generator (Seed reproducibility)
     generator = torch.Generator(device="cuda").manual_seed(seed or 42)
 
-    # Callback으로 진행률 전송
+    # Send progress via Callback
     def progress_callback(step: int, timestep: int, latents: torch.Tensor):
         progress_percent = int((step / 50) * 100)
         milestones = [0, 25, 50, 75, 90]
@@ -145,7 +145,7 @@ def generate_image(
         if progress_percent in milestones:
             send_progress(webhook_url, generation_id, step, 50)
 
-    # 이미지 생성
+    # Generate image
     image = pipeline(
         prompt=prompt,
         num_inference_steps=50,
@@ -161,7 +161,7 @@ def generate_image(
 
 
 def get_resolution(aspect_ratio: str) -> tuple[int, int]:
-    """Aspect ratio에 따른 해상도 계산."""
+    """Calculate resolution based on aspect ratio."""
     resolutions = {
         "1:1": (512, 512),
         "2:2": (768, 768),
@@ -170,17 +170,17 @@ def get_resolution(aspect_ratio: str) -> tuple[int, int]:
     return resolutions.get(aspect_ratio, (512, 512))
 ```
 
-### 2.2 Scheduler 최적화
+### 2.2 Scheduler Optimization
 
 ```python
 from diffusers import DPMSolverMultistepScheduler, EulerDiscreteScheduler
 
-# DPM-Solver++ (기본값, 빠른 수렴)
+# DPM-Solver++ (default, fast convergence)
 pipeline.scheduler = DPMSolverMultistepScheduler.from_config(
     pipeline.scheduler.config
 )
 
-# 또는 Euler Discrete (더 높은 품질, 느림)
+# Or Euler Discrete (higher quality, slower)
 pipeline.scheduler = EulerDiscreteScheduler.from_config(
     pipeline.scheduler.config
 )
@@ -188,9 +188,9 @@ pipeline.scheduler = EulerDiscreteScheduler.from_config(
 
 ---
 
-## 3. RabbitMQ Integration 패턴
+## 3. RabbitMQ Integration Pattern
 
-### 3.1 메시지 수신 및 처리
+### 3.1 Receive and Process Messages
 
 ```python
 import pika
@@ -201,7 +201,7 @@ def start_rabbitmq_consumer(
     queue_name: str = "image_generation",
     callback: Callable[[dict], None] = None
 ) -> None:
-    """RabbitMQ Consumer 시작."""
+    """Start RabbitMQ Consumer."""
 
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(host=os.getenv("RABBITMQ_HOST", "localhost"))
@@ -214,7 +214,7 @@ def start_rabbitmq_consumer(
             message = json.loads(body)
             print(f"[RabbitMQ] Received: {message}")
 
-            # 메시지 처리
+            # Process message
             callback(message)
 
             # ACK
@@ -231,11 +231,11 @@ def start_rabbitmq_consumer(
     channel.start_consuming()
 ```
 
-### 3.2 메시지 처리 핸들러
+### 3.2 Message Processing Handler
 
 ```python
 def handle_generation_task(message: dict) -> None:
-    """이미지 생성 작업 처리."""
+    """Process image generation task."""
 
     generation_id = message["generation_id"]
     style_id = message["style_id"]
@@ -246,10 +246,10 @@ def handle_generation_task(message: dict) -> None:
     webhook_base_url = message["webhook_url"]
 
     try:
-        # 1. S3에서 LoRA 모델 다운로드
+        # 1. Download LoRA model from S3
         lora_path = download_lora_model(lora_model_url)
 
-        # 2. 이미지 생성
+        # 2. Generate image
         image = generate_image(
             style_id=style_id,
             lora_model_path=lora_path,
@@ -259,13 +259,13 @@ def handle_generation_task(message: dict) -> None:
             generation_id=generation_id
         )
 
-        # 3. 작가 서명(시그니처) 워터마크 삽입
+        # 3. Insert artist signature watermark
         image_with_signature = add_watermark(image, artist_name)
 
-        # 4. S3 업로드
+        # 4. Upload to S3
         result_url = upload_image_to_s3(image_with_signature, generation_id)
 
-        # 5. 완료 Webhook 전송
+        # 5. Send completion Webhook
         send_complete_webhook(
             url=f"{webhook_base_url}/api/webhooks/inference/complete",
             generation_id=generation_id,
@@ -274,7 +274,7 @@ def handle_generation_task(message: dict) -> None:
         )
 
     except Exception as e:
-        # 6. 실패 Webhook 전송
+        # 6. Send failure Webhook
         send_failed_webhook(
             url=f"{webhook_base_url}/api/webhooks/inference/failed",
             generation_id=generation_id,
@@ -284,16 +284,16 @@ def handle_generation_task(message: dict) -> None:
 
 ---
 
-## 4. S3 Storage 패턴
+## 4. S3 Storage Pattern
 
-### 4.1 LoRA 모델 다운로드
+### 4.1 Download LoRA Model
 
 ```python
 import boto3
 from pathlib import Path
 
 def download_lora_model(s3_url: str) -> str:
-    """S3에서 LoRA 모델 다운로드."""
+    """Download LoRA model from S3."""
 
     s3_client = boto3.client(
         "s3",
@@ -309,17 +309,17 @@ def download_lora_model(s3_url: str) -> str:
     return local_path
 ```
 
-### 4.2 생성 이미지 업로드
+### 4.2 Upload Generated Image
 
 ```python
 def upload_image_to_s3(image: Image.Image, generation_id: int) -> str:
-    """생성 이미지 S3 Public Bucket 업로드."""
+    """Upload generated image to S3 Public Bucket."""
 
     s3_client = boto3.client("s3")
     bucket = os.getenv("S3_BUCKET", "stylelicense-images")
     key = f"generations/gen_{generation_id}.jpg"
 
-    # 임시 파일로 저장 후 업로드
+    # Save to temporary file then upload
     temp_path = f"/tmp/gen_{generation_id}.jpg"
     image.save(temp_path, format="JPEG", quality=95)
 
@@ -335,9 +335,9 @@ def upload_image_to_s3(image: Image.Image, generation_id: int) -> str:
 
 ---
 
-## 5. Webhook 패턴
+## 5. Webhook Pattern
 
-### 5.1 진행률 전송
+### 5.1 Send Progress
 
 ```python
 import requests
@@ -348,10 +348,10 @@ def send_progress(
     current_step: int,
     total_steps: int
 ) -> None:
-    """실시간 Backend로 진행률 전송."""
+    """Send progress to Backend in real-time."""
 
     progress_percent = int((current_step / total_steps) * 100)
-    estimated_seconds = int((total_steps - current_step) * 0.1)  # 0.1초/step 가정
+    estimated_seconds = int((total_steps - current_step) * 0.1)  # Assume 0.1s/step
 
     payload = {
         "generation_id": generation_id,
@@ -376,7 +376,7 @@ def send_progress(
         print(f"[Webhook] Failed to send progress: {e}")
 ```
 
-### 5.2 완료/실패 Webhook
+### 5.2 Complete/Failure Webhooks
 
 ```python
 def send_complete_webhook(
@@ -385,7 +385,7 @@ def send_complete_webhook(
     result_url: str,
     seed: int
 ) -> None:
-    """생성 완료 Webhook 전송."""
+    """Send generation completion Webhook."""
 
     payload = {
         "generation_id": generation_id,
@@ -408,7 +408,7 @@ def send_complete_webhook(
 
 
 def send_failed_webhook(url: str, generation_id: int, error: str) -> None:
-    """생성 실패 Webhook 전송."""
+    """Send generation failure Webhook."""
 
     payload = {
         "generation_id": generation_id,
@@ -429,14 +429,14 @@ def send_failed_webhook(url: str, generation_id: int, error: str) -> None:
 
 ---
 
-## 6. GPU 최적화
+## 6. GPU Optimization
 
-### 6.1 메모리 효율적인 Pipeline 로드
+### 6.1 Memory-Efficient Pipeline Loading
 
 ```python
 from diffusers import StableDiffusionPipeline
 
-# FP16으로 메모리 절약
+# Save memory with FP16
 pipeline = StableDiffusionPipeline.from_pretrained(
     "stable-diffusion-v1-5/stable-diffusion-v1-5",
     torch_dtype=torch.float16,
@@ -444,28 +444,28 @@ pipeline = StableDiffusionPipeline.from_pretrained(
 )
 pipeline = pipeline.to("cuda")
 
-# CPU Offloading (VRAM 부족 시)
+# CPU Offloading (when VRAM is insufficient)
 pipeline.enable_sequential_cpu_offload()
 ```
 
-### 6.2 배치 처리 최적화
+### 6.2 Batch Processing Optimization
 
 ```python
-# 여러 이미지 동시 생성 (VRAM 허용 시)
+# Generate multiple images simultaneously (if VRAM allows)
 images = pipeline(
-    prompt=[prompt] * 4,  # 4장 동시 생성
+    prompt=[prompt] * 4,  # Generate 4 images at once
     num_inference_steps=50,
     guidance_scale=7.5
 ).images
 ```
 
-### 6.3 캐시 정리
+### 6.3 Cache Cleanup
 
 ```python
 import torch
 import gc
 
-# 생성 완료 후 메모리 정리
+# Clean up memory after generation
 del pipeline
 gc.collect()
 torch.cuda.empty_cache()
@@ -473,9 +473,9 @@ torch.cuda.empty_cache()
 
 ---
 
-## 7. 테스트 작성
+## 7. Writing Tests
 
-### 7.1 작가 서명(시그니처) 워터마크 테스트
+### 7.1 Artist Signature Watermark Test
 
 ```python
 import pytest
@@ -483,22 +483,22 @@ from PIL import Image
 from signature import add_watermark
 
 def test_add_watermark():
-    """워터마크 삽입 테스트."""
+    """Test watermark insertion."""
     image = Image.new("RGB", (512, 512), color="white")
 
     watermarked = add_watermark(image, artist_name="TestArtist", opacity=128)
 
     assert watermarked.size == (512, 512)
     assert watermarked.mode == "RGB"
-    # 워터마크가 추가되어 이미지가 변경되었는지 확인
+    # Check if image was modified by watermark addition
     assert watermarked != image
 ```
 
-### 7.2 Integration Test 예시
+### 7.2 Integration Test Example
 
 ```python
 def test_webhook_complete(mocker):
-    """완료 Webhook 전송 테스트."""
+    """Test completion Webhook sending."""
     mock_post = mocker.patch("requests.post")
 
     send_complete_webhook(
@@ -515,11 +515,11 @@ def test_webhook_complete(mocker):
 
 ---
 
-## 참고 문서
+## Reference Documents
 
-- [TECHSPEC.md](../../TECHSPEC.md) - 전체 시스템 명세
-- [docs/API.md](../../docs/API.md) - Backend API 명세
-- [docs/PATTERNS.md](../../docs/PATTERNS.md) - 공통 코드 패턴
+- [TECHSPEC.md](../../TECHSPEC.md) - Overall system specification
+- [docs/API.md](../../docs/API.md) - Backend API specification
+- [docs/PATTERNS.md](../../docs/PATTERNS.md) - Common code patterns
 - [PyTorch Docs](https://pytorch.org/docs/stable/)
 - [Diffusers Docs](https://huggingface.co/docs/diffusers/)
 - [PEFT Docs](https://huggingface.co/docs/peft/)

@@ -1,51 +1,51 @@
 # Frontend Code Guide
 
-**목적**: Vue 3 + Pinia 기반 Frontend 개발 시 따라야 할 코드 패턴과 예제를 제공합니다.
+**Purpose**: Provides code patterns and examples to follow when developing Frontend based on Vue 3 + Pinia.
 
-**대상**: Frontend 개발자, 코드 리뷰어
+**Audience**: Frontend developers, Code reviewers
 
 ---
 
-## 목차
+## Table of Contents
 
-1. [코드 작성 원칙](#1-코드-작성-원칙)
+1. [Code Writing Principles](#1-code-writing-principles)
 2. [Vue 3 Composition API](#2-vue-3-composition-api)
-3. [Pinia Store 패턴](#3-pinia-store-패턴)
-4. [Composable 패턴](#4-composable-패턴)
-5. [컴포넌트 패턴](#5-컴포넌트-패턴)
-6. [API 통신](#6-api-통신)
-7. [무한 스크롤](#7-무한-스크롤)
-8. [에러 핸들링](#8-에러-핸들링)
-9. [성능 최적화](#9-성능-최적화)
-10. [테스트](#10-테스트)
+3. [Pinia Store Pattern](#3-pinia-store-pattern)
+4. [Composable Pattern](#4-composable-pattern)
+5. [Component Pattern](#5-component-pattern)
+6. [API Communication](#6-api-communication)
+7. [Infinite Scroll](#7-infinite-scroll)
+8. [Error Handling](#8-error-handling)
+9. [Performance Optimization](#9-performance-optimization)
+10. [Testing](#10-testing)
 
 ---
 
-## 1. 코드 작성 원칙
+## 1. Code Writing Principles
 
-### 1.1 Vue 3 철학
+### 1.1 Vue 3 Philosophy
 
-- **`<script setup>` 사용** - Options API 금지
-- **Pinia Setup Store** - Options Store 금지
-- **Composition API** - 재사용 가능한 로직은 Composable로 분리
-- **Feature-Sliced Design** - 기능별 폴더 구조
+- **Use `<script setup>`** - Options API prohibited
+- **Pinia Setup Store** - Options Store prohibited
+- **Composition API** - Separate reusable logic into Composables
+- **Feature-Sliced Design** - Folder structure by features
 
-### 1.2 네이밍 규칙
+### 1.2 Naming Rules
 
 ```javascript
-// 파일명
-StyleCard.vue          // 컴포넌트: PascalCase
+// File names
+StyleCard.vue          // Component: PascalCase
 useAuth.js             // Composable: use + camelCase
 authStore.js           // Store: camelCase
 authApi.js             // API: camelCase
 
-// 변수명
+// Variable names
 const userName = ref('')              // camelCase
 const isLoading = ref(false)          // Boolean: is/has/should prefix
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 상수: UPPER_SNAKE_CASE
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // Constants: UPPER_SNAKE_CASE
 ```
 
-### 1.3 Import 순서
+### 1.3 Import Order
 
 ```vue
 <script setup>
@@ -74,18 +74,18 @@ import { validateEmail } from '@/shared/utils/validators'
 
 ```
 src/features/auth/
-├── ui/              # Vue 컴포넌트
-├── api/             # API 통신
+├── ui/              # Vue components
+├── api/             # API communication
 ├── store/           # Pinia Store
-├── composables/     # 재사용 로직
-└── utils/           # 유틸리티
+├── composables/     # Reusable logic
+└── utils/           # Utilities
 ```
 
 ---
 
 ## 2. Vue 3 Composition API
 
-### 2.1 기본 구조
+### 2.1 Basic Structure
 
 ```vue
 <script setup>
@@ -134,40 +134,40 @@ onMounted(() => {
 ```javascript
 import { ref, reactive, toRefs } from 'vue'
 
-// ✅ Ref: 원시값에 적합
+// ✅ Ref: Suitable for primitive values
 const count = ref(0)
 const message = ref('Hello')
-count.value++ // .value로 접근
+count.value++ // Access with .value
 
-// ✅ Reactive: 객체 전체
+// ✅ Reactive: Entire object
 const state = reactive({
   user: null,
   loading: false
 })
-state.loading = true // 직접 접근
+state.loading = true // Direct access
 
-// Composable 반환 시 toRefs
+// toRefs for Composable return
 function useUser() {
   const state = reactive({ user: null, loading: false })
-  return toRefs(state) // 구조 분해 가능
+  return toRefs(state) // Destructurable
 }
 ```
 
 ### 2.3 Computed vs Watch
 
 ```javascript
-// ✅ Computed: 파생 상태 (side effect 없음)
+// ✅ Computed: Derived state (no side effects)
 const fullName = computed(() => `${firstName.value} ${lastName.value}`)
 const activeUsers = computed(() => users.value.filter(u => u.is_active))
 
-// ✅ Watch: Side effect (API 호출, localStorage 등)
+// ✅ Watch: Side effects (API calls, localStorage, etc.)
 watch(searchQuery, async (query) => {
   if (query.length > 2) {
     await searchStyles(query)
   }
 })
 
-// 여러 값 감시
+// Watch multiple values
 watch([firstName, lastName], ([newFirst, newLast]) => {
   console.log(`Name: ${newFirst} ${newLast}`)
 })
@@ -175,9 +175,9 @@ watch([firstName, lastName], ([newFirst, newLast]) => {
 
 ---
 
-## 3. Pinia Store 패턴
+## 3. Pinia Store Pattern
 
-### 3.1 Setup Store (권장)
+### 3.1 Setup Store (Recommended)
 
 ```javascript
 // src/features/auth/store/authStore.js
@@ -204,7 +204,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = response.data.user
       return true
     } catch (err) {
-      error.value = err.response?.data?.message || '로그인 실패'
+      error.value = err.response?.data?.message || 'Login failed'
       return false
     } finally {
       loading.value = false
@@ -220,7 +220,7 @@ export const useAuthStore = defineStore('auth', () => {
 })
 ```
 
-### 3.2 컴포넌트에서 사용
+### 3.2 Using in Components
 
 ```vue
 <script setup>
@@ -229,22 +229,22 @@ import { useAuthStore } from '@/features/auth/store/authStore'
 
 const authStore = useAuthStore()
 
-// ✅ storeToRefs: state/getters 반응형 구조 분해
+// ✅ storeToRefs: Reactive destructuring of state/getters
 const { user, isAuthenticated, loading } = storeToRefs(authStore)
 
-// ✅ Actions: 직접 구조 분해
+// ✅ Actions: Direct destructuring
 const { login, logout } = authStore
 </script>
 
 <template>
   <div v-if="isAuthenticated">
-    <p>환영합니다, {{ user.username }}님!</p>
-    <button @click="logout">로그아웃</button>
+    <p>Welcome, {{ user.username }}!</p>
+    <button @click="logout">Logout</button>
   </div>
 </template>
 ```
 
-### 3.3 Store 간 의존성
+### 3.3 Store Dependencies
 
 ```javascript
 // src/features/tokens/store/tokenStore.js
@@ -253,7 +253,7 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from '@/features/auth/store/authStore'
 
 export const useTokenStore = defineStore('token', () => {
-  const authStore = useAuthStore() // 다른 Store 참조
+  const authStore = useAuthStore() // Reference another Store
 
   const balance = ref(0)
 
@@ -273,7 +273,7 @@ export const useTokenStore = defineStore('token', () => {
 
 ---
 
-## 4. Composable 패턴
+## 4. Composable Pattern
 
 ### 4.1 useDebounce
 
@@ -296,7 +296,7 @@ export function useDebounce(value, delay = 500) {
 }
 ```
 
-**사용:**
+**Usage:**
 ```vue
 <script setup>
 import { ref, watch } from 'vue'
@@ -351,11 +351,11 @@ export function usePagination(fetchFn, options = {}) {
 
 ---
 
-## 5. 컴포넌트 패턴
+## 5. Component Pattern
 
 ### 5.1 Smart vs Presentational
 
-**Smart (로직 포함):**
+**Smart (Contains logic):**
 ```vue
 <!-- src/features/styles/ui/StyleGrid.vue -->
 <script setup>
@@ -386,7 +386,7 @@ function handleClick(styleId) {
 </template>
 ```
 
-**Presentational (순수 UI):**
+**Presentational (Pure UI):**
 ```vue
 <!-- src/features/styles/ui/StyleCard.vue -->
 <script setup>
@@ -404,7 +404,7 @@ const emit = defineEmits(['click'])
       <h3 class="font-bold">{{ style.name }}</h3>
       <p class="text-sm text-gray-600">{{ style.artist_name }}</p>
       <div class="flex justify-between mt-2">
-        <span>{{ style.generation_cost_tokens }} 토큰</span>
+        <span>{{ style.generation_cost_tokens }} tokens</span>
         <span>❤️ {{ style.like_count }}</span>
       </div>
     </div>
@@ -412,7 +412,7 @@ const emit = defineEmits(['click'])
 </template>
 ```
 
-### 5.2 Form 검증 (Zod)
+### 5.2 Form Validation (Zod)
 
 ```vue
 <script setup>
@@ -421,8 +421,8 @@ import { z } from 'zod'
 import { useAuthStore } from '@/features/auth/store/authStore'
 
 const loginSchema = z.object({
-  email: z.string().email('올바른 이메일 형식이 아닙니다'),
-  password: z.string().min(8, '비밀번호는 최소 8자 이상')
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(8, 'Password must be at least 8 characters')
 })
 
 const email = ref('')
@@ -457,16 +457,16 @@ async function handleSubmit() {
       <input v-model="email" @blur="validateField('email', email)" />
       <span v-if="errors.email" class="text-red-500 text-sm">{{ errors.email }}</span>
     </div>
-    <button type="submit">로그인</button>
+    <button type="submit">Login</button>
   </form>
 </template>
 ```
 
 ---
 
-## 6. API 통신
+## 6. API Communication
 
-### 6.1 Axios 인스턴스
+### 6.1 Axios Instance
 
 ```javascript
 // src/shared/api/axios.js
@@ -475,7 +475,7 @@ import axios from 'axios'
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
   timeout: 10000,
-  withCredentials: true, // 세션 쿠키
+  withCredentials: true, // Session cookie
   headers: { 'Content-Type': 'application/json' }
 })
 
@@ -493,7 +493,7 @@ api.interceptors.response.use(
 export default api
 ```
 
-### 6.2 API 함수
+### 6.2 API Functions
 
 ```javascript
 // src/features/styles/api/styleApi.js
@@ -518,7 +518,7 @@ export async function searchStyles(query) {
 }
 ```
 
-### 6.3 파일 업로드
+### 6.3 File Upload
 
 ```javascript
 export async function uploadStyleImages(files, metadata) {
@@ -536,7 +536,7 @@ export async function uploadStyleImages(files, metadata) {
 }
 ```
 
-### 6.4 폴링 (학습 진행률)
+### 6.4 Polling (Training Progress)
 
 ```javascript
 // src/features/styles/composables/useTrainingProgress.js
@@ -575,7 +575,7 @@ export function useTrainingProgress(styleId) {
 
 ---
 
-## 7. 무한 스크롤
+## 7. Infinite Scroll
 
 ### 7.1 useInfiniteScroll
 
@@ -631,7 +631,7 @@ export function useInfiniteScroll(fetchFn, options = {}) {
 }
 ```
 
-### 7.2 사용 예제
+### 7.2 Usage Example
 
 ```vue
 <script setup>
@@ -660,10 +660,10 @@ onMounted(async () => {
       <GenerationCard v-for="gen in generations" :key="gen.id" :generation="gen" />
     </div>
 
-    <!-- Observer 타겟 -->
+    <!-- Observer target -->
     <div ref="observerTarget" class="h-24 flex items-center justify-center">
       <LoadingSpinner v-if="loading" />
-      <p v-else-if="!hasMore">모든 게시물을 불러왔습니다</p>
+      <p v-else-if="!hasMore">All posts loaded</p>
     </div>
   </div>
 </template>
@@ -671,7 +671,7 @@ onMounted(async () => {
 
 ---
 
-## 8. 에러 핸들링
+## 8. Error Handling
 
 ### 8.1 Toast Composable
 
@@ -706,7 +706,7 @@ export function useToast() {
 }
 ```
 
-### 8.2 Toast 컴포넌트
+### 8.2 Toast Component
 
 ```vue
 <!-- src/shared/ui/ToastContainer.vue -->
@@ -734,7 +734,7 @@ const { toasts, removeToast } = useToast()
 </template>
 ```
 
-### 8.3 Form 에러 처리
+### 8.3 Form Error Handling
 
 ```vue
 <script setup>
@@ -748,7 +748,7 @@ const formData = ref({ name: '', description: '' })
 const errors = ref({})
 
 const schema = z.object({
-  name: z.string().min(2, '이름은 최소 2자').max(50),
+  name: z.string().min(2, 'Name must be at least 2 characters').max(50),
   description: z.string().max(500)
 })
 
@@ -757,11 +757,11 @@ async function handleSubmit() {
     schema.parse(formData.value)
     errors.value = {}
     await createStyle(formData.value)
-    toast.success('생성 완료!')
+    toast.success('Created successfully!')
   } catch (err) {
     if (err instanceof z.ZodError) {
       errors.value = err.flatten().fieldErrors
-      toast.error('입력값을 확인하세요')
+      toast.error('Please check your input')
     } else if (err.response?.status === 400) {
       errors.value = err.response.data.errors || {}
       toast.error(err.response.data.message)
@@ -773,9 +773,9 @@ async function handleSubmit() {
 
 ---
 
-## 9. 성능 최적화
+## 9. Performance Optimization
 
-### 9.1 컴포넌트 Lazy Loading
+### 9.1 Component Lazy Loading
 
 ```javascript
 // src/router/index.js
@@ -791,7 +791,7 @@ const routes = [
 ]
 ```
 
-### 9.2 이미지 Lazy Loading
+### 9.2 Image Lazy Loading
 
 ```vue
 <script setup>
@@ -820,23 +820,23 @@ onMounted(() => {
 ### 9.3 Computed vs Watch
 
 ```javascript
-// ✅ Computed: 파생 상태
+// ✅ Computed: Derived state
 const filteredStyles = computed(() =>
   styles.value.filter(s => s.name.includes(searchQuery.value))
 )
 
-// ✅ Watch: Side effect
+// ✅ Watch: Side effects
 watch(userId, async (id) => {
   user.value = await fetchUserData(id)
 })
 
-// ❌ Watch로 파생 상태 (비효율)
+// ❌ Watch for derived state (inefficient)
 watch([styles, searchQuery], () => {
   filteredStyles.value = styles.value.filter(...)
 })
 ```
 
-### 9.4 Virtual Scrolling (대량 데이터)
+### 9.4 Virtual Scrolling (Large Datasets)
 
 ```vue
 <script setup>
@@ -855,9 +855,9 @@ const items = ref([]) // 1000+ items
 
 ---
 
-## 10. 테스트
+## 10. Testing
 
-### 10.1 Composable 테스트
+### 10.1 Composable Testing
 
 ```javascript
 // src/shared/composables/useDebounce.test.js
@@ -883,7 +883,7 @@ describe('useDebounce', () => {
 })
 ```
 
-### 10.2 컴포넌트 테스트
+### 10.2 Component Testing
 
 ```javascript
 // src/features/styles/ui/StyleCard.test.js
@@ -903,7 +903,7 @@ describe('StyleCard', () => {
   it('renders correctly', () => {
     const wrapper = mount(StyleCard, { props: { style: mockStyle } })
     expect(wrapper.text()).toContain('Test Style')
-    expect(wrapper.text()).toContain('10 토큰')
+    expect(wrapper.text()).toContain('10 tokens')
   })
 
   it('emits click event', async () => {
@@ -914,7 +914,7 @@ describe('StyleCard', () => {
 })
 ```
 
-### 10.3 Store 테스트
+### 10.3 Store Testing
 
 ```javascript
 // src/features/auth/store/authStore.test.js
@@ -946,31 +946,31 @@ describe('useAuthStore', () => {
 
 ---
 
-## 참고 문서
+## Reference Documents
 
-- **[Frontend README.md](README.md)** - 프로젝트 구조 및 환경
-- **[docs/API.md](../../docs/API.md)** - Backend API 명세
-- **[docs/PATTERNS.md](../../docs/PATTERNS.md)** - 공통 패턴
+- **[Frontend README.md](README.md)** - Project structure and environment
+- **[docs/API.md](../../docs/API.md)** - Backend API specification
+- **[docs/PATTERNS.md](../../docs/PATTERNS.md)** - Common patterns
 
 ---
 
-## 체크리스트
+## Checklist
 
-**코드 작성 전:**
-- [ ] Frontend README.md 읽기
-- [ ] docs/API.md 확인
-- [ ] 이 CODE_GUIDE.md 패턴 확인
+**Before writing code:**
+- [ ] Read Frontend README.md
+- [ ] Check docs/API.md
+- [ ] Check this CODE_GUIDE.md patterns
 
-**코드 작성 시:**
-- [ ] `<script setup>` 사용
-- [ ] Pinia Setup Store 패턴
-- [ ] Feature-Sliced Design 구조
-- [ ] Zod 폼 검증
-- [ ] try-catch 에러 핸들링
-- [ ] Tailwind CSS 사용
+**When writing code:**
+- [ ] Use `<script setup>`
+- [ ] Pinia Setup Store pattern
+- [ ] Feature-Sliced Design structure
+- [ ] Zod form validation
+- [ ] try-catch error handling
+- [ ] Use Tailwind CSS
 
-**코드 작성 후:**
-- [ ] `npm run lint` 통과
-- [ ] `npm run format` 실행
-- [ ] `npm run test` 통과
-- [ ] 브라우저 동작 확인
+**After writing code:**
+- [ ] Pass `npm run lint`
+- [ ] Run `npm run format`
+- [ ] Pass `npm run test`
+- [ ] Verify browser functionality
