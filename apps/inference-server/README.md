@@ -191,7 +191,7 @@ AWS_STORAGE_BUCKET_NAME=stylelicense-media
 AWS_S3_REGION_NAME=ap-northeast-2
 
 # Backend API (운영 서버의 도메인 - HTTPS 사용)
-BACKEND_API_URL=https://stylelicense.com
+BACKEND_API_URL=https://api.stylelicense.com
 INTERNAL_API_TOKEN=your_internal_token  # 32자 이상 랜덤 UUID
 
 # GPU
@@ -267,7 +267,7 @@ pylint inference/ services/ consumer/ watermark/
   - 생성 이미지: Public Bucket (`stylelicense-generations`)
   - **AWS Access Key 환경변수** 설정 (RunPod Pod에서 S3 접근)
 - [ ] **Backend API 연결 설정**
-  - `BACKEND_API_URL=https://stylelicense.com` (도메인 사용)
+  - `BACKEND_API_URL=https://api.stylelicense.com` (도메인 사용)
   - `INTERNAL_API_TOKEN=<32자-UUID>` (Webhook 인증용)
   - Backend EC2 Security Group: 443 포트 허용 (RunPod IP 또는 전체)
 - [ ] GPU 메모리 프로파일링 (24GB 이내 사용)

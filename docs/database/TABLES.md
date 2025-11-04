@@ -101,6 +101,8 @@ CREATE TABLE transactions (
     receiver_id             BIGINT
                             REFERENCES users(id) ON DELETE CASCADE,
     amount                  BIGINT NOT NULL,
+    transaction_type        VARCHAR(20) NOT NULL
+                            CHECK (transaction_type IN ('purchase','generation','withdrawal','transfer')),
     price_per_token         DECIMAL(10,2),
     currency_code           CHAR(3) DEFAULT 'KRW',
     total_price             DECIMAL(18,2) GENERATED ALWAYS AS
@@ -118,6 +120,7 @@ CREATE TABLE transactions (
 -- 인덱스
 CREATE INDEX idx_transactions_sender ON transactions(sender_id, created_at DESC);
 CREATE INDEX idx_transactions_receiver ON transactions(receiver_id, created_at DESC);
+CREATE INDEX idx_transactions_type ON transactions(transaction_type, created_at DESC);
 CREATE INDEX idx_transactions_style ON transactions(related_style_id);
 CREATE INDEX idx_transactions_generation ON transactions(related_generation_id);
 CREATE INDEX idx_transactions_status ON transactions(status, created_at DESC);
@@ -126,16 +129,17 @@ CREATE INDEX idx_transactions_status ON transactions(status, created_at DESC);
 **주요 컬럼**:
 - `sender_id`: 토큰 차감 대상 (NULL = 시스템/플랫폼 발행)
 - `receiver_id`: 토큰 증가 대상 (NULL = 플랫폼으로의 지급)
+- `transaction_type`: 거래 유형 (purchase/generation/withdrawal/transfer)
 - `currency_code`: 통화 코드 (기본값: 'KRW')
 - `related_style_id`: 이미지 생성 결제 시 사용한 스타일
 - `related_generation_id`: 이미지 생성 결제 시 생성된 이미지 ID
 - `refunded`: 환불 여부 (true면 잔액 계산 제외)
 
-**거래 유형 판별**:
-- `sender_id=NULL, receiver_id!=NULL`: 시스템 발행 (웰컴 보너스 등)
-- `sender_id!=NULL, receiver_id=NULL`: 토큰 구매 (플랫폼에 지급)
-- `sender_id!=NULL, receiver_id!=NULL, related_generation_id=NULL`: 사용자 간 송금
-- `sender_id!=NULL, receiver_id!=NULL, related_generation_id!=NULL`: 이미지 생성 결제
+**거래 유형 (transaction_type)**:
+- `purchase`: 토큰 구매 (사용자가 토스 결제로 토큰 충전)
+- `generation`: 이미지 생성 결제 (이미지 생성 시 작가에게 토큰 지급)
+- `withdrawal`: 출금 (MVP 제외, 작가가 토큰을 현금화)
+- `transfer`: 송금 (MVP 제외, 사용자 간 토큰 송금)
 
 **비즈니스 규칙**:
 - **토큰 잔액 관리**: `users.token_balance`가 단일 진실 공급원(Single Source of Truth)

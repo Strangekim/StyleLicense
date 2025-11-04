@@ -29,7 +29,7 @@
   "data": {
     "results": [
       {
-        "id": "01234567-89ab-cdef-0123-456789abcdef",
+        "id": 123,
         "name": "Watercolor Dreams",
         "artist_name": "John Doe"
       }
@@ -55,7 +55,7 @@
 {
   "success": true,
   "data": {
-    "id": "01234567-89ab-cdef-0123-456789abcdef",
+    "id": 123,
     "name": "Watercolor Dreams",
     "description": "A beautiful watercolor style",
     "status": "COMPLETED",
@@ -74,15 +74,15 @@
 ### 1.3 Success Response (CREATE)
 
 ```http
-POST /api/v1/styles/
+POST /api/styles/
 HTTP/1.1 201 Created
-Location: /api/v1/styles/01234567-89ab-cdef-0123-456789abcdef
+Location: /api/styles/123
 Content-Type: application/json
 
 {
   "success": true,
   "data": {
-    "id": "01234567-89ab-cdef-0123-456789abcdef",
+    "id": 123,
     "name": "New Style",
     "status": "DRAFT",
     "created_at": "2025-01-20T10:00:00.000Z"
@@ -98,7 +98,7 @@ Content-Type: application/json
 ### 1.4 Success Response (DELETE)
 
 ```http
-DELETE /api/v1/styles/01234567-89ab-cdef-0123-456789abcdef
+DELETE /api/styles/123
 HTTP/1.1 204 No Content
 ```
 
@@ -136,7 +136,7 @@ HTTP/1.1 204 No Content
 ### 2.2 Validation Error (422)
 
 ```http
-POST /api/v1/styles/
+POST /api/styles/
 HTTP/1.1 422 Unprocessable Entity
 
 {
@@ -166,7 +166,7 @@ HTTP/1.1 422 Unprocessable Entity
 | 404 | `NOT_FOUND` | 리소스 없음 |
 | 409 | `CONFLICT` | 리소스 충돌 (중복 생성 등) |
 | 422 | `VALIDATION_ERROR` | 입력 검증 실패 |
-| 422 | `INSUFFICIENT_TOKENS` | 토큰 부족 |
+| 402 | `INSUFFICIENT_TOKENS` | 토큰 부족 |
 | 422 | `TRAINING_IN_PROGRESS` | 이미 학습 중 |
 | 429 | `RATE_LIMIT_EXCEEDED` | 요청 횟수 초과 |
 | 500 | `INTERNAL_SERVER_ERROR` | 서버 오류 |
@@ -243,10 +243,9 @@ Content-Type: application/json
 
 ```
 ✅ Good:
-/api/v1/styles
-/api/v1/generations
-/api/v1/transactions
-/api/v1/posts
+/api/styles
+/api/generations
+/api/transactions
 
 ❌ Bad:
 /api/Style
@@ -291,10 +290,10 @@ firstName, FirstName, pricePerImage, createdAt
 
 ```
 ✅ Good:
-GET /api/v1/styles?offset=0&limit=20&sort_by=created_at&artist_id=123
+GET /api/styles?offset=0&limit=20&sort_by=created_at&artist_id=123
 
 ❌ Bad:
-GET /api/v1/styles?Offset=0&LIMIT=20&sortBy=created_at&artistId=123
+GET /api/styles?Offset=0&LIMIT=20&sortBy=created_at&artistId=123
 ```
 
 ### 4.4 Error Codes
@@ -320,14 +319,14 @@ ERROR_001
 
 ## 5. Data Types & Formats
 
-### 5.1 UUID
+### 5.1 ID (Identifier)
 
-**형식**: `8-4-4-4-12` (소문자, 하이픈 포함)
+**형식**: Integer (BIGINT)
 
 ```json
 {
-  "id": "01234567-89ab-cdef-0123-456789abcdef",
-  "style_id": "550e8400-e29b-41d4-a716-446655440000"
+  "id": 123,
+  "style_id": 456
 }
 ```
 
@@ -452,8 +451,8 @@ ERROR_001
 - `limit`: 결과 수 (1-100, 기본값 20)
 
 ```http
-GET /api/v1/community/posts?limit=20
-GET /api/v1/community/posts?cursor=2025-01-15T12:34:56Z&limit=20
+GET /api/generations?limit=20
+GET /api/generations?cursor=2025-01-15T12:34:56Z&limit=20
 ```
 
 **Response**:
@@ -464,7 +463,7 @@ GET /api/v1/community/posts?cursor=2025-01-15T12:34:56Z&limit=20
   "data": {
     "results": [
       {
-        "id": "01234567-89ab-cdef-0123-456789abcdef",
+        "id": 123,
         "title": "게시글 제목",
         "created_at": "2025-01-15T12:34:56Z"
       }

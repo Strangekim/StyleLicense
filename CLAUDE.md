@@ -10,9 +10,11 @@
 
 **첫 작업 시작 전 필수 읽기:**
 
-1. **Read [TECHSPEC.md](TECHSPEC.md)** - 전체 시스템 구조와 핵심 Context 이해
-2. **Read [ARCHITECTURE.md](ARCHITECTURE.md)** - 시스템 컴포넌트 간 관계 파악
-3. **Read [PLAN.md](PLAN.md)** - 현재 진행 중인 Milestone 확인
+1. **Read [TECHSPEC.md](TECHSPEC.md)** - 전체 시스템 구조, 아키텍처, 핵심 Context 이해
+   - Section 4: 시스템 아키텍처 및 컴포넌트 간 관계
+   - Section 5: 데이터 모델 및 스키마
+   - Section 6: API 설계
+2. **Read [PLAN.md](PLAN.md)** - 현재 진행 중인 Milestone 확인
 
 **항상 참조:**
 - [docs/database/README.md](docs/database/README.md) - DB 스키마 확인 시

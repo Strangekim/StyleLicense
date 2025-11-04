@@ -448,13 +448,13 @@ GET /api/tokens/transactions?type=all&cursor=...&limit=20
 ```
 
 #### 거래 타입 판별 규칙
-거래 타입(`type`)은 다음 필드 조합으로 백엔드에서 계산하여 응답에 포함됩니다:
-- `purchase` (토큰 구매): `sender_id!=null`, `receiver_id=null`, `related_generation_id=null`
-- `welcome` (웰컴 보너스): `sender_id=null`, `receiver_id!=null`, `memo='Welcome Bonus'`
-- `usage` (이미지 생성 결제): `sender_id!=null`, `receiver_id!=null`, `related_generation_id!=null`
-- `transfer` (송금, MVP 제외): `sender_id!=null`, `receiver_id!=null`, `related_generation_id=null`
+거래 타입(`type`)은 DB의 `transaction_type` 컬럼에 저장되며, 다음 값들을 가질 수 있습니다:
+- `purchase` (토큰 구매): 사용자가 토스 결제로 토큰 충전
+- `generation` (이미지 생성 결제): 이미지 생성 시 작가에게 토큰 지급
+- `withdrawal` (출금, MVP 제외): 작가가 토큰을 현금화
+- `transfer` (송금, MVP 제외): 사용자 간 토큰 송금
 
-**주의**: DB의 transactions 테이블에는 type 컬럼이 없으며, 조회 시 Serializer에서 동적으로 계산합니다.
+**DB 스키마**: `transaction_type` 컬럼은 NOT NULL이며, CHECK 제약으로 위 4가지 값만 허용합니다.
 
 ---
 

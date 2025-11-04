@@ -145,7 +145,7 @@ Backend EC2 (t3.medium)
 |--------|--------------|------|------|
 | **Backend** | EC2 t3.medium | 1 | Django + Gunicorn + Nginx + PostgreSQL + RabbitMQ |
 | **Frontend** | (Backend에 포함) | - | Nginx에서 정적 파일 서빙 |
-| **Database** | PostgreSQL 15 (로컬) | 1 | Backend EC2 로컬 설치 |
+| **Database** | PostgreSQL 15 (Docker) | 1 | Backend EC2에서 Docker 컨테이너로 실행 |
 | **Queue** | RabbitMQ (Docker) | 1 | Backend EC2에 함께 실행 |
 | **Training Server** | RunPod RTX 4090 24GB | 1 | LoRA Fine-tuning 전용 GPU Pod |
 | **Inference Server** | RunPod RTX 4090 24GB | 1 | 이미지 생성 전용 GPU Pod |
@@ -332,8 +332,26 @@ curl http://localhost:8000/api/health
 
 ## Configuration Guide
 
-### 1. PostgreSQL 설정
+### 1. PostgreSQL 설정 (Docker 사용)
 
+**Docker로 PostgreSQL 실행 (권장)**:
+```bash
+# Docker 컨테이너로 PostgreSQL 실행
+docker run -d \
+  --name postgres \
+  --restart always \
+  -e POSTGRES_DB=style_license_db \
+  -e POSTGRES_USER=stylelicense_user \
+  -e POSTGRES_PASSWORD=your_password \
+  -v /var/lib/postgresql/data:/var/lib/postgresql/data \
+  -p 5432:5432 \
+  postgres:15
+
+# 백업 디렉토리 생성
+sudo mkdir -p /var/backups/postgresql
+```
+
+**로컬 설치 (대안)**:
 ```bash
 # PostgreSQL 15 설치
 sudo apt update
@@ -348,10 +366,6 @@ sudo -u postgres psql
 ALTER USER stylelicense_user WITH PASSWORD 'your_password';
 GRANT ALL PRIVILEGES ON DATABASE style_license_db TO stylelicense_user;
 \q
-
-# 백업 디렉토리 생성
-sudo mkdir -p /var/backups/postgresql
-sudo chown postgres:postgres /var/backups/postgresql
 ```
 
 ### 2. RabbitMQ 설정

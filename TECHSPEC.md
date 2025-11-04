@@ -340,27 +340,27 @@
 #### 모델 학습 플로우
 ```
 작가 → Frontend: 이미지 업로드
-Frontend → Backend: POST /api/models/train
+Frontend → Backend: POST /api/styles
 Backend → S3: 이미지 저장
 Backend → RabbitMQ: 학습 작업 전송
 RabbitMQ → Training Server: 작업 수신
 Training Server: LoRA Fine-tuning (30분~2시간)
 Training Server → S3: 모델 파일 저장
-Training Server → Backend: PATCH /api/models/:id/status
+Training Server → Backend: POST /api/webhooks/training/complete
 Backend → Frontend: 알림 (학습 완료)
 ```
 
 #### 이미지 생성 플로우
 ```
 사용자 → Frontend: 프롬프트 입력
-Frontend → Backend: POST /api/images/generate
+Frontend → Backend: POST /api/generations
 Backend: 토큰 차감 (SELECT FOR UPDATE)
 Backend → RabbitMQ: 생성 작업 전송
 RabbitMQ → Inference Server: 작업 수신
 Inference Server: 이미지 생성 (5~10초)
 Inference Server: 서명 삽입
 Inference Server → S3: 이미지 저장
-Inference Server → Backend: PATCH /api/images/:id/status
+Inference Server → Backend: POST /api/webhooks/inference/complete
 Backend → Frontend: 이미지 URL 반환
 ```
 
@@ -407,7 +407,7 @@ style_license_db
 |--------|------|-----------|
 | **users** | 사용자 계정 | token_balance, role(user/artist) |
 | **artists** | 작가 프로필 (1:1) | earned_token_balance, follower_count, signature_image_url |
-| **transactions** | 토큰 거래 내역 | sender, receiver, amount, status |
+| **transactions** | 토큰 거래 내역 | sender, receiver, amount, status, transaction_type |
 | **purchases** | 토스 결제 기록 | amount_tokens, status, provider_payment_key |
 | **styles** | 화풍 모델 | training_status, generation_cost_tokens |
 | **artworks** | 학습 이미지 (10~100장) | image_url, is_valid |
@@ -1211,7 +1211,7 @@ project-root/
 
 ### 10.3 Rate Limiting
 
-- **이미지 생성**: 1명당 10회/분
+- **이미지 생성**: 1명당 6회/분
 - **API 전체**: 1명당 100회/분
 - **로그인 시도**: 1 IP당 5회/5분
 

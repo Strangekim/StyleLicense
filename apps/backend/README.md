@@ -42,12 +42,13 @@ apps/backend/
 │   └── wsgi.py                 # WSGI entry point
 │
 ├── app/                        # Main application
-│   ├── models/                 # Django models (13 models)
-│   │   ├── user.py            # User, UserProfile
-│   │   ├── token.py           # TokenPackage, TokenTransaction
-│   │   ├── style.py           # StyleModel, TrainingDataset, TrainingImage
-│   │   ├── generation.py      # GenerationRequest, GeneratedImage
-│   │   ├── community.py       # CommunityPost, PostLike, Comment
+│   ├── models/                 # Django models
+│   │   ├── user.py            # User, Artist
+│   │   ├── token.py           # Transaction, Purchase
+│   │   ├── style.py           # Style, Artwork
+│   │   ├── generation.py      # Generation
+│   │   ├── community.py       # Follow, Like, Comment
+│   │   ├── tagging.py         # Tag, StyleTag, ArtworkTag, GenerationTag
 │   │   └── notification.py    # Notification
 │   │
 │   ├── serializers/           # DRF Serializers
@@ -191,11 +192,13 @@ RABBITMQ_PORT=5672
 RABBITMQ_USER=guest
 RABBITMQ_PASS=guest
 
-# AWS S3
+# AWS S3 (로컬 개발 시)
 AWS_ACCESS_KEY_ID=your_key
 AWS_SECRET_ACCESS_KEY=your_secret
 AWS_STORAGE_BUCKET_NAME=stylelicense-media
 AWS_S3_REGION_NAME=ap-northeast-2
+
+# 프로덕션: EC2 IAM Role 사용 (환경변수 불필요)
 
 # OAuth
 GOOGLE_CLIENT_ID=your_client_id
@@ -285,7 +288,7 @@ python manage.py migrate app 0002  # 0002로 롤백
 **중요 필드 설명**:
 - `users.role`: 'user' 또는 'artist' (작가 권한 구분)
 - `styles.generation_cost_tokens`: 이미지 1장당 토큰 비용
-- `transactions`: sender_id/receiver_id/related_generation_id 조합으로 거래 유형 판별 (transaction_type 컬럼 없음)
+- `transactions.transaction_type`: 거래 유형 ('purchase', 'generation', 'withdrawal', 'transfer')
 
 ---
 
@@ -310,9 +313,19 @@ python manage.py migrate app 0002  # 0002로 롤백
 
 - [ ] `DEBUG = False`
 - [ ] `ALLOWED_HOSTS` 설정 (도메인 추가: stylelicense.com)
-- [ ] **로컬 PostgreSQL 15.x 설치 및 연결 설정**
-  - `sudo apt install postgresql-15`
-  - 데이터베이스 생성: `createdb stylelicense_db`
+- [ ] **PostgreSQL 15.x 설정 (Docker 권장)**
+  - **Docker 사용 (권장)**:
+    ```bash
+    docker run -d --name postgres \
+      -e POSTGRES_PASSWORD=your_password \
+      -v /var/lib/postgresql/data:/var/lib/postgresql/data \
+      -p 5432:5432 postgres:15
+    ```
+  - **로컬 설치 (대안)**:
+    ```bash
+    sudo apt install postgresql-15
+    createdb stylelicense_db
+    ```
   - `DATABASE_URL=postgresql://user:pass@localhost:5432/stylelicense_db`
 - [ ] **RabbitMQ Docker 설정**
   - `docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management`

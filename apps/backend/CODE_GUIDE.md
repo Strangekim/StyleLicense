@@ -89,15 +89,15 @@ User = get_user_model()
 
 class StyleModel(models.Model):
     """작가의 화풍을 나타내는 AI 모델"""
-    
-    # Status choices
-    STATUS_CHOICES = [
-        ('DRAFT', 'Draft'),
-        ('TRAINING', 'Training'),
-        ('COMPLETED', 'Completed'),
-        ('FAILED', 'Failed'),
+
+    # Training status choices
+    TRAINING_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('training', 'Training'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
     ]
-    
+
     # Fields
     artist = models.ForeignKey(
         User,
@@ -106,15 +106,15 @@ class StyleModel(models.Model):
     )
     name = models.CharField(max_length=200)
     description = models.TextField()
-    status = models.CharField(
+    training_status = models.CharField(
         max_length=20,
-        choices=STATUS_CHOICES,
-        default='DRAFT',
+        choices=TRAINING_STATUS_CHOICES,
+        default='pending',
         db_index=True  # 자주 필터링
     )
     generation_cost_tokens = models.IntegerField(default=100)  # 토큰 단위
-    model_file_url = models.URLField(blank=True, null=True)
-    
+    model_path = models.TextField(blank=True, null=True)  # S3 경로
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -123,16 +123,16 @@ class StyleModel(models.Model):
         db_table = 'styles'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['status', 'artist']),  # 복합 인덱스
+            models.Index(fields=['training_status', 'artist']),  # 복합 인덱스
             models.Index(fields=['-created_at']),
         ]
-    
+
     def __str__(self):
         return f"{self.name} by {self.artist.username}"
-    
+
     def is_ready(self):
         """생성에 사용 가능한 상태인지 확인"""
-        return self.status == 'COMPLETED' and self.model_file_url
+        return self.training_status == 'completed' and self.model_path
 ```
 
 ### 2.2 Related Names 규칙
@@ -217,13 +217,13 @@ class StyleModelSerializer(serializers.ModelSerializer):
             'id',
             'name',
             'description',
-            'status',
+            'training_status',
             'generation_cost_tokens',
             'artist_name',  # read-only
             'training_images',  # write-only
             'created_at',
         ]
-        read_only_fields = ['id', 'status', 'created_at']
+        read_only_fields = ['id', 'training_status', 'created_at']
 
     def validate_generation_cost_tokens(self, value):
         """가격 검증"""
@@ -262,10 +262,10 @@ class TrainingImageSerializer(serializers.ModelSerializer):
 
 class StyleModelDetailSerializer(serializers.ModelSerializer):
     training_images = TrainingImageSerializer(many=True, read_only=True)
-    
+
     class Meta:
         model = StyleModel
-        fields = ['id', 'name', 'training_images', 'created_at']
+        fields = ['id', 'name', 'training_status', 'training_images', 'created_at']
 ```
 
 ### 3.3 Writable Nested Serializers
@@ -353,7 +353,7 @@ class StyleViewSet(viewsets.ModelViewSet):
             return queryset.filter(artist=self.request.user)
 
         # 일반 사용자는 완료된 스타일만 조회
-        return queryset.filter(status='COMPLETED')
+        return queryset.filter(training_status='completed')
     
     def get_permissions(self):
         """Action별 권한 설정"""
@@ -369,9 +369,9 @@ class StyleViewSet(viewsets.ModelViewSet):
     def train(self, request, pk=None):
         """학습 시작 커스텀 액션"""
         style = self.get_object()
-        
+
         # 이미 학습 중이면 거부
-        if style.status == 'TRAINING':
+        if style.training_status == 'training':
             return Response(
                 {'error': 'Training already in progress'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -394,15 +394,15 @@ class StyleViewSet(viewsets.ModelViewSet):
             image_urls=style.get_training_image_urls(),
             params={'epochs': 200, 'learning_rate': 1e-4}
         )
-        
+
         # 상태 업데이트
-        style.status = 'TRAINING'
+        style.training_status = 'training'
         style.save()
-        
+
         return Response({
             'message': 'Training started',
             'style_id': pk,
-            'status': 'TRAINING'
+            'training_status': 'training'
         })
 ```
 
@@ -416,7 +416,7 @@ class GenerationViewSet(viewsets.ModelViewSet):
         """생성 진행률 조회 (폴링용)"""
         generation = self.get_object()
         return Response({
-            'status': generation.status,
+            'status': generation.status,  # generations 테이블은 'status' 사용
             'progress': generation.progress_percent,
             'estimated_time_remaining': generation.estimated_seconds,
         })
@@ -739,11 +739,11 @@ def training_complete(request):
     style = StyleModel.objects.get(id=style_id)
     
     if success:
-        style.status = 'COMPLETED'
-        style.model_file_url = model_path
+        style.training_status = 'completed'
+        style.model_path = model_path
         notification_type = 'TRAINING_SUCCESS'
     else:
-        style.status = 'FAILED'
+        style.training_status = 'failed'
         notification_type = 'TRAINING_FAILED'
     
     style.save()
@@ -956,15 +956,15 @@ class StyleViewSet(viewsets.ModelViewSet):
 
 ```python
 class StyleModel(models.Model):
-    status = models.CharField(
+    training_status = models.CharField(
         max_length=20,
         db_index=True  # 단일 컬럼 인덱스
     )
-    
+
     class Meta:
         indexes = [
-            # 복합 인덱스 (status + artist)
-            models.Index(fields=['status', 'artist']),
+            # 복합 인덱스 (training_status + artist)
+            models.Index(fields=['training_status', 'artist']),
             
             # 정렬용 인덱스
             models.Index(fields=['-created_at']),
@@ -1002,7 +1002,7 @@ class StyleViewSet(viewsets.ModelViewSet):
         
         # DB 조회
         queryset = StyleModel.objects.filter(
-            status='COMPLETED'
+            training_status='completed'
         ).order_by('-view_count')[:10]
         
         # 캐시 저장 (5분)
@@ -1072,9 +1072,9 @@ def style_model(db, artist):
         artist=artist,
         name='Test Style',
         description='Test description',
-        status='COMPLETED',
+        training_status='completed',
         generation_cost_tokens=100,
-        model_file_url='https://s3.amazonaws.com/test.safetensors'
+        model_path='s3://stylelicense-models/test.safetensors'
     )
 
 @pytest.fixture
@@ -1203,9 +1203,9 @@ class TestStyleAPI:
         )
         
         response = api_client.post(f'/api/styles/{style_model.id}/train/')
-        
+
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['status'] == 'TRAINING'
+        assert response.data['training_status'] == 'training'
         mock_rabbitmq.assert_called_once()
 ```
 

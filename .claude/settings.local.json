@@ -8,7 +8,9 @@
       "Bash(cat:*)",
       "Bash(iconv:*)",
       "Bash(CODE_GUIDE_utf8.md)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(\"C:\\Users\\SSAFY\\Desktop\\StyleLicense\\TECHSPEC_utf8.md\")",
+      "Bash(\"C:\\Users\\SSAFY\\Desktop\\StyleLicense\\TECHSPEC_temp.md\")"
     ],
     "deny": [],
     "ask": []
