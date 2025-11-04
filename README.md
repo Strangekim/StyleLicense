@@ -11,8 +11,6 @@ project-root/
 │   ├── database/
 │   │   └── README.md                # DB 스키마 상세
 │   ├── API.md                       # API 명세
-│   ├── SECURITY.md                  # 보안 정책
-│   ├── DEPLOYMENT.md                # 배포 가이드
 │   └── PATTERNS.md                  # 공통 코드 패턴
 │
 ├── design/                          # 디자인 리소스 

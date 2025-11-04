@@ -948,8 +948,6 @@ POST /api/webhooks/inference/failed
 - 모든 입력값 서버 재검증 (DRF Serializer)
 - SQL Injection, XSS 방어
 
-**상세 보안 정책**: [docs/SECURITY.md](docs/SECURITY.md)
-
 ---
 
 ### 6.14 참조 문서
@@ -1543,8 +1541,6 @@ project-root/
 │   │   │   └── operations.md  (마이그레이션 + 운영)
 │   │   └── TABLES.md          (모든 테이블 정의 한 곳에)
 │   ├── API.md             # API 명세 상세
-│   ├── SECURITY.md        # 보안 정책
-│   ├── DEPLOYMENT.md      # 배포 가이드
 │   └── PATTERNS.md        # 코드 패턴
 └── apps/
     ├── backend/           # 개발용 Backend 코드

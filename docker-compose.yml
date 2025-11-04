@@ -1,0 +1,181 @@
+# Development Docker Compose Configuration
+# For local development with hot-reload and debugging
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: stylelicense-postgres
+    environment:
+      POSTGRES_DB: stylelicense_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stylelicense-network
+
+  # RabbitMQ Message Queue
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: stylelicense-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"    # AMQP port
+      - "15672:15672"  # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stylelicense-network
+
+  # Backend (Django REST Framework)
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: stylelicense-backend
+    command: python manage.py runserver 0.0.0.0:8000
+    environment:
+      - DEBUG=True
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/stylelicense_db
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}
+      - AWS_S3_REGION_NAME=${AWS_S3_REGION_NAME:-us-east-1}
+      - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:-dev-internal-token}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/backend:/app
+      - backend_static:/app/staticfiles
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - stylelicense-network
+
+  # Frontend (Vue 3 + Vite)
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+      target: builder  # Use builder stage for development
+    container_name: stylelicense-frontend
+    command: npm run dev -- --host 0.0.0.0
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000/api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/frontend:/app
+      - /app/node_modules  # Anonymous volume to preserve node_modules
+    networks:
+      - stylelicense-network
+
+  # Training Server (LoRA Fine-tuning)
+  # NOTE: Requires NVIDIA GPU with CUDA support
+  # Uncomment to run locally with GPU
+  # training-server:
+  #   build:
+  #     context: ./apps/training-server
+  #     dockerfile: Dockerfile
+  #   container_name: stylelicense-training
+  #   runtime: nvidia
+  #   environment:
+  #     - RABBITMQ_HOST=rabbitmq
+  #     - RABBITMQ_PORT=5672
+  #     - RABBITMQ_USER=guest
+  #     - RABBITMQ_PASSWORD=guest
+  #     - RABBITMQ_QUEUE=model_training
+  #     - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+  #     - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+  #     - AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}
+  #     - AWS_S3_REGION_NAME=${AWS_S3_REGION_NAME:-us-east-1}
+  #     - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:-dev-internal-token}
+  #     - WEBHOOK_BASE_URL=http://backend:8000
+  #   volumes:
+  #     - ./apps/training-server:/app
+  #     - training_models:/tmp/models
+  #   depends_on:
+  #     - rabbitmq
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
+  #   networks:
+  #     - stylelicense-network
+
+  # Inference Server (Image Generation)
+  # NOTE: Requires NVIDIA GPU with CUDA support
+  # Uncomment to run locally with GPU
+  # inference-server:
+  #   build:
+  #     context: ./apps/inference-server
+  #     dockerfile: Dockerfile
+  #   container_name: stylelicense-inference
+  #   runtime: nvidia
+  #   environment:
+  #     - RABBITMQ_HOST=rabbitmq
+  #     - RABBITMQ_PORT=5672
+  #     - RABBITMQ_USER=guest
+  #     - RABBITMQ_PASSWORD=guest
+  #     - RABBITMQ_QUEUE=image_generation
+  #     - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+  #     - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+  #     - AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}
+  #     - AWS_S3_REGION_NAME=${AWS_S3_REGION_NAME:-us-east-1}
+  #     - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:-dev-internal-token}
+  #     - WEBHOOK_BASE_URL=http://backend:8000
+  #   volumes:
+  #     - ./apps/inference-server:/app
+  #     - inference_models:/tmp/models
+  #   depends_on:
+  #     - rabbitmq
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
+  #   networks:
+  #     - stylelicense-network
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  backend_static:
+  training_models:
+  inference_models:
+
+networks:
+  stylelicense-network:
+    driver: bridge

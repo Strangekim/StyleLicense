@@ -109,9 +109,9 @@ CP-M1-1 → CP-M1-2 → CP-M1-3
   - Session persists after page refresh
   - Unauthenticated users redirected to /login
   - Artist-only routes protected
-- **Reference**: 
+- **Reference**:
   - [docs/API.md#authentication](docs/API.md#authentication)
-  - [docs/SECURITY.md](docs/SECURITY.md)
+  - [TECHSPEC.md#10-보안-설계](TECHSPEC.md#10-보안-설계)
 
 ### Parallel Tasks (병렬 실행 가능)
 ```
@@ -717,7 +717,7 @@ CP-M6-1 → CP-M6-2 → CP-M6-3 → CP-M6-4
   - No SSL certificate warnings
   - Database migrations applied successfully
   - Basic user flow works (login, browse, generate)
-- **Reference**: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+- **Reference**: [DOCKER.md](DOCKER.md)
 
 #### CP-M6-4: Monitoring Setup
 - **Status**: PLANNED
@@ -735,7 +735,7 @@ CP-M6-1 → CP-M6-2 → CP-M6-3 → CP-M6-4
   - Errors appear in Sentry dashboard
   - Server metrics visible in monitoring tool
   - Receive alert when error rate > 10/minute
-- **Reference**: [docs/DEPLOYMENT.md#monitoring](docs/DEPLOYMENT.md#monitoring)
+- **Reference**: [DOCKER.md](DOCKER.md)
 
 ### Parallel Tasks (병렬 실행 가능)
 ```

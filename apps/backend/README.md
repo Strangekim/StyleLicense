@@ -391,7 +391,7 @@ GET /api/health
 ### Project Documents
 - **[TECHSPEC.md](../../TECHSPEC.md)** - Overall system architecture
 - **[docs/PATTERNS.md](../../docs/PATTERNS.md)** - Common code patterns
-- **[docs/SECURITY.md](../../docs/SECURITY.md)** - Security policies
+- **[DOCKER.md](../../DOCKER.md)** - Docker setup and deployment guide
 
 ---
 

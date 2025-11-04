@@ -1885,8 +1885,7 @@ Content-Type: application/json
 ### 관련 문서
 - **데이터베이스 스키마**: [docs/database/README.md](database/README.md)
 - **쿼리 예제**: [docs/database/guides/QUERIES.md](database/guides/QUERIES.md)
-- **보안 정책**: [docs/SECURITY.md](SECURITY.md)
-- **배포 가이드**: [docs/DEPLOYMENT.md](DEPLOYMENT.md)
+- **Docker 배포 가이드**: [DOCKER.md](../DOCKER.md)
 
 ### 프로젝트 문서
 - **기술 명세**: [TECHSPEC.md](../TECHSPEC.md)

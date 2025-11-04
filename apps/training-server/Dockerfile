@@ -1,27 +1,54 @@
-# 1. NVIDIA CUDA 런타임 이미지를 베이스로 사용
-FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
+# Training Server Dockerfile for LoRA Fine-tuning
+# Requires NVIDIA GPU with CUDA support
 
-# 2. Python 및 필수 도구 설치
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    python3.11 \
-    python3-pip \
-    python3-venv \
-    && \
-    rm -rf /var/lib/apt/lists/*
+FROM nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04
 
-# 3. Python 3.11을 기본 python으로 설정
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    DEBIAN_FRONTEND=noninteractive
 
-# 4. 작업 디렉토리 설정
+# Set work directory
 WORKDIR /app
 
-# 5. Python 패키지 설치
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3.11 \
+    python3-pip \
+    git \
+    wget \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
 
-# 6. 애플리케이션 코드 복사
+# Upgrade pip
+RUN python3 -m pip install --upgrade pip
+
+# Copy requirements first (for better caching)
+COPY requirements.txt .
+
+# Install PyTorch with CUDA support
+RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+# Install other Python dependencies
+RUN pip install -r requirements.txt
+
+# Copy project files
 COPY . .
 
-# 7. 애플리케이션 실행
-CMD ["python", "main.py"]
+# Create directories for temporary files and models
+RUN mkdir -p /tmp/models /tmp/images
+
+# Create a non-root user (optional, but recommended)
+RUN useradd -m -u 1000 trainer && \
+    chown -R trainer:trainer /app /tmp/models /tmp/images
+
+USER trainer
+
+# Health check (checks if the consumer is running)
+HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
+    CMD python3 -c "import pika; conn = pika.BlockingConnection(pika.ConnectionParameters(host='${RABBITMQ_HOST:-rabbitmq}'))" || exit 1
+
+# Default command: Start RabbitMQ consumer
+CMD ["python3", "rabbitmq_consumer.py"]
