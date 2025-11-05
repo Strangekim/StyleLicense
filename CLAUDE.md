@@ -119,21 +119,34 @@
    - Lint 에러 시: 에러 수정 후 다시 실행
    - 모든 체크가 통과할 때까지 반복
 
-### Step 4: Mark Complete
+### Step 4: Finalize and Commit
 
-1. **App PLAN.md 업데이트**
-   - 완료한 Subtask에 `[x]` 체크
-   - 해당 작업의 Commit ID 기록 (선택)
+1.  **App PLAN.md 업데이트**:
+    *   완료한 Subtask에 `[x]`를 체크합니다.
 
-2. **Root PLAN.md 업데이트**
-   - 해당 Task의 모든 Subtask가 완료되었으면
-   - Root PLAN.md에서 해당 Task에 `[x]` 체크
+2.  **개발 브랜치로 전환 및 동기화**:
+    *   `git checkout dev` 명령어로 공용 개발 브랜치인 `dev`로 전환합니다.
+    *   `git pull origin dev` 명령어로 최신 코드를 반영합니다.
 
-3. **Milestone 완료 확인**
-   - Milestone의 모든 Task가 체크되었으면
-   - Milestone의 **Exit Criteria** 확인
-   - 모두 만족하면 Milestone Status를 `DONE`으로 변경
-   - 다음 Milestone의 Status를 `IN_PROGRESS`로 변경
+3.  **변경사항 스테이징 및 커밋**:
+    *   `git add .` 명령어로 변경된 모든 파일을 스테이징합니다.
+    *   `git commit -m "feat(app): description"` 형식으로 커밋 메시지를 작성하여 커밋합니다.
+
+4.  **원격 저장소에 푸시**:
+    *   `git push origin dev` 명령어로 `dev` 브랜치에 변경사항을 푸시합니다.
+
+5.  **커밋 해시 기록**:
+    *   `git rev-parse HEAD` 명령어로 방금 생성한 커밋의 고유 해시값(예: `a1b2c3d`)을 가져옵니다.
+    *   `apps/{app-name}/PLAN.md` 파일의 완료한 subtask 옆에 커밋 해시를 기록합니다.
+        ```markdown
+        - [x] GET /api/tokens/balance endpoint (Commit: a1b2c3d)
+        ```
+
+6.  **Root PLAN.md 업데이트**:
+    *   만약 해당 작업으로 인해 상위 태스크의 모든 Subtask가 완료되었다면, 루트 `PLAN.md`의 태스크에도 `[x]`를 체크합니다.
+
+7.  **사용자에게 알림**:
+    *   모든 과정이 끝나면, "작업이 완료되어 `dev` 브랜치에 커밋(a1b2c3d)하고 푸시했습니다. `PLAN.md`에 커밋 정보를 기록했습니다." 와 같이 최종 결과를 보고합니다.
 
 ---
 
@@ -206,11 +219,23 @@ python manage.py test app.tests.test_token_service
 
 **5.4. Iterate until all pass**
 
-#### 6. Mark Complete
+#### 6. Finalize and Commit
+
+**6.1. Checkout and Commit**
+```bash
+git checkout dev
+git pull origin dev
+git add .
+git commit -m "feat(backend): implement consume_tokens with SELECT FOR UPDATE"
+git push origin dev
+```
+
+**6.2. Record Commit Hash**
+(git rev-parse HEAD 실행 후 나온 해시가 `a1b2c3d`라고 가정)
 
 **apps/backend/PLAN.md:**
 ```markdown
-- [x] consume_tokens() with SELECT FOR UPDATE
+- [x] consume_tokens() with SELECT FOR UPDATE (Commit: a1b2c3d)
 ```
 
 **PLAN.md (when all subtasks done):**
@@ -240,7 +265,7 @@ python manage.py test app.tests.test_token_service
 - 모든 체크 통과할 때까지 반복
 
 ### ✅ Task Completion
-1. Subtask 완료 → App PLAN.md에 `[x]` 체크
+1. Subtask 완료 → App PLAN.md에 `[x]` 체크 및 커밋 해시 기록
 2. 모든 Subtask 완료 → Root PLAN.md에 `[x]` 체크
 3. Exit Criteria 확인 → 모두 만족 시 Milestone `DONE`
 
@@ -281,7 +306,7 @@ python manage.py test app.tests.test_token_service
 3. 모든 조건 만족 시 Milestone 완료
 
 ### 문서가 없거나 불명확한 경우
-1. 사용자에게 명확화 요청
+1. **반드시 한국어로** 사용자에게 명확화 요청
 2. 임시로 합리적인 가정 하에 진행
 3. 작성한 코드에 TODO 주석으로 표시
 
@@ -293,5 +318,7 @@ python manage.py test app.tests.test_token_service
 - 상황에 따라 유연하게 조정 가능합니다
 - 사용자의 추가 지시사항이 있으면 우선합니다
 - 불명확한 부분은 언제든 질문하세요
+- 모든 질문 및 사용자 확인 요청은 **반드시 한국어로** 진행합니다.
+
 
 ---

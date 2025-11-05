@@ -1,7 +1,7 @@
 # Style License 프로젝트 기술 명세서 (TECHSPEC.md)
 
 **Repository :**  작성 예정
-**Version :** 0.4(API 설계 추가)
+**Version :** 1.0
 
 ---
 
