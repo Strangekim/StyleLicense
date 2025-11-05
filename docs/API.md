@@ -555,8 +555,9 @@ GET /api/styles?sort=popular&cursor=...&limit=20&tags=watercolor,portrait
 
 #### 정렬 기준
 - `recent`: `created_at DESC`
-- `popular`: `usage_count DESC, created_at DESC`
-  - usage_count = 실제 생성 횟수 (generations 테이블 COUNT)
+- `popular`: `artist.follower_count DESC, created_at DESC`
+  - 1차: 스타일을 소유한 작가의 팔로워 수
+  - 2차: 최신순
 
 ---
 

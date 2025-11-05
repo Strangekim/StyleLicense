@@ -22,7 +22,7 @@ This document contains detailed subtasks for inference server development. For h
 ### M1-Initialization
 
 **Referenced by**: Root PLAN.md → PT-M1-Inference  
-**Status**: DONE
+**Status**: PLANNED
 
 #### Subtasks
 
@@ -42,9 +42,9 @@ This document contains detailed subtasks for inference server development. For h
   - [x] Verify image quality
 
 **Exit Criteria**:
-- ✅ Stable Diffusion loads without errors
-- ✅ CUDA is available
-- ✅ Can generate test image
+- [ ] Stable Diffusion loads without errors
+- [ ] CUDA is available
+- [ ] Can generate test image
 
 ---
 

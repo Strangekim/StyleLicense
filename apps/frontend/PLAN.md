@@ -30,7 +30,7 @@ This document contains detailed subtasks for frontend development. For high-leve
 ### M1-Initialization
 
 **Referenced by**: Root PLAN.md → PT-M1-Frontend  
-**Status**: DONE
+**Status**: PLANNED
 
 #### Subtasks
 

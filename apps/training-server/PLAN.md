@@ -22,7 +22,7 @@ This document contains detailed subtasks for training server development. For hi
 ### M1-Initialization
 
 **Referenced by**: Root PLAN.md → PT-M1-Training  
-**Status**: DONE
+**Status**: PLANNED
 
 #### Subtasks
 
@@ -42,9 +42,9 @@ This document contains detailed subtasks for training server development. For hi
   - [x] Test simple tensor operation on GPU
 
 **Exit Criteria**:
-- ✅ PyTorch imports without errors
-- ✅ CUDA is available
-- ✅ RabbitMQ connection succeeds
+- [ ] PyTorch imports without errors
+- [ ] CUDA is available
+- [ ] RabbitMQ connection succeeds
 
 ---
 

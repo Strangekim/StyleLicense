@@ -23,7 +23,7 @@ This document contains detailed subtasks for backend development. For high-level
 ### M1-Initialization
 
 **Referenced by**: Root PLAN.md → PT-M1-Backend  
-**Status**: DONE
+**Status**: PLANNED
 
 #### Subtasks
 
@@ -58,9 +58,9 @@ This document contains detailed subtasks for backend development. For high-level
   - [x] Test container starts with docker-compose up backend
 
 **Exit Criteria**:
-- ✅ python manage.py runserver starts without errors
-- ✅ GET /api/health returns 200 OK
-- ✅ Database connection test passes
+- [ ] python manage.py runserver starts without errors
+- [ ] GET /api/health returns 200 OK
+- [ ] Database connection test passes
 
 ---
 

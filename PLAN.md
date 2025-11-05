@@ -71,18 +71,18 @@ CP-M1-1 → CP-M1-2 → CP-M1-3
   - RabbitMQ management UI accessible at localhost:15672
 
 #### CP-M1-2: Database Schema
-- **Status**: DONE
+- **Status**: PLANNED
 - **Type**: SEQUENTIAL
 - **Dependencies**: [CP-M1-1]
 - **Owner**: Backend
 - **Tasks**:
-  - [x] User model with google_id, user_type, token_balance
-  - [x] StyleModel with training_status, signature fields
-  - [x] GeneratedImage with metadata
-  - [x] TokenTransaction with transaction_type
-  - [x] Tag, Follow, Notification, ImageLike, ImageComment models
-  - [x] Indexes on (user_id, created_at, training_status)
-  - [x] Foreign key constraints
+  - [ ] User model with google_id, user_type, token_balance
+  - [ ] StyleModel with training_status, signature fields
+  - [ ] GeneratedImage with metadata
+  - [ ] TokenTransaction with transaction_type
+  - [ ] Tag, Follow, Notification, ImageLike, ImageComment models
+  - [ ] Indexes on (user_id, created_at, training_status)
+  - [ ] Foreign key constraints
 - **Exit Criteria**:
   - `python manage.py migrate` succeeds
   - All models visible in Django admin
@@ -119,50 +119,50 @@ PT-M1-Backend ⫽ PT-M1-Frontend ⫽ PT-M1-Training ⫽ PT-M1-Inference
 ```
 
 #### PT-M1-Backend: Backend Initialization
-- **Status**: DONE
+- **Status**: PLANNED
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M1-Frontend, PT-M1-Training, PT-M1-Inference]
 - **Owner**: Backend
 - **Reference**: [apps/backend/PLAN.md#m1-initialization](apps/backend/PLAN.md#m1-initialization)
 - **Summary**:
-  - [x] Django project creation
-  - [x] PostgreSQL connection configuration
-  - [x] Django REST Framework setup
-  - [x] Health check endpoint: GET /api/health
+  - [ ] Django project creation
+  - [ ] PostgreSQL connection configuration
+  - [ ] Django REST Framework setup
+  - [ ] Health check endpoint: GET /api/health
 
 #### PT-M1-Frontend: Frontend Initialization
-- **Status**: DONE
+- **Status**: PLANNED
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M1-Backend, PT-M1-Training, PT-M1-Inference]
 - **Owner**: Frontend
 - **Reference**: [apps/frontend/PLAN.md#m1-initialization](apps/frontend/PLAN.md#m1-initialization)
 - **Summary**:
-  - [x] Vite + Vue 3 project setup
-  - [x] Tailwind CSS configuration
-  - [x] Pinia, Vue Router, Axios installation
-  - [x] i18n setup (en, ko)
+  - [ ] Vite + Vue 3 project setup
+  - [ ] Tailwind CSS configuration
+  - [ ] Pinia, Vue Router, Axios installation
+  - [ ] i18n setup (en, ko)
 
 #### PT-M1-Training: Training Server Initialization
-- **Status**: DONE
+- **Status**: PLANNED
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M1-Backend, PT-M1-Frontend, PT-M1-Inference]
 - **Owner**: ML Engineer
 - **Reference**: [apps/training-server/PLAN.md#m1-initialization](apps/training-server/PLAN.md#m1-initialization)
 - **Summary**:
-  - [x] PyTorch, Diffusers installation
-  - [x] RabbitMQ connection test
-  - [x] CUDA availability check
+  - [ ] PyTorch, Diffusers installation
+  - [ ] RabbitMQ connection test
+  - [ ] CUDA availability check
 
 #### PT-M1-Inference: Inference Server Initialization
-- **Status**: DONE
+- **Status**: PLANNED
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M1-Backend, PT-M1-Frontend, PT-M1-Training]
 - **Owner**: ML Engineer
 - **Reference**: [apps/inference-server/PLAN.md#m1-initialization](apps/inference-server/PLAN.md#m1-initialization)
 - **Summary**:
-  - [x] Stable Diffusion installation
-  - [x] RabbitMQ connection test
-  - [x] Test inference with base model
+  - [ ] Stable Diffusion installation
+  - [ ] RabbitMQ connection test
+  - [ ] Test inference with base model
 
 ### Exit Criteria
 - [ ] All CP-M1 tasks completed
