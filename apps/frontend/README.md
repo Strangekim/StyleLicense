@@ -175,6 +175,349 @@ feature/
 
 ---
 
+## Design System
+
+### Overview
+
+Style License frontend follows design mockups located in `docs/design/pages/` with Instagram-inspired UI patterns. All design resources (logos, icons, page mockups) are integrated into the development workflow.
+
+**Design Philosophy**:
+- **Instagram-inspired**: Modern, clean, mobile-first design language
+- **Consistency over exactness**: Maintain visual consistency across all pages (colors, fonts, spacing)
+- **Commercial standards**: Follow industry best practices for UX/UI
+
+---
+
+### Design Resources Location
+
+```
+Project structure:
+docs/design/
+└── pages/                    # 17 page design mockups (PNG/JPG)
+    ├── LogIn Page.png
+    ├── Main Page.png
+    ├── Feed detail Page1-2.png
+    ├── Search & Following Artist Page.png
+    ├── StyleDetailPage1-4.png
+    ├── Create Style Page1-3.png
+    ├── Profile Page.png
+    ├── Edit Profile1-2.png
+    ├── Notification Page.png
+    └── Comment Modal.jpg
+
+apps/frontend/src/assets/
+├── images/                   # Production logos
+│   ├── main_logo.png        # Primary logo (light bg)
+│   ├── main_logo_black.png  # Logo variant (dark bg)
+│   ├── main_typo.png        # Typography/wordmark
+│   └── styleLicense_logo.png # Alternative logo
+└── icons/                    # Production icons
+    ├── brush_icon.png       # Art/style actions
+    ├── style_icon.png       # Navigation (inactive)
+    └── style_icon_selected.png # Navigation (active)
+```
+
+---
+
+### UI Design Guidelines
+
+#### 1. Follow Page Mockups with Flexibility
+
+**Base Reference**: Always start with mockups in `docs/design/pages/`
+
+**Allowed Adjustments**:
+- ✅ Adjust component spacing for better visual hierarchy
+- ✅ Unify font sizes across similar elements
+- ✅ Standardize colors for consistency (e.g., all primary buttons same color)
+- ✅ Improve alignment and grid consistency
+- ✅ Enhance responsive behavior for mobile/tablet
+
+**Example**:
+```vue
+<!-- Mockup shows 12px gap, but 16px provides better breathing room -->
+<div class="flex flex-col gap-4">  <!-- gap-4 = 16px, not 12px -->
+  <Button />
+  <Input />
+</div>
+```
+
+#### 2. Instagram UI Patterns
+
+Use Instagram as the primary reference for:
+- **Feed layouts**: Grid/masonry for image galleries
+- **Navigation**: Bottom tab bar (mobile), sidebar (desktop)
+- **Modals**: Comment modal, share modal, settings modal
+- **Interactions**: Like button animation, follow button states
+- **Loading states**: Skeleton loaders, shimmer effects
+
+**Instagram Reference**:
+- https://www.instagram.com/ (web version)
+- Focus on: Feed, Profile, Explore pages
+
+#### 3. Handle Missing Specifications
+
+When page mockups don't cover specific features:
+- **Option 1**: Reference Instagram's implementation
+- **Option 2**: Follow modern design trends (e.g., Dribbble, Behance)
+- **Option 3**: Use industry standards (Material Design, Apple HIG)
+
+**Examples**:
+- **Loading state**: No mockup? → Use skeleton loader (Instagram-style)
+- **Error state**: No mockup? → Use toast notification (common pattern)
+- **Empty state**: No mockup? → Centered icon + text + action button
+
+#### 4. TECHSPEC.md Authority (Critical)
+
+**If mockup conflicts with TECHSPEC.md requirements, TECHSPEC.md wins.**
+
+**Excluded Features** (present in mockups but NOT in TECHSPEC.md):
+- ❌ **Comment likes** - Comment Modal.jpg shows like button on comments, but TECHSPEC.md line 751 explicitly states "댓글 좋아요 없음"
+- ❌ Any feature not listed in TECHSPEC.md sections 6-8
+
+**Verification Process**:
+1. Check mockup design
+2. Cross-reference with TECHSPEC.md
+3. If feature is missing from TECHSPEC.md → **Do NOT implement**
+4. If uncertain → Ask for clarification
+
+**Example**:
+```vue
+<!-- ❌ WRONG: Comment like button (not in TECHSPEC.md) -->
+<button @click="likeComment">
+  <HeartIcon />
+</button>
+
+<!-- ✅ CORRECT: Only show comments, no like interaction -->
+<div class="comment">
+  <p>{{ comment.content }}</p>
+</div>
+```
+
+#### 5. Commercial Standards
+
+All UI interactions must follow industry best practices:
+- **Smooth animations**: 200-300ms transitions (not instant, not slow)
+- **Clear feedback**: Loading states, success/error messages
+- **Accessible**: ARIA labels, keyboard navigation, color contrast
+- **Responsive**: Mobile-first design, breakpoints at 640px, 768px, 1024px
+- **Performance**: Lazy loading images, virtualized lists
+
+**Example**:
+```vue
+<!-- ✅ GOOD: Clear loading state, smooth transition -->
+<button
+  @click="handleSubmit"
+  :disabled="isLoading"
+  class="transition-colors duration-200 hover:bg-blue-600"
+>
+  <SpinnerIcon v-if="isLoading" class="animate-spin" />
+  <span v-else>Submit</span>
+</button>
+```
+
+---
+
+### Asset Usage
+
+#### Using Logos in Components
+
+```vue
+<script setup>
+import mainLogo from '@/assets/images/main_logo.png'
+import mainLogoBlack from '@/assets/images/main_logo_black.png'
+import mainTypo from '@/assets/images/main_typo.png'
+</script>
+
+<template>
+  <!-- Header logo -->
+  <img :src="mainLogo" alt="Style License" class="h-8" />
+
+  <!-- Dark mode logo -->
+  <img v-if="isDarkMode" :src="mainLogoBlack" alt="Style License" />
+
+  <!-- Typography only (e.g., footer) -->
+  <img :src="mainTypo" alt="Style License" class="h-6" />
+</template>
+```
+
+#### Using Icons in Components
+
+```vue
+<script setup>
+import { ref } from 'vue'
+import styleIcon from '@/assets/icons/style_icon.png'
+import styleIconSelected from '@/assets/icons/style_icon_selected.png'
+import brushIcon from '@/assets/icons/brush_icon.png'
+
+const isActive = ref(false)
+</script>
+
+<template>
+  <!-- Navigation icon (bottom tab bar) -->
+  <button @click="navigate">
+    <img
+      :src="isActive ? styleIconSelected : styleIcon"
+      alt="Styles"
+      class="w-6 h-6"
+    />
+  </button>
+
+  <!-- Action button icon -->
+  <button>
+    <img :src="brushIcon" alt="Create" class="w-5 h-5" />
+  </button>
+</template>
+```
+
+---
+
+### Page Mockup Reference
+
+Map each page component to its design mockup:
+
+| Page Component | Mockup Reference | Key Features |
+|----------------|------------------|--------------|
+| **LoginPage.vue** | `LogIn Page.png` | Google OAuth button, logo, tagline |
+| **MainPage.vue** | `Main Page.png` | Feed grid, infinite scroll, bottom nav |
+| **FeedDetailPage.vue** | `Feed detail Page1.png`, `Feed detail Page2.png` | Image detail, comments, like button |
+| **SearchPage.vue** | `Search & Following Artist Page.png` | Search bar, following section, results grid |
+| **StyleDetailPage.vue** | `StyleDetailPage1-4.png` | Style info, sample gallery, generation form |
+| **EditStylePage.vue** | `Create Style Page1-3.png` | Image upload, tag input, training progress |
+| **MyPage.vue** | `Profile Page.png` | User profile, portfolio grid, edit button |
+| **EditProfilePage.vue** | `Edit Profile1-2.png` | Profile form, image upload |
+| **NotificationPage.vue** | `Notification Page.png` | Notification list, mark as read |
+| **Comment Modal** | `Comment Modal.jpg` | Modal overlay, comment list, input |
+
+**Usage**:
+1. Open mockup from `docs/design/pages/`
+2. Analyze layout, colors, spacing, components
+3. Implement with Tailwind CSS + Vue 3 Composition API
+4. Adjust for consistency (spacing, colors, fonts)
+
+---
+
+### Design System Setup
+
+#### Color Extraction (TODO)
+
+Extract colors from mockups and define in `tailwind.config.js`:
+
+```javascript
+// apps/frontend/tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#...',   // Extract from mockups
+          500: '#...',  // Main brand color
+          900: '#...',
+        },
+        secondary: { /* ... */ },
+        neutral: { /* ... */ },
+        success: '#...',
+        error: '#...',
+        warning: '#...',
+      }
+    }
+  }
+}
+```
+
+#### Typography (TODO)
+
+Identify font families and sizes from mockups:
+
+```javascript
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],  // Primary font
+        display: ['...'],  // Headings (if different)
+      },
+      fontSize: {
+        'xs': '0.75rem',   // 12px
+        'sm': '0.875rem',  // 14px
+        'base': '1rem',    // 16px
+        'lg': '1.125rem',  // 18px
+        'xl': '1.25rem',   // 20px
+        '2xl': '1.5rem',   // 24px
+        // ... adjust based on mockups
+      }
+    }
+  }
+}
+```
+
+#### Spacing & Layout
+
+Define consistent spacing scale:
+
+```javascript
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      spacing: {
+        '18': '4.5rem',   // Custom spacing if needed
+        '88': '22rem',
+      },
+      borderRadius: {
+        'xl': '1rem',     // Card corners
+        '2xl': '1.5rem',  // Modal corners
+      },
+      maxWidth: {
+        'screen-xl': '1280px',  // Container max width
+      }
+    }
+  }
+}
+```
+
+---
+
+### Implementation Workflow
+
+When implementing a new page:
+
+1. **Reference mockup**: Open corresponding PNG from `docs/design/pages/`
+2. **Extract specs**: Note colors, spacing, font sizes, component structure
+3. **Check TECHSPEC.md**: Verify all features are required (remove if not listed)
+4. **Implement structure**: Create layout with Tailwind classes
+5. **Add interactions**: Follow Instagram patterns for hover/click states
+6. **Test responsiveness**: Ensure mobile/tablet/desktop views work
+7. **Refine consistency**: Adjust spacing/colors if inconsistent with other pages
+
+**Example checklist for MainPage.vue**:
+- [ ] Extract color palette from Main Page.png
+- [ ] Implement grid layout (Instagram-style)
+- [ ] Add infinite scroll (useInfiniteScroll composable)
+- [ ] Verify feed API matches TECHSPEC.md GET /api/generations/feed
+- [ ] Add loading skeleton (Instagram-style shimmer)
+- [ ] Test mobile responsiveness
+- [ ] Add smooth transitions (200ms)
+
+---
+
+### Design System Maintenance
+
+**Consistency Checks**:
+- [ ] All buttons use same primary color
+- [ ] All cards have consistent border radius
+- [ ] All text uses defined font scale
+- [ ] All spacing follows 4px/8px grid
+- [ ] All interactive elements have hover/focus states
+- [ ] All forms have validation states (error, success)
+
+**Tools**:
+- **Figma** (if available): Export design tokens automatically
+- **Color Picker**: Extract exact hex codes from mockups
+- **Design Linter**: Check for inconsistencies (manual review)
+
+---
+
 ### Main Page Configuration
 
 | Page | Route | Auth | Description |
@@ -656,17 +999,24 @@ server {
 ### Essential Documents
 - **[CODE_GUIDE.md](CODE_GUIDE.md)** - Code writing patterns and examples (must read before coding)
 - **[PLAN.md](PLAN.md)** - Development task plan (check next task)
+- **Design System** (above) - UI design guidelines, mockups, and asset usage
 
 ### Project Documents
-- **[TECHSPEC.md](../../TECHSPEC.md)** - Overall system architecture
+- **[TECHSPEC.md](../../TECHSPEC.md)** - Overall system architecture (authority for features)
 - **[docs/API.md](../../docs/API.md)** - Backend API specification
 - **[docs/PATTERNS.md](../../docs/PATTERNS.md)** - Common code patterns
+- **[docs/design/pages/](../../docs/design/pages/)** - Page design mockups (17 screens)
+
+### Design References
+- **Instagram Web**: https://www.instagram.com/ - Primary UI pattern reference
+- **Tailwind CSS**: https://tailwindcss.com/docs - Styling framework
+- **Dribbble**: https://dribbble.com/ - Design inspiration
+- **Material Design**: https://m3.material.io/ - Component patterns
 
 ### External Documentation
 - **Vue 3**: https://vuejs.org/guide/introduction.html
 - **Pinia**: https://pinia.vuejs.org/
 - **Vue Router**: https://router.vuejs.org/
-- **Tailwind CSS**: https://tailwindcss.com/docs
 - **Vite**: https://vitejs.dev/guide/
 
 ---

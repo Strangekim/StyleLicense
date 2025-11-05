@@ -12,7 +12,10 @@
       "Bash(\"C:\\Users\\SSAFY\\Desktop\\StyleLicense\\TECHSPEC_utf8.md\")",
       "Bash(\"C:\\Users\\SSAFY\\Desktop\\StyleLicense\\TECHSPEC_temp.md\")",
       "Bash(\"C:/Users/SSAFY/Desktop/StyleLicense/CODE_GUIDE_utf8.md\")",
-      "Bash(PLAN.md)"
+      "Bash(PLAN.md)",
+      "Bash(mv:*)",
+      "Bash(rmdir:*)",
+      "Bash(cp:*)"
     ],
     "deny": [],
     "ask": []

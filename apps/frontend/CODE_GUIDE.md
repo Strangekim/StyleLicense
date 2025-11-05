@@ -65,9 +65,31 @@ import { fetchStyles } from '@/features/styles/api/styleApi'
 // 5. Components
 import StyleCard from '@/features/styles/ui/StyleCard.vue'
 
-// 6. Utils
+// 6. Assets (Design resources)
+import logo from '@/assets/images/main_logo.png'
+import styleIcon from '@/assets/icons/style_icon.png'
+
+// 7. Utils
 import { validateEmail } from '@/shared/utils/validators'
 </script>
+```
+
+**Design Asset Import**:
+```vue
+<script setup>
+// Always import from src/assets/ (set up in vite.config.js)
+import mainLogo from '@/assets/images/main_logo.png'
+import mainLogoBlack from '@/assets/images/main_logo_black.png'
+import brushIcon from '@/assets/icons/brush_icon.png'
+import styleIcon from '@/assets/icons/style_icon.png'
+import styleIconSelected from '@/assets/icons/style_icon_selected.png'
+</script>
+
+<template>
+  <!-- Use :src binding for reactive images -->
+  <img :src="mainLogo" alt="Style License" class="h-8" />
+  <img :src="isActive ? styleIconSelected : styleIcon" alt="Styles" />
+</template>
 ```
 
 ### 1.4 Feature-Sliced Design
@@ -352,6 +374,91 @@ export function usePagination(fetchFn, options = {}) {
 ---
 
 ## 5. Component Pattern
+
+### 5.0 Design Guidelines (IMPORTANT)
+
+**Before implementing any component, review:**
+- **Design mockups**: `docs/design/pages/` (17 PNG/JPG files)
+- **Design System**: `README.md#design-system` (comprehensive guide)
+- **TECHSPEC.md**: Authority for features (no comment likes, etc.)
+
+**Key Principles**:
+1. **Follow mockups with flexibility** - Adjust spacing/colors for consistency
+2. **Instagram-inspired UI** - Reference Instagram for patterns
+3. **Tailwind CSS** - Use utility classes, extract to tailwind.config.js
+4. **Smooth animations** - 200-300ms transitions
+5. **Accessibility** - ARIA labels, keyboard navigation, color contrast
+
+**Example - Button Component**:
+```vue
+<!-- src/shared/ui/Button.vue -->
+<script setup>
+const props = defineProps({
+  variant: { type: String, default: 'primary' }, // primary, secondary, outline
+  size: { type: String, default: 'md' }, // sm, md, lg
+  loading: { type: Boolean, default: false }
+})
+</script>
+
+<template>
+  <!-- Base classes + variant classes + smooth transition -->
+  <button
+    :class="[
+      'rounded-lg font-medium transition-colors duration-200',
+      'focus:outline-none focus:ring-2 focus:ring-offset-2',
+      {
+        'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500': variant === 'primary',
+        'bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-400': variant === 'secondary',
+        'border-2 border-blue-600 text-blue-600 hover:bg-blue-50': variant === 'outline',
+        'px-3 py-1.5 text-sm': size === 'sm',
+        'px-4 py-2 text-base': size === 'md',
+        'px-6 py-3 text-lg': size === 'lg',
+        'opacity-50 cursor-not-allowed': loading
+      }
+    ]"
+    :disabled="loading"
+  >
+    <!-- Loading spinner (Instagram-style) -->
+    <svg v-if="loading" class="animate-spin h-5 w-5 inline-block mr-2" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+    </svg>
+    <slot />
+  </button>
+</template>
+```
+
+**Extract to Tailwind Config**:
+```javascript
+// tailwind.config.js - Extract common colors/values
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#eff6ff',
+          500: '#3b82f6',  // From mockups
+          600: '#2563eb',
+          700: '#1d4ed8'
+        }
+      },
+      transitionDuration: {
+        '200': '200ms',  // Standard transition
+      }
+    }
+  }
+}
+```
+
+**Component Checklist**:
+- [ ] Matches mockup design (or Instagram pattern)
+- [ ] TECHSPEC.md features only (no extras)
+- [ ] Smooth transitions (200-300ms)
+- [ ] Mobile responsive
+- [ ] Loading/error/empty states
+- [ ] Accessible (ARIA, keyboard nav)
+
+---
 
 ### 5.1 Smart vs Presentational
 

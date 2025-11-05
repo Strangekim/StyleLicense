@@ -11,9 +11,17 @@
 This document contains detailed subtasks for frontend development. For high-level milestones and dependencies, see [root PLAN.md](../../PLAN.md).
 
 **Reference Documents**:
-- [Frontend README.md](README.md) - Architecture and directory structure
+- [Frontend README.md](README.md) - Architecture, directory structure, **Design System**
 - [Frontend CODE_GUIDE.md](CODE_GUIDE.md) - Code patterns and conventions
 - [API Documentation](../../docs/API.md) - API specifications
+- [Design Mockups](../../docs/design/pages/) - 17 page design mockups (PNG/JPG)
+
+**Design Guidelines** (See README.md#design-system):
+1. ✅ Follow `docs/design/pages/` mockups with flexibility for consistency
+2. ✅ Use Instagram UI patterns as reference
+3. ✅ TECHSPEC.md is authority - remove features not listed (e.g., comment likes)
+4. ✅ Follow commercial standards (smooth animations, accessibility)
+5. ✅ Extract colors/fonts to `tailwind.config.js`
 
 ---
 
@@ -270,19 +278,27 @@ This document contains detailed subtasks for frontend development. For high-leve
   - [ ] Test Modal opens and closes
   - [ ] Test Header displays user info when authenticated
 
-**Implementation Reference**: [CODE_GUIDE.md#components](CODE_GUIDE.md#components)
+**Implementation Reference**:
+- [CODE_GUIDE.md#components](CODE_GUIDE.md#components)
+- **Design mockups**: All page mockups in `docs/design/pages/` show component usage
 
 **Exit Criteria**:
 - [ ] All base components created and functional
-- [ ] Components follow design system
+- [ ] Components follow design system (colors, spacing, fonts)
 - [ ] Mobile responsive
+- [ ] Assets (logos, icons) imported from `src/assets/`
 
 ---
 
 ### M3-Style-Pages
 
-**Referenced by**: Root PLAN.md → PT-M3-StylePages  
+**Referenced by**: Root PLAN.md → PT-M3-StylePages
 **Status**: PLANNED
+
+**Design Mockup References**:
+- `StyleDetailPage1-4.png` - Style detail views
+- `Create Style Page1-3.png` - Style creation flow
+- `Search & Following Artist Page.png` - Search and marketplace
 
 #### Subtasks
 
@@ -434,6 +450,49 @@ Status: PLANNED
 
 ## Quick Reference
 
+### Design Resources
+
+**Page Mockups**: `docs/design/pages/` (17 PNG/JPG files)
+**Logos**: `src/assets/images/` (main_logo.png, main_logo_black.png, etc.)
+**Icons**: `src/assets/icons/` (brush_icon.png, style_icon.png, style_icon_selected.png)
+
+**Key Guidelines**:
+1. Follow mockups with flexibility for consistency
+2. Use Instagram UI patterns
+3. TECHSPEC.md is authority (no comment likes, etc.)
+4. Extract colors/fonts to tailwind.config.js
+
+**See README.md#design-system for full design guidelines.**
+
+### Common Commands
+
+```bash
+# Development
 npm run dev
+
+# Build
 npm run build
+
+# Testing
+npm run test
+npm run test:e2e
+
+# Code quality
+npm run lint
+npm run format
+```
+
+### Asset Import Example
+
+```vue
+<script setup>
+import logo from '@/assets/images/main_logo.png'
+import styleIcon from '@/assets/icons/style_icon.png'
+</script>
+
+<template>
+  <img :src="logo" alt="Style License" />
+  <img :src="styleIcon" alt="Styles" />
+</template>
+```
 
