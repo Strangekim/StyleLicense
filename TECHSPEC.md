@@ -645,11 +645,11 @@ GET /api/styles/:id
 #### 6.5.5 스타일 정렬 옵션 (명확화)
 ```
 GET /api/styles?sort=recent   # created_at DESC (기본값)
-GET /api/styles?sort=popular  # 실제 사용 횟수 DESC → created_at DESC
+GET /api/styles?sort=popular  # 팔로워 많은 작가 우선 → created_at DESC
 ```
 
 **popular 정렬 기준**:
-1. 1차: 실제 생성 횟수 (`generations_count`)
+1. 1차: 작가 팔로워 수 (`artist.follower_count DESC`)
 2. 2차: 최신순 (`created_at DESC`)
 
 **상세 명세**: [docs/API.md#styles-api](docs/API.md#styles-api)
@@ -1173,7 +1173,7 @@ project-root/
 
 #### API 보호
 - 모든 API는 인증 필수 (로그인 페이지 제외)
-- 작가 전용 API는 `user_type === 'artist'` 검증
+- 작가 전용 API는 `role === 'artist'` 검증
 - CSRF 토큰 검증 (Django 기본 제공)
 
 #### 사용자 탈퇴 정책

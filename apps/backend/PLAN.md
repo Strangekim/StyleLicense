@@ -89,8 +89,9 @@ This document contains detailed subtasks for backend development. For high-level
 
 - [ ] Authentication endpoints
   - [ ] Create app/views/auth.py
-  - [ ] POST /api/auth/google - OAuth redirect handler
-    - [ ] Validate Google token
+  - [ ] GET /api/auth/google/login - OAuth redirect to Google
+  - [ ] GET /api/auth/google/callback - OAuth callback handler
+    - [ ] Validate Google OAuth code
     - [ ] Get or create User with google_id
     - [ ] Create session
     - [ ] Return user data
@@ -103,7 +104,7 @@ This document contains detailed subtasks for backend development. For high-level
 
 - [ ] User model customization
   - [ ] Extend AbstractUser in app/models/user.py
-  - [ ] Add fields: google_id, user_type, token_balance, profile_image_url
+  - [ ] Add fields: google_id, role, token_balance, profile_image_url
   - [ ] Create migration
 
 - [ ] URL routing
@@ -141,7 +142,7 @@ This document contains detailed subtasks for backend development. For high-level
 - [ ] Create base ViewSet with pagination
   - [ ] Create app/views/base.py
   - [ ] Define BaseViewSet extending ModelViewSet
-  - [ ] Configure PageNumberPagination (page_size=20)
+  - [ ] Configure CursorPagination (page_size=20, ordering='-created_at')
   - [ ] Add get_queryset optimization helpers (select_related, prefetch_related)
 
 - [ ] Global exception handler
@@ -157,7 +158,7 @@ This document contains detailed subtasks for backend development. For high-level
   - [ ] Paginated responses: {"data": [...], "count": N, "next": "url", "previous": "url"}
 
 - [ ] Testing
-  - [ ] Test pagination with ?page=2&page_size=10
+  - [ ] Test pagination with ?cursor=<timestamp>&limit=10
   - [ ] Test error responses return proper status codes (400, 401, 403, 404, 500)
   - [ ] Test response format consistency
 
@@ -293,7 +294,7 @@ This document contains detailed subtasks for backend development. For high-level
   - [ ] Implement pagination (default 20 per page)
   - [ ] Filter by tags: ?tags=watercolor,portrait (AND logic)
   - [ ] Filter by artist: ?artist_id=123
-  - [ ] Sort by: ?sort=popularity or ?sort=created_at (default: -created_at)
+  - [ ] Sort by: ?sort=popular or ?sort=created_at (default: -created_at)
   - [ ] Only return models with status=completed
 
 - [ ] GET /api/models/:id endpoint

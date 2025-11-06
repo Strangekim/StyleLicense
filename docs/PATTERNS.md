@@ -290,10 +290,10 @@ firstName, FirstName, pricePerImage, createdAt
 
 ```
 ✅ Good:
-GET /api/styles?offset=0&limit=20&sort_by=created_at&artist_id=123
+GET /api/styles?cursor=2025-01-15T12:34:56Z&limit=20&sort=recent&artist_id=123
 
 ❌ Bad:
-GET /api/styles?Offset=0&LIMIT=20&sortBy=created_at&artistId=123
+GET /api/styles?Cursor=xxx&LIMIT=20&Sort=recent&artistId=123  # Inconsistent casing
 ```
 
 ### 4.4 Error Codes
@@ -531,7 +531,7 @@ GET /api/generations?cursor=2025-01-15T12:34:56Z&limit=20
       "seed": 42
     }
   },
-  "callback_url": "https://api.stylelicense.com/api/webhooks/generation/complete",
+  "callback_url": "https://api.stylelicense.com/api/webhooks/inference/complete",
   "created_at": "2025-01-20T11:30:00.000Z"
 }
 ```
@@ -739,7 +739,7 @@ CONSTRAINT ck_styles_price_positive
 | `style` | 코드 포맷팅 | `style: Run black on backend` |
 | `refactor` | 리팩토링 | `refactor(service): Extract signature logic to service` |
 | `test` | 테스트 추가/수정 | `test(token): Add concurrency tests` |
-| `chore` | 빌드/설정 변경 | `chore: Update Django to 5.0.1` |
+| `chore` | 빌드/설정 변경 | `chore: Update Django to 4.2.11` |
 | `perf` | 성능 개선 | `perf(query): Add select_related to styles API` |
 
 ### 9.3 Scope

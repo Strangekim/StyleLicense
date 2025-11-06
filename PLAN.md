@@ -76,7 +76,7 @@ CP-M1-1 → CP-M1-2 → CP-M1-3
 - **Dependencies**: [CP-M1-1]
 - **Owner**: Backend
 - **Tasks**:
-  - [ ] User model with google_id, user_type, token_balance
+  - [ ] User model with google_id, role, token_balance
   - [ ] StyleModel with training_status, signature fields
   - [ ] GeneratedImage with metadata
   - [ ] TokenTransaction with transaction_type
@@ -98,7 +98,8 @@ CP-M1-1 → CP-M1-2 → CP-M1-3
   - [ ] Django-allauth configuration
   - [ ] Google OAuth provider setup
   - [ ] Session middleware configuration
-  - [ ] POST /api/auth/google endpoint
+  - [ ] GET /api/auth/google/login (OAuth redirect)
+  - [ ] GET /api/auth/google/callback (OAuth callback handler)
   - [ ] POST /api/auth/logout endpoint
   - [ ] GET /api/auth/me endpoint
   - [ ] Frontend OAuth redirect handler
@@ -205,7 +206,7 @@ CP-M2-1 → CP-M2-2 → CP-M2-3
   - [ ] Response format standardization (success/error)
 - **Exit Criteria**:
   - Consistent API response structure across all endpoints
-  - Pagination works with ?page=N&page_size=M
+  - Cursor-based pagination works with ?cursor=<timestamp>&limit=N
   - All errors return proper HTTP status codes
 
 #### CP-M2-2: RabbitMQ Integration
@@ -255,7 +256,7 @@ PT-M2-StyleAPI ⫽ PT-M2-TokenAPI ⫽ PT-M2-TagAPI
 - **Reference**: [apps/backend/PLAN.md#m2-style-model-api](apps/backend/PLAN.md#m2-style-model-api)
 - **Summary**:
   - [ ] POST /api/models/train (image upload, tag assignment, price)
-  - [ ] GET /api/models (pagination, filter by tags/artist, sort by popularity/date)
+  - [ ] GET /api/models (pagination, filter by tags/artist, sort by popular/recent)
   - [ ] GET /api/models/:id (detail with artist info, sample images)
   - [ ] DELETE /api/models/:id (owner-only permission check)
   - [ ] Validation: 10-100 images, JPG/PNG only, max 10MB each
@@ -336,7 +337,7 @@ CP-M3-1 → CP-M3-2
 - **Owner**: Frontend
 - **Tasks**:
   - [ ] requiresAuth guard (check useAuthStore.isAuthenticated)
-  - [ ] requiresArtist guard (check user_type === 'artist')
+  - [ ] requiresArtist guard (check role === 'artist')
   - [ ] Guard application to protected routes
   - [ ] Redirect logic to /login or /
 - **Exit Criteria**:

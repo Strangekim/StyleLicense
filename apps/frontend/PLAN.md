@@ -92,7 +92,7 @@ This document contains detailed subtasks for frontend development. For high-leve
 - [ ] OAuth redirect handler
   - [ ] Create src/pages/auth/GoogleCallback.vue
   - [ ] Parse OAuth code from URL query params
-  - [ ] Call backend POST /api/auth/google with code
+  - [ ] Handle OAuth callback - backend redirects to frontend with session cookie
   - [ ] Store user in authStore on success
   - [ ] Redirect to / or intended route
   - [ ] Handle errors with toast notification
@@ -106,7 +106,7 @@ This document contains detailed subtasks for frontend development. For high-leve
 - [ ] Router guards
   - [ ] Update src/router/index.js
   - [ ] Add requiresAuth guard (check authStore.isAuthenticated)
-  - [ ] Add requiresArtist guard (check user.user_type === artist)
+  - [ ] Add requiresArtist guard (check user.role === 'artist')
   - [ ] Apply guards to protected routes
   - [ ] Redirect unauthenticated users to /login
 
@@ -191,7 +191,7 @@ This document contains detailed subtasks for frontend development. For high-leve
   - [ ] If true, allow navigation
 
 - [ ] Create requiresArtist guard
-  - [ ] Check useAuthStore().user?.user_type === artist
+  - [ ] Check useAuthStore().user?.role === 'artist'
   - [ ] If false, redirect to / with error toast
   - [ ] If true, allow navigation
 

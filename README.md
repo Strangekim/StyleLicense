@@ -80,7 +80,7 @@
 ![Stable Diffusion](https://img.shields.io/badge/Stable_Diffusion-v1.5-purple)
 ![LoRA](https://img.shields.io/badge/LoRA-Fine--tuning-orange)
 ![Diffusers](https://img.shields.io/badge/🤗_Diffusers-0.24+-yellow)
-![CUDA](https://img.shields.io/badge/CUDA-12.1-76B900?logo=nvidia&logoColor=white)
+![CUDA](https://img.shields.io/badge/CUDA-11.8+-76B900?logo=nvidia&logoColor=white)
 
 ### Infrastructure
 ![Docker](https://img.shields.io/badge/Docker-24.0+-2496ED?logo=docker&logoColor=white)
@@ -145,7 +145,7 @@
 - **Node.js** 18+ and npm (for frontend)
 - **Python** 3.11+ (for backend/AI servers)
 - **PostgreSQL** 15+ (if running without Docker)
-- **CUDA** 12.1+ (for GPU-accelerated training/inference)
+- **CUDA** 11.8+ (for GPU-accelerated training/inference)
 
 ### Quick Start with Docker
 

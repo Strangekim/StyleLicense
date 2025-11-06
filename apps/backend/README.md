@@ -17,7 +17,7 @@ Style License API server based on Django REST Framework. Provides user authentic
 
 | Category | Technology | Version | Purpose |
 |----------|------------|---------|---------|
-| Framework | Django | 5.x | Web framework |
+| Framework | Django | 4.2 | Web framework (LTS) |
 | API | Django REST Framework | 3.14+ | REST API |
 | Database | PostgreSQL | 15.x | Primary database |
 | Message Queue | RabbitMQ (pika) | 1.3+ | Async task queue |

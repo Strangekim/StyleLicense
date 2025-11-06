@@ -354,6 +354,8 @@ export function usePagination(fetchFn, options = {}) {
   async function fetchPage(page) {
     loading.value = true
     try {
+      // Note: Page number pagination for admin/dashboard only
+      // Public feeds should use cursor-based pagination (see line 709)
       const response = await fetchFn({ page, page_size: pageSize })
       items.value = response.data.results
       totalPages.value = Math.ceil(response.data.count / pageSize)
