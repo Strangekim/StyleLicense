@@ -190,7 +190,7 @@ GET /api/auth/me
   "data": {
     "id": 1,
     "username": "john_doe",
-    "profile_image": "https://s3.../profile.jpg",
+    "profile_image": "https://storage.googleapis.com/stylelicense-media/profile.jpg",
     "role": "user",
     "token_balance": 150,
     "bio": null,
@@ -206,7 +206,7 @@ GET /api/auth/me
   "artist": {
     "id": 10,
     "artist_name": "John Artist",
-    "signature_image_url": "https://s3.../signature.png",
+    "signature_image_url": "https://storage.googleapis.com/stylelicense-media/signature.png",
     "verified_email": "john@example.com",
     "earned_token_balance": 500,
     "follower_count": 123
@@ -257,7 +257,7 @@ GET /api/users/:id
   "data": {
     "id": 1,
     "username": "john_doe",
-    "profile_image": "https://s3.../profile.jpg",
+    "profile_image": "https://storage.googleapis.com/stylelicense-media/profile.jpg",
     "bio": "안녕하세요!",
     "role": "artist",
     "created_at": "2025-01-01T00:00:00Z",
@@ -341,7 +341,7 @@ X-CSRFToken: xyz789...
       "id": 10,
       "artist_name": "John Artist",
       "verified_email": "john@example.com",
-      "signature_image_url": "https://s3.../signature.png"
+      "signature_image_url": "https://storage.googleapis.com/stylelicense-media/signature.png"
     }
   }
 }
@@ -378,7 +378,7 @@ GET /api/tokens/balance
 - `token_balance`: 사용 가능한 토큰 (사용자)
 - `earned_token_balance`: 작가가 벌어들인 토큰 (작가만, 현금화 대기 중)
 
-**Database Reference**: [artists table schema](database/TABLES.md#artists)
+**Database Reference**: [database/TABLES.md#artists](database/TABLES.md#artists)
 
 ---
 
@@ -390,7 +390,7 @@ GET /api/tokens/transactions?type=all&cursor=...&limit=20
 ```
 
 **쿼리 파라미터**:
-- `type`: `all` (기본값), `purchase` (충전), `usage` (사용)
+- `type`: `all` (기본값), `purchase` (충전), `generation` (사용)
 - `cursor`: 페이지네이션 커서
 - `limit`: 결과 수 (1-100, 기본값 20)
 
@@ -419,8 +419,10 @@ GET /api/tokens/transactions?type=all&cursor=...&limit=20
       },
       {
         "id": 101,
-        "type": "usage",
+        "type": "generation",
         "amount": 50,
+        "price_per_token": 100.00,
+        "total_price": 5000.00,
         "currency_code": "KRW",
         "status": "completed",
         "memo": "이미지 생성 결제",
@@ -439,7 +441,7 @@ GET /api/tokens/transactions?type=all&cursor=...&limit=20
         },
         "related_generation": {
           "id": 500,
-          "result_url": "https://s3.../generated_500.jpg"
+          "result_url": "https://storage.googleapis.com/stylelicense-media/generated_500.jpg"
         }
       }
     ],
@@ -536,7 +538,7 @@ GET /api/styles?sort=popular&cursor=...&limit=20&tags=watercolor,portrait
         "id": 10,
         "name": "Watercolor Dreams",
         "description": "부드러운 수채화 스타일",
-        "thumbnail_url": "https://s3.../thumbnail.jpg",
+        "thumbnail_url": "https://storage.googleapis.com/stylelicense-media/thumbnail.jpg",
         "artist": {
           "id": 5,
           "username": "artist_name",
@@ -555,7 +557,7 @@ GET /api/styles?sort=popular&cursor=...&limit=20&tags=watercolor,portrait
 }
 ```
 
-**Database Reference**: [styles table schema](database/TABLES.md#styles)
+**Database Reference**: [database/TABLES.md#styles](database/TABLES.md#styles)
 
 #### 정렬 기준
 - `recent`: `created_at DESC`
@@ -580,12 +582,12 @@ GET /api/styles/:id
     "id": 10,
     "name": "Watercolor Dreams",
     "description": "부드러운 수채화 스타일...",
-    "thumbnail_url": "https://s3.../thumbnail.jpg",
+    "thumbnail_url": "https://storage.googleapis.com/stylelicense-media/thumbnail.jpg",
     "artist": {
       "id": 5,
       "username": "artist_name",
       "artist_name": "Artist Display Name",
-      "profile_image": "https://s3.../profile.jpg",
+      "profile_image": "https://storage.googleapis.com/stylelicense-media/profile.jpg",
       "follower_count": 123
     },
     "training_status": "completed",
@@ -604,7 +606,7 @@ GET /api/styles/:id
     "sample_artworks": [
       {
         "id": 100,
-        "image_url": "https://s3.../artwork1.jpg",
+        "image_url": "https://storage.googleapis.com/stylelicense-media/artwork1.jpg",
         "tags": ["woman", "portrait"]
       }
     ],
@@ -622,7 +624,7 @@ GET /api/styles/:id
     "id": 10,
     "name": "Watercolor Dreams",
     "training_status": "completed",
-    "model_path": "s3://bucket/models/style_10.safetensors",
+    "model_path": "gs://stylelicense-models/style_10.safetensors",
     "training_metric": {
       "loss": 0.05,
       "epochs": 100
@@ -902,7 +904,7 @@ GET /api/generations/:id
       }
     },
     "status": "completed",
-    "result_url": "https://s3.../generated_500.jpg",
+    "result_url": "https://storage.googleapis.com/stylelicense-media/generated_500.jpg",
     "description": "노을 배경의 여성 초상화",
     "aspect_ratio": "1:1",
     "is_public": false,
@@ -945,7 +947,7 @@ GET /api/generations/:id
 - `processing`: 생성 중
 - `retrying`: 재시도 중 (1~3회)
 - `completed`: 완료
-- `failed`: 실패 (토큰 환불됨)
+- `failed`: 최종 실패 (토큰 환불됨)
 
 #### 에러
 - `404 NOT_FOUND`: 생성 요청 없음
@@ -974,13 +976,13 @@ GET /api/generations/feed?cursor=...&limit=20&tags=portrait
         "user": {
           "id": 1,
           "username": "john_doe",
-          "profile_image": "https://s3.../profile.jpg"
+          "profile_image": "https://storage.googleapis.com/stylelicense-media/profile.jpg"
         },
         "style": {
           "id": 10,
           "name": "Watercolor Dreams"
         },
-        "result_url": "https://s3.../generated_500.jpg",
+        "result_url": "https://storage.googleapis.com/stylelicense-media/generated_500.jpg",
         "description": "노을 배경의 여성 초상화",
         "like_count": 15,
         "comment_count": 3,
@@ -1028,7 +1030,7 @@ GET /api/generations/me?cursor=...&limit=20&status=completed
           "id": 10,
           "name": "Watercolor Dreams"
         },
-        "result_url": "https://s3.../generated_500.jpg",
+        "result_url": "https://storage.googleapis.com/stylelicense-media/generated_500.jpg",
         "status": "completed",
         "is_public": false,
         "like_count": 15,
@@ -1109,14 +1111,8 @@ X-CSRFToken: xyz789...
 ```
 
 **Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "following": false,
-    "follower_count": 123
-  }
-}
+```http
+HTTP/1.1 204 No Content
 ```
 
 #### 에러
@@ -1141,7 +1137,7 @@ GET /api/users/me/following?cursor=...&limit=20
       {
         "id": 3,
         "username": "artist1",
-        "profile_image": "https://s3.../profile.jpg",
+        "profile_image": "https://storage.googleapis.com/stylelicense-media/profile.jpg",
         "artist_name": "Artist One",
         "role": "artist",
         "follower_count": 456,
@@ -1186,14 +1182,8 @@ X-CSRFToken: xyz789...
 ```
 
 **Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "liked": false,
-    "like_count": 15
-  }
-}
+```http
+HTTP/1.1 204 No Content
 ```
 
 #### 에러
@@ -1219,7 +1209,7 @@ GET /api/generations/:id/comments?cursor=...&limit=20
         "user": {
           "id": 2,
           "username": "commenter",
-          "profile_image": "https://s3.../profile.jpg"
+          "profile_image": "https://storage.googleapis.com/stylelicense-media/profile.jpg"
         },
         "content": "정말 멋진 작품이에요!",
         "like_count": 5,
@@ -1328,11 +1318,8 @@ X-CSRFToken: xyz789...
 ```
 
 #### Response
-```json
-{
-  "success": true,
-  "message": "댓글이 삭제되었습니다"
-}
+```http
+HTTP/1.1 204 No Content
 ```
 
 #### 설명
@@ -1364,7 +1351,7 @@ GET /api/search?q=watercolor&type=all&limit=20
       {
         "id": 10,
         "name": "Watercolor Dreams",
-        "thumbnail_url": "https://s3.../thumbnail.jpg",
+        "thumbnail_url": "https://storage.googleapis.com/stylelicense-media/thumbnail.jpg",
         "artist": {
           "id": 5,
           "artist_name": "John Artist"
@@ -1378,7 +1365,7 @@ GET /api/search?q=watercolor&type=all&limit=20
         "id": 5,
         "username": "watercolor_master",
         "artist_name": "Watercolor Master",
-        "profile_image": "https://s3.../profile.jpg",
+        "profile_image": "https://storage.googleapis.com/stylelicense-media/profile.jpg",
         "follower_count": 1234,
         "matched_by": "name"
       }
@@ -1434,13 +1421,13 @@ GET /api/notifications?cursor=...&limit=20&unread_only=false
         "actor": {
           "id": 2,
           "username": "user2",
-          "profile_image": "https://s3.../profile.jpg"
+          "profile_image": "https://storage.googleapis.com/stylelicense-media/profile.jpg"
         },
         "target_type": "generation",
         "target_id": 500,
         "target": {
           "id": 500,
-          "result_url": "https://s3.../generated_500.jpg"
+          "result_url": "https://storage.googleapis.com/stylelicense-media/generated_500.jpg"
         },
         "is_read": false,
         "created_at": "2025-01-15T12:00:00Z"
@@ -1525,11 +1512,16 @@ X-CSRFToken: xyz789...
 
 ### 10.1 인증 방식
 
-#### Request Header
+#### Request Headers (둘 다 필수)
 ```http
 Authorization: Bearer <INTERNAL_API_TOKEN>
 X-Request-Source: training-server | inference-server
 ```
+
+#### 인증 요구사항
+- **Authorization**: Bearer token 필수 (INTERNAL_API_TOKEN 환경변수)
+- **X-Request-Source**: 요청 출처 식별 필수 (training-server 또는 inference-server)
+- **둘 다 누락 또는 불일치 시**: 401 Unauthorized 반환
 
 #### 보안 설정
 - 환경변수: `INTERNAL_API_TOKEN` (긴 UUID, 최소 32자)
@@ -1582,7 +1574,7 @@ Content-Type: application/json
 
 {
   "style_id": 10,
-  "model_path": "s3://bucket/models/style_10.safetensors",
+  "model_path": "gs://stylelicense-models/style_10.safetensors",
   "training_metric": {
     "loss": 0.05,
     "epochs": 100
@@ -1649,7 +1641,7 @@ Content-Type: application/json
 
 {
   "generation_id": 500,
-  "result_url": "https://s3.../generated_500.jpg",
+  "result_url": "https://storage.googleapis.com/stylelicense-media/generated_500.jpg",
   "metadata": {
     "seed": 42,
     "steps": 50,

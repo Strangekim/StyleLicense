@@ -777,7 +777,7 @@ PT-M6-BackendDeploy ⫽ PT-M6-FrontendBuild ⫽ PT-M6-CICD
 - **Can Run With**: [PT-M6-BackendDeploy, PT-M6-FrontendBuild]
 - **Dependencies**: [M5]
 - **Owner**: DevOps
-- **Reference**: [apps/deploy/README.md](apps/deploy/README.md)
+- **Reference**: [DOCKER.md](DOCKER.md), [TECHSPEC.md Section 14](TECHSPEC.md#14-배포-및-cicd)
 - **Summary**:
   - [ ] GitHub Actions workflow for Backend (test → build → deploy)
   - [ ] GitHub Actions workflow for Frontend (test → build → deploy)

@@ -1141,16 +1141,14 @@ project-root/
 │   ├── backend/          # 개발용 Django API 서버
 │   ├── frontend/         # 개발용 Vue 3 SPA
 │   ├── training-server/  # LoRA 학습 서버
-│   ├── inference-server/ # 이미지 생성 서버
-│   └── deploy/           # 🔧 로컬 개발 환경 (Docker Compose)
-│                         #    ⚠️ 프로덕션은 GCP 개별 배포 사용
+│   └── inference-server/ # 이미지 생성 서버
 ├── docs/                 # 공통 문서
 └── design/               # 디자인 리소스
 ```
 
 **개발 vs 배포**:
 - `apps/backend/`, `apps/frontend/`: 개발용 코드 (이곳에서 개발)
-- `apps/deploy/`: 로컬 개발 환경 (Docker Compose, 전체 스택 로컬 실행)
+- **로컬 개발**: 루트의 `docker-compose.yml` 사용 (전체 스택 로컬 실행)
 - **프로덕션 배포**: GCP 서비스별 개별 배포 (Cloud Run, Cloud Storage, GCE 등)
 
 ### 9.2 공통 패턴
@@ -1207,15 +1205,25 @@ project-root/
 ### 10.2 데이터 보호
 
 #### 민감 정보 암호화
-- 환경 변수로 관리: `DATABASE_URL`, `SECRET_KEY`, `OAUTH_CLIENT_SECRET`
-- **S3 Access**: 
-  - **Backend EC2**: IAM Role을 사용하여 EC2 인스턴스에 S3 접근 권한 부여
-  - **외부 AI 서버**: 전용 IAM 사용자를 생성하고, 발급된 Access Key를 환경 변수로 사용하여 S3에 접근
+- **Google Secret Manager**: 민감 정보 암호화 저장
+  - `SECRET_KEY`, `OAUTH_CLIENT_SECRET`, `INTERNAL_API_TOKEN`, `TOSS_SECRET_KEY`
+  - Cloud Run에서 자동으로 환경 변수로 주입
+- **환경 변수**: 비민감 정보 (`DATABASE_URL`, `RABBITMQ_HOST`, `GCS_BUCKET_NAME`)
+
+#### Cloud Storage 접근 제어
+- **서비스 계정 인증** (키 파일 불필요):
+  - **Backend (Cloud Run)**: 서비스 계정에 Storage 권한 부여 (`roles/storage.objectAdmin`)
+  - **AI Servers (GCE)**: VM에 연결된 서비스 계정으로 자동 인증
+  - IAM으로 권한 세밀하게 제어 가능
 
 #### 이미지 저장
-- 학습 이미지: S3 Private Bucket (작가만 접근)
-- 생성 이미지: S3 Public Bucket (서명 포함, 메타데이터 기록)
-- 서명 없는 원본 이미지는 사용자 접근 불가
+- **학습 이미지**: `stylelicense-media` 버킷 (Private, 작가만 접근)
+  - IAM 정책으로 특정 사용자만 읽기/쓰기 권한 부여
+- **생성 이미지**: `stylelicense-generations` 버킷 (Public 읽기, 서명 포함)
+  - 메타데이터: 작가 ID, 생성 시간, 스타일 ID 기록
+  - 서명 없는 원본 이미지는 사용자 접근 불가
+- **모델 파일**: `stylelicense-models` 버킷 (Private)
+  - 학습된 LoRA 모델 (.safetensors) 저장
 
 ### 10.3 Rate Limiting
 
@@ -1547,11 +1555,7 @@ Server     Server
 - AI Servers ↔ RabbitMQ: GCE 내부 IP (동일 VPC)
 - AI Servers → Backend (Webhook): Public URL (HTTPS) + INTERNAL_API_TOKEN 인증
 
-### 14.3 배포 프로젝트 (apps/deploy) - **Deprecated**
-
-⚠️ **경고**: 이 섹션에 설명된 EC2 기반 배포 방법은 더 이상 사용되지 않습니다. 현재 프로젝트는 **Google Cloud Platform (GCP)** 기반 아키텍처로 이전되었습니다.
-
-#### 새로운 배포 방법 (GCP)
+### 14.3 GCP 배포 가이드
 
 각 서비스는 역할에 맞는 최적의 GCP 서비스에 개별적으로 배포됩니다:
 
@@ -1602,17 +1606,14 @@ Server     Server
       stylelicense/training-server:latest
   ```
 
-#### apps/deploy 폴더 용도 (현재)
-
-**apps/deploy** 폴더는 GCP 배포에는 사용되지 않지만, **로컬 개발 환경**을 위한 Docker Compose 설정을 제공합니다:
-
-```bash
-# 로컬에서 전체 스택 실행 (개발용)
-cd apps/deploy
-docker-compose up -d
-```
-
-자세한 내용은 [apps/deploy/README.md](apps/deploy/README.md)를 참고하세요.
+**로컬 개발 환경**:
+- 루트의 `docker-compose.yml` 사용
+- 가이드: [DOCKER.md](../../DOCKER.md)
+- 실행 명령어:
+  ```bash
+  # 프로젝트 루트에서
+  docker-compose up -d
+  ```
 
 ### 14.4 CI/CD
 
@@ -1744,20 +1745,10 @@ project-root/
     │   ├── README.md
     │   ├── PLAN.md
     │   └── CODE_GUIDE.md
-    ├── inference-server/  # 추론 서버 코드
-    │   ├── README.md
-    │   ├── PLAN.md
-    │   └── CODE_GUIDE.md
-    └── deploy/            # 🚀 EC2 배포 전용 프로젝트
-        ├── README.md      # 배포 가이드 (초기 설정, deploy.sh 설명)
-        ├── backend/       # Backend 코드 전문 (apps/backend/ 복사본)
-        ├── frontend/      # Frontend 빌드 결과물 (dist/)
-        ├── docker-compose.yml
-        ├── nginx.conf
-        ├── deploy.sh      # 배포 스크립트
-        └── scripts/
-            ├── setup.sh   # 초기 설정 (PostgreSQL(Docker), RabbitMQ(Docker), Nginx)
-            └── backup.sh  # DB 백업
+    └── inference-server/  # 추론 서버 코드
+        ├── README.md
+        ├── PLAN.md
+        └── CODE_GUIDE.md
 ```
 
 ### 15.2 문서 작성 규칙

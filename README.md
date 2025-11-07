@@ -73,7 +73,6 @@
 ![DRF](https://img.shields.io/badge/Django_REST-3.14+-A30000?logo=django&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)
 ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3.12-FF6600?logo=rabbitmq&logoColor=white)
-![Gunicorn](https://img.shields.io/badge/Gunicorn-21.2-499848?logo=gunicorn&logoColor=white)
 
 ### AI/ML
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.1+-EE4C2C?logo=pytorch&logoColor=white)
@@ -84,56 +83,54 @@
 
 ### Infrastructure
 ![Docker](https://img.shields.io/badge/Docker-24.0+-2496ED?logo=docker&logoColor=white)
-![Nginx](https://img.shields.io/badge/Nginx-1.24-009639?logo=nginx&logoColor=white)
-![AWS S3](https://img.shields.io/badge/AWS_S3-Storage-FF9900?logo=amazons3&logoColor=white)
+![Google Cloud Run](https://img.shields.io/badge/Google_Cloud_Run-Serverless-4A90E2?logo=googlecloud&logoColor=white)
+![Google Compute Engine](https://img.shields.io/badge/Google_Compute_Engine-VM-4A90E2?logo=googlecloud&logoColor=white)
+![Google Cloud SQL](https://img.shields.io/badge/Google_Cloud_SQL-Database-4A90E2?logo=googlecloud&logoColor=white)
+![Google Cloud Storage](https://img.shields.io/badge/Google_Cloud_Storage-Storage-4A90E2?logo=googlecloud&logoColor=white)
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Client (Browser)                        │
-│                    Vue 3 + Tailwind CSS                         │
-└────────────────┬────────────────────────────────────────────────┘
-                 │ HTTPS / Session Cookie
-                 ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      Backend API Server                         │
-│              Django REST Framework + PostgreSQL                 │
-└─────┬──────────────────────────────────────────────┬────────────┘
-      │                                              │
-      │ RabbitMQ                                     │ RabbitMQ
-      │ (model_training)                             │ (image_generation)
-      ▼                                              ▼
-┌──────────────────────┐                  ┌──────────────────────┐
-│  Training Server     │                  │  Inference Server    │
-│  LoRA Fine-tuning    │                  │  Image Generation    │
-│  PyTorch + PEFT      │                  │  Stable Diffusion    │
-│  CUDA RTX 4090       │                  │  + LoRA Weights      │
-└──────────────────────┘                  └──────────────────────┘
-         │                                           │
-         └─────────────┬─────────────────────────────┘
-                       ▼
-              ┌─────────────────┐
-              │   AWS S3        │
-              │  Model Storage  │
-              │  Image Storage  │
-              └─────────────────┘
+┌──────────┐  HTTPS (CDN)  ┌─────────────────┐
+│          ├───────────────┤  Cloud Storage  │
+│   User   │               │(Frontend + Assets)│
+│          │  HTTPS (API)  └─────────────────┘
+└──────────┘      │
+                  ↓
+            ┌───────────┐
+            │ Cloud Run │
+            │ (Backend) │
+            └───────────┘
+    ┌───────────┴───────────┐
+    │                         │
+    ↓                         ↓
+┌───────────┐           ┌───────────┐
+│ Cloud SQL │           │ RabbitMQ  │
+│(PostgreSQL)│          (on GCE VM)│
+└───────────┘           └───────────┘
+                              │
+                 ┌────────────┴────────────┐
+                 │                         │
+                 ↓                         ↓
+         ┌───────────────┐       ┌───────────────┐
+         │ Training Server │       │Inference Server │
+         │  (GCE + GPU)  │       │  (GCE + GPU)  │
+         └───────────────┘       └───────────────┘
 ```
 
 ### Component Overview
 
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| **Frontend** | Vue 3 + Vite | SPA with Instagram-inspired UI |
-| **Backend** | Django + DRF | REST API, authentication, business logic |
-| **Database** | PostgreSQL 15 | User data, models, transactions |
-| **Message Queue** | RabbitMQ | Async task distribution |
-| **Training Server** | PyTorch + LoRA | Fine-tune Stable Diffusion models |
-| **Inference Server** | Diffusers | Generate images with trained models |
-| **Storage** | AWS S3 | Store models, images, signatures |
-| **Proxy** | Nginx | Reverse proxy, SSL termination |
+| Component | Technology | Hosting (GCP) | Purpose |
+|-----------|-----------|---|---------|
+| **Frontend** | Vue 3 + Vite | **Cloud Storage + CDN** | SPA with Instagram-inspired UI |
+| **Backend** | Django + DRF | **Cloud Run** | REST API, authentication, business logic |
+| **Database** | PostgreSQL 15 | **Cloud SQL** | User data, models, transactions |
+| **Message Queue** | RabbitMQ | **Compute Engine (GCE)** | Async task distribution |
+| **Training Server** | PyTorch + LoRA | **Compute Engine (GCE)** | Fine-tune Stable Diffusion models |
+| **Inference Server** | Diffusers | **Compute Engine (GCE)** | Generate images with trained models |
+| **Storage** | - | **Cloud Storage** | Store models, images, signatures |
 
 ---
 
