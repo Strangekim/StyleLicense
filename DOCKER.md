@@ -96,7 +96,7 @@ docker-compose exec backend python manage.py collectstatic --noinput
 
 ### 5. Access Services
 
-- **Frontend**: http://localhost:3000
+- **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:8000/api
 - **Django Admin**: http://localhost:8000/admin
 - **RabbitMQ Management**: http://localhost:15672 (guest/guest)
@@ -114,113 +114,35 @@ docker-compose down -v
 
 ---
 
-## Production Setup
+## Production Setup (GCP)
 
-Production setup is designed for deployment on EC2 with Nginx reverse proxy and SSL certificates.
+**주의**: 프로덕션 환경은 더 이상 `docker-compose.prod.yml`을 사용하지 않습니다. 각 서비스는 역할에 맞는 최적의 GCP 서비스에 개별적으로 배포됩니다.
 
-### 1. Prepare Server
+배포에 대한 자세한 내용은 각 서비스의 `README.md`를 참고하세요.
 
-```bash
-# Update system
-sudo apt-get update && sudo apt-get upgrade -y
-
-# Install Docker and Docker Compose
-# (Follow official installation guide)
-
-# Clone repository
-git clone <repository-url>
-cd StyleLicense
-```
-
-### 2. Configure Environment
-
-```bash
-# Copy and configure environment
-cp .env.example .env
-
-# Edit .env with production values
-nano .env
-
-# IMPORTANT: Set strong passwords and tokens
-# - SECRET_KEY (generate with: python -c "import secrets; print(secrets.token_urlsafe(50))")
-# - POSTGRES_PASSWORD
-# - RABBITMQ_PASSWORD
-# - INTERNAL_API_TOKEN
-```
-
-### 3. Configure Nginx
-
-```bash
-# Edit nginx configuration with your domain
-nano nginx/conf.d/default.conf
-
-# Replace "yourdomain.com" with your actual domain
-```
-
-### 4. Build Frontend
-
-```bash
-cd apps/frontend
-npm install
-npm run build
-cd ../..
-```
-
-### 5. Start Services
-
-```bash
-# Start all services
-docker-compose -f docker-compose.prod.yml up -d
-
-# Check status
-docker-compose -f docker-compose.prod.yml ps
-
-# View logs
-docker-compose -f docker-compose.prod.yml logs -f
-```
-
-### 6. Setup SSL with Let's Encrypt
-
-```bash
-# First, ensure DNS points to your server IP
-
-# Get SSL certificate
-docker-compose -f docker-compose.prod.yml run --rm certbot certonly \
-    --webroot \
-    --webroot-path=/var/www/certbot \
-    --email admin@yourdomain.com \
-    --agree-tos \
-    --no-eff-email \
-    -d yourdomain.com \
-    -d www.yourdomain.com
-
-# Restart nginx
-docker-compose -f docker-compose.prod.yml restart nginx
-```
-
-### 7. Initialize Database
-
-```bash
-# Run migrations
-docker-compose -f docker-compose.prod.yml exec backend python manage.py migrate
-
-# Create superuser
-docker-compose -f docker-compose.prod.yml exec backend python manage.py createsuperuser
-
-# Collect static files
-docker-compose -f docker-compose.prod.yml exec backend python manage.py collectstatic --noinput
-```
+- **Backend**: `apps/backend/README.md` → **Google Cloud Run**에 배포
+- **Frontend**: `apps/frontend/README.md` → **Google Cloud Storage**에 배포
+- **Database**: `docs/database/README.md` → **Google Cloud SQL**에서 호스팅
+- **AI Servers**: `apps/training-server/README.md` → **Google Compute Engine (GCE)**에 배포
 
 ---
 
-## AI Servers Setup (GPU Required)
+## AI Servers Setup (GCP - GCE)
 
-AI servers (Training and Inference) run on separate GPU machines (e.g., RunPod).
+AI 서버 (Training/Inference)는 GPU가 연결된 별도의 Google Compute Engine(GCE) VM에서 Docker 컨테이너로 실행됩니다.
 
-### Training Server
+### 1. GCE VM 생성
 
+- GCP 콘솔 또는 `gcloud` CLI를 사용하여 GPU가 장착된 VM을 생성합니다. (자세한 내용은 각 AI 서버의 `README.md` 참고)
+- **중요**: VM 생성 시, Cloud Storage 등 다른 GCP 서비스에 접근할 수 있는 권한을 가진 **서비스 계정(Service Account)**을 연결합니다. 이를 통해 별도의 인증 키 없이 안전하게 서비스 이용이 가능합니다.
+
+### 2. Docker 컨테이너 실행
+
+VM에 SSH로 접속한 후, 각 서버의 Docker 이미지를 빌드하고 실행합니다.
+
+#### Training Server
 ```bash
-# On GPU machine
+# On GCE VM for Training
 cd StyleLicense/apps/training-server
 
 # Build image
@@ -231,27 +153,16 @@ docker run -d \
     --name training-server \
     --gpus all \
     --restart unless-stopped \
-    -e RABBITMQ_HOST=<backend-server-ip> \
-    -e RABBITMQ_PORT=5672 \
-    -e RABBITMQ_USER=admin \
-    -e RABBITMQ_PASSWORD=<rabbitmq-password> \
-    -e RABBITMQ_QUEUE=model_training \
-    -e AWS_ACCESS_KEY_ID=<aws-key> \
-    -e AWS_SECRET_ACCESS_KEY=<aws-secret> \
-    -e AWS_STORAGE_BUCKET_NAME=<bucket-name> \
-    -e AWS_S3_REGION_NAME=us-east-1 \
+    -e RABBITMQ_HOST=<rabbitmq-vm-internal-ip> \
+    -e GCS_BUCKET_NAME=<your-gcs-bucket-name> \
     -e INTERNAL_API_TOKEN=<internal-token> \
-    -e WEBHOOK_BASE_URL=https://yourdomain.com \
+    -e BACKEND_API_URL=https://your-backend-domain.com \
     stylelicense-training
-
-# View logs
-docker logs -f training-server
 ```
 
-### Inference Server
-
+#### Inference Server
 ```bash
-# On GPU machine
+# On GCE VM for Inference
 cd StyleLicense/apps/inference-server
 
 # Build image
@@ -262,43 +173,189 @@ docker run -d \
     --name inference-server \
     --gpus all \
     --restart unless-stopped \
-    -e RABBITMQ_HOST=<backend-server-ip> \
-    -e RABBITMQ_PORT=5672 \
-    -e RABBITMQ_USER=admin \
-    -e RABBITMQ_PASSWORD=<rabbitmq-password> \
-    -e RABBITMQ_QUEUE=image_generation \
-    -e AWS_ACCESS_KEY_ID=<aws-key> \
-    -e AWS_SECRET_ACCESS_KEY=<aws-secret> \
-    -e AWS_STORAGE_BUCKET_NAME=<bucket-name> \
-    -e AWS_S3_REGION_NAME=us-east-1 \
+    -e RABBITMQ_HOST=<rabbitmq-vm-internal-ip> \
+    -e GCS_BUCKET_NAME=<your-gcs-bucket-name> \
     -e INTERNAL_API_TOKEN=<internal-token> \
-    -e WEBHOOK_BASE_URL=https://yourdomain.com \
+    -e BACKEND_API_URL=https://your-backend-domain.com \
     stylelicense-inference
-
-# View logs
-docker logs -f inference-server
 ```
 
-### Security Configuration
+### 3. 방화벽 설정
 
-**On Backend Server (EC2):**
+- **RabbitMQ VM**: AI 서버 VM들의 내부 IP로부터 오는 5672 포트 트래픽을 허용하도록 방화벽 규칙을 설정합니다.
+- **Backend (Cloud Run)**: 기본적으로 Public URL로 접근 가능하며, `INTERNAL_API_TOKEN`으로 내부 요청을 인증합니다.
 
-1. Allow RabbitMQ connections from AI servers:
+---
+
+## RabbitMQ Setup (GCP - GCE)
+
+RabbitMQ는 메시지 큐 시스템으로, Backend와 AI 서버 간 비동기 작업 분배에 사용됩니다. Google Compute Engine (GCE) VM에서 Docker 컨테이너로 실행됩니다.
+
+### 1. GCE VM 생성
+
 ```bash
-# Edit security group to allow port 5672 from AI server IPs
+# GCP 프로젝트 ID 설정
+export PROJECT_ID=your-gcp-project-id
+export REGION=asia-northeast3
+export ZONE=asia-northeast3-a
+
+# RabbitMQ VM 생성
+gcloud compute instances create stylelicense-rabbitmq \
+    --project=$PROJECT_ID \
+    --zone=$ZONE \
+    --machine-type=e2-medium \
+    --boot-disk-size=20GB \
+    --boot-disk-type=pd-standard \
+    --image-family=debian-11 \
+    --image-project=debian-cloud \
+    --tags=rabbitmq-server \
+    --metadata=startup-script='#!/bin/bash
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sh get-docker.sh
+usermod -aG docker $USER
+
+# Run RabbitMQ container
+docker run -d \
+    --name rabbitmq \
+    --restart unless-stopped \
+    -e RABBITMQ_DEFAULT_USER=admin \
+    -e RABBITMQ_DEFAULT_PASS=CHANGE_THIS_PASSWORD \
+    -v rabbitmq_data:/var/lib/rabbitmq \
+    -p 5672:5672 \
+    -p 15672:15672 \
+    rabbitmq:3-management-alpine
+'
 ```
 
-2. Configure firewall (if using ufw):
+### 2. 방화벽 규칙 생성
+
+#### 내부 트래픽 허용 (AMQP 포트)
+
+Backend (Cloud Run)와 AI 서버 (GCE)가 RabbitMQ에 접근할 수 있도록 내부 트래픽을 허용합니다.
+
 ```bash
-sudo ufw allow from <training-server-ip> to any port 5672
-sudo ufw allow from <inference-server-ip> to any port 5672
+# AI Servers와 Backend로부터 오는 5672 포트 허용
+gcloud compute firewall-rules create allow-rabbitmq-internal \
+    --project=$PROJECT_ID \
+    --direction=INGRESS \
+    --priority=1000 \
+    --network=default \
+    --action=ALLOW \
+    --rules=tcp:5672 \
+    --source-ranges=10.0.0.0/8 \
+    --target-tags=rabbitmq-server \
+    --description="Allow internal access to RabbitMQ AMQP port"
 ```
 
-**On AI Servers:**
+#### 관리 UI 접근 (선택사항)
 
-- Ensure `INTERNAL_API_TOKEN` matches the backend
-- Use secure RabbitMQ credentials
-- Store AWS credentials securely
+⚠️ **주의**: 프로덕션 환경에서는 관리 UI를 공개하지 않는 것이 안전합니다. 필요 시 Cloud IAP (Identity-Aware Proxy) 또는 SSH 터널링을 사용하세요.
+
+```bash
+# SSH 터널링으로 관리 UI 접근 (권장)
+gcloud compute ssh stylelicense-rabbitmq \
+    --zone=$ZONE \
+    --ssh-flag="-L 15672:localhost:15672"
+
+# 브라우저에서 http://localhost:15672 접근
+# ID: admin, PW: (VM 생성 시 설정한 비밀번호)
+```
+
+### 3. Cloud Run에서 RabbitMQ 접근 설정
+
+Cloud Run은 기본적으로 외부 네트워크만 접근 가능하므로, **Serverless VPC Access Connector**를 생성하여 내부 네트워크 접근이 가능하도록 합니다.
+
+```bash
+# VPC Connector 생성 (최초 1회만)
+gcloud compute networks vpc-access connectors create stylelicense-connector \
+    --region=$REGION \
+    --subnet-project=$PROJECT_ID \
+    --subnet=default \
+    --min-instances=2 \
+    --max-instances=10
+
+# Backend Cloud Run에 VPC Connector 연결
+gcloud run services update backend \
+    --vpc-connector stylelicense-connector \
+    --vpc-egress all-traffic \
+    --region=$REGION
+```
+
+이제 Backend (Cloud Run)는 RabbitMQ VM의 **내부 IP**로 접근할 수 있습니다:
+```bash
+# RabbitMQ VM의 내부 IP 확인
+gcloud compute instances describe stylelicense-rabbitmq \
+    --zone=$ZONE \
+    --format='get(networkInterfaces[0].networkIP)'
+
+# 출력 예: 10.128.0.5
+# Backend 환경 변수에 설정: RABBITMQ_HOST=10.128.0.5
+```
+
+### 4. RabbitMQ 모니터링 및 관리
+
+#### 컨테이너 상태 확인
+
+```bash
+# VM에 SSH 접속
+gcloud compute ssh stylelicense-rabbitmq --zone=$ZONE
+
+# RabbitMQ 컨테이너 상태 확인
+docker ps | grep rabbitmq
+
+# RabbitMQ 로그 확인
+docker logs rabbitmq
+
+# RabbitMQ 재시작
+docker restart rabbitmq
+```
+
+#### Health Check
+
+```bash
+# RabbitMQ 진단 명령어
+docker exec rabbitmq rabbitmq-diagnostics ping
+
+# 큐 목록 확인
+docker exec rabbitmq rabbitmqctl list_queues
+
+# 연결 목록 확인
+docker exec rabbitmq rabbitmqctl list_connections
+```
+
+### 5. 백업 및 복구
+
+RabbitMQ 데이터는 Docker 볼륨 (`rabbitmq_data`)에 저장됩니다.
+
+```bash
+# VM 스냅샷 생성 (백업)
+gcloud compute disks snapshot stylelicense-rabbitmq \
+    --zone=$ZONE \
+    --snapshot-names=rabbitmq-backup-$(date +%Y%m%d)
+
+# 볼륨 백업 (VM 내부에서)
+docker run --rm \
+    -v rabbitmq_data:/data \
+    -v $(pwd):/backup \
+    alpine tar czf /backup/rabbitmq-data-backup.tar.gz /data
+```
+
+### 6. 대안: Cloud Pub/Sub 마이그레이션 계획
+
+**장기적 권장사항**: RabbitMQ on GCE 대신 **Cloud Pub/Sub**로 마이그레이션하면 다음 장점이 있습니다:
+
+- ✅ **서버리스**: VM 관리 불필요
+- ✅ **고가용성**: 99.95% SLA, 자동 복제
+- ✅ **자동 확장**: 트래픽에 따라 자동 확장
+- ✅ **비용 효율적**: 사용량 기반 과금 (메시지당 $0.40/백만)
+
+**마이그레이션 작업**:
+- Backend: `pika` → `google-cloud-pubsub`
+- AI Servers: `pika` → `google-cloud-pubsub`
+- 메시지 포맷 변경: RabbitMQ → Pub/Sub 형식
+
+현재는 기존 코드 재사용을 위해 RabbitMQ를 사용하지만, 향후 Pub/Sub로 전환하면 운영 부담이 크게 줄어듭니다.
 
 ---
 
@@ -444,7 +501,7 @@ docker-compose -f docker-compose.prod.yml restart nginx
 curl http://localhost:8000/api/health
 
 # Frontend health
-curl http://localhost:3000/health
+curl http://localhost:5173/health
 
 # RabbitMQ health
 curl http://localhost:15672/api/healthchecks/node

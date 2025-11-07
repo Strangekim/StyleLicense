@@ -264,15 +264,34 @@
 
 ## 4. 시스템 아키텍처
 
-### 4.1 전체 시스템 구조도
+### 4.1 전체 시스템 구조도 (GCP 기반 MVP)
 ```
-┌─────────────┐    HTTPS    ┌──────────────┐
-│  Frontend   │───────────  │  API Gateway │──┬──▶ Backend Server (Session)
-│   (Vue)     │             │   (Django)   │  ├──▶ Training Server
-└─────────────┘             └──────────────┘  ├──▶ Inference Server
-                                              ├──▶ RabbitMQ
-                                              └──▶ PostgreSQL / S3
-
+                           ┌─────────────────┐
+┌──────────┐  HTTPS (CDN)  │ Cloud Storage   │
+│          ├───────────────┤(Frontend/이미지) │
+│   User   │               └─────────────────┘
+│          │  HTTPS (API)
+└──────────┘      │
+                  ↓
+            ┌───────────┐
+            │ Cloud Run │
+            │ (Backend) │
+            └───────────┘
+    ┌───────────┴───────────┐
+    │                         │
+    ↓                         ↓
+┌───────────┐           ┌───────────┐
+│ Cloud SQL │           │ RabbitMQ  │
+│(PostgreSQL)│          (on GCE VM) │
+└───────────┘           └───────────┘
+                              │
+                 ┌────────────┴────────────┐
+                 │                         │
+                 ↓                         ↓
+         ┌───────────────┐       ┌───────────────┐
+         │Training Server│       │Inference Server│
+         │  (GCE + GPU)  │       │  (GCE + GPU)  │
+         └───────────────┘       └───────────────┘
 ```
 
 ### 4.2 컴포넌트 설명
@@ -282,7 +301,7 @@
 - Google OAuth 로그인 처리
 - 이미지 업로드/다운로드
 - 실시간 생성 상태 폴링
-- **(운영 환경)** Vite로 정적 파일 빌드 → Backend EC2의 Nginx에서 서빙
+- **(운영 환경)** **Google Cloud Storage**에 정적 파일로 배포, **Cloud CDN**을 통해 전 세계에 캐시하여 제공.
 
 #### Backend (Django)
 - REST API 서버
@@ -290,77 +309,68 @@
 - 비즈니스 로직 처리
 - RabbitMQ 작업 전송
 - 토큰 트랜잭션 관리
-- **(운영 환경)** Gunicorn으로 실행, Nginx Reverse Proxy 구성
-  - Nginx: Frontend 정적 파일 서빙 + Gunicorn 프록시 + Let's Encrypt SSL 종료
+- **(운영 환경)** 컨테이너화하여 **Google Cloud Run**에 배포. 트래픽에 따라 자동 확장/축소.
 
 #### PostgreSQL
 - 사용자, 모델, 이미지 메타데이터 저장
 - 토큰 트랜잭션 기록
 - ACID 트랜잭션 보장
-- **(운영 환경)** Backend EC2 인스턴스에서 Docker 컨테이너로 실행
-  - 이미지: postgres:15
-  - 볼륨 마운트: 데이터 영속성 보장
-  - 네트워크: Backend와 동일 Docker 네트워크로 격리
-  - 포트: 5432 (내부 통신)
+- **(운영 환경)** **Google Cloud SQL for PostgreSQL** 사용. 완전 관리형 서비스로 백업, 복제, 보안 자동 관리.
 
 #### RabbitMQ
 - 비동기 작업 큐
 - `model_training` 큐: 모델 학습 작업
 - `image_generation` 큐: 이미지 생성 작업
-- **(운영 환경)** Backend EC2 인스턴스에서 Docker로 함께 실행
+- **(운영 환경)** **Google Compute Engine(GCE)**의 저렴한 VM(e.g., e2-small)에서 Docker 컨테이너로 실행.
 
 #### Training Server
-- **(운영 환경)** RunPod RTX 4090 24GB VRAM GPU 서버 (1대)
-  - 인스턴스: RunPod GPU Pod (RTX 4090)
-  - 네트워크: Public IP를 통해 Backend API Webhook 호출
-  - 인증: INTERNAL_API_TOKEN 헤더로 인증
+- **(운영 환경)** **Google Compute Engine(GCE) VM + GPU** (예: **NVIDIA L4**) 사용.
+  - **Spot VM(선점형)** 옵션을 활용하여 학습 비용을 60~90% 절감.
 - Stable Diffusion 기반 LoRA Fine-tuning
 - 학습 진행 상황 30초마다 Backend API로 전송
-- 학습 완료 시 Backend Webhook 호출 (POST /api/webhooks/training/complete)
-- 모델 파일 S3 저장 (AWS Access Key 사용)
+- 학습 완료 시 Backend Webhook 호출
+- 모델 파일을 **Cloud Storage**에 저장.
 
 #### Inference Server
-- **(운영 환경)** RunPod RTX 4090 24GB VRAM GPU 서버 (1대)
-  - 인스턴스: RunPod GPU Pod (RTX 4090)
-  - 네트워크: Public IP를 통해 Backend API Webhook 호출
-  - 인증: INTERNAL_API_TOKEN 헤더로 인증
-- LoRA 가중치 로드 후 이미지 생성 (5~10초)
+- **(운영 환경)** **Google Compute Engine(GCE) VM + GPU** (예: **NVIDIA T4**) 사용.
+  - 24/7 운영을 위해 **약정 사용 할인(CUD)** 적용 고려.
+- LoRA 가중치 로드 후 이미지 생성
 - 생성 진행 상황 실시간 Backend API로 전송
-- 서명 자동 삽입 (PIL) - 작가 시그니처 워터마크
-- 생성 이미지 S3 저장 (AWS Access Key 사용)
-- 생성 완료 시 Backend Webhook 호출 (POST /api/webhooks/inference/complete)
+- 서명 자동 삽입 (PIL)
+- 생성 이미지를 **Cloud Storage**에 저장.
+- 생성 완료 시 Backend Webhook 호출
 
-#### S3 (또는 호환 스토리지)
-- 학습 이미지 저장
-- 모델 파일 저장
-- 생성 이미지 저장
+#### Cloud Storage
+- **(구 S3)**
+- **프론트엔드 파일** 호스팅
+- **학습/생성 이미지** 저장
+- **학습 완료 모델 파일** 저장
 
 ### 4.3 데이터 흐름
 
 #### 모델 학습 플로우
 ```
 작가 → Frontend: 이미지 업로드
-Frontend → Backend: POST /api/styles
-Backend → S3: 이미지 저장
+Frontend → Backend(Cloud Run): POST /api/styles
+Backend → Cloud Storage: 이미지 저장
 Backend → RabbitMQ: 학습 작업 전송
-RabbitMQ → Training Server: 작업 수신
-Training Server: LoRA Fine-tuning (30분~2시간)
-Training Server → S3: 모델 파일 저장
-Training Server → Backend: POST /api/webhooks/training/complete
+RabbitMQ → Training Server(GCE): 작업 수신
+Training Server: LoRA Fine-tuning
+Training Server → Cloud Storage: 모델 파일 저장
+Training Server → Backend(Cloud Run): POST /api/webhooks/training/complete
 Backend → Frontend: 알림 (학습 완료)
 ```
 
 #### 이미지 생성 플로우
 ```
 사용자 → Frontend: 프롬프트 입력
-Frontend → Backend: POST /api/generations
+Frontend → Backend(Cloud Run): POST /api/generations
 Backend: 토큰 차감 (SELECT FOR UPDATE)
 Backend → RabbitMQ: 생성 작업 전송
-RabbitMQ → Inference Server: 작업 수신
-Inference Server: 이미지 생성 (5~10초)
-Inference Server: 서명 삽입
-Inference Server → S3: 이미지 저장
-Inference Server → Backend: POST /api/webhooks/inference/complete
+RabbitMQ → Inference Server(GCE): 작업 수신
+Inference Server: 이미지 생성 + 서명 삽입
+Inference Server → Cloud Storage: 이미지 저장
+Inference Server → Backend(Cloud Run): POST /api/webhooks/inference/complete
 Backend → Frontend: 이미지 URL 반환
 ```
 
@@ -452,7 +462,6 @@ tags ──── styles/artworks/generations (M:N)
 - **RESTful 아키텍처**: 리소스 기반 URL 설계, HTTP 메서드 활용
 - **Session-based Authentication**: Django 세션 쿠키 기반 인증
 - **JSON 통신**: 모든 요청/응답은 `application/json`
-- **버전 관리**: URL 기반 (`/v1`)
 - **HTTPS 필수**: 프로덕션 환경
 - **멱등성 보장**: 동일 요청 반복 시 동일 결과 (결제, 중복 방지 등)
 
@@ -575,7 +584,7 @@ tags ──── styles/artworks/generations (M:N)
 **거래 내역 필터**:
 ```
 GET /api/tokens/transactions?type=purchase  # 충전만
-GET /api/tokens/transactions?type=usage     # 사용만
+GET /api/tokens/transactions?type=generation  # 사용만
 GET /api/tokens/transactions?type=all       # 전체 (기본값)
 ```
 
@@ -1133,15 +1142,16 @@ project-root/
 │   ├── frontend/         # 개발용 Vue 3 SPA
 │   ├── training-server/  # LoRA 학습 서버
 │   ├── inference-server/ # 이미지 생성 서버
-│   └── deploy/           # 🚀 EC2 배포 전용 독립 프로젝트
-│                         #    (backend 전문 + frontend 빌드 결과물)
+│   └── deploy/           # 🔧 로컬 개발 환경 (Docker Compose)
+│                         #    ⚠️ 프로덕션은 GCP 개별 배포 사용
 ├── docs/                 # 공통 문서
 └── design/               # 디자인 리소스
 ```
 
 **개발 vs 배포**:
 - `apps/backend/`, `apps/frontend/`: 개발용 코드 (이곳에서 개발)
-- `apps/deploy/`: 배포용 프로젝트 (EC2에 배포, backend 전문 + frontend/dist/ 포함)
+- `apps/deploy/`: 로컬 개발 환경 (Docker Compose, 전체 스택 로컬 실행)
+- **프로덕션 배포**: GCP 서비스별 개별 배포 (Cloud Run, Cloud Storage, GCE 등)
 
 ### 9.2 공통 패턴
 - API 응답 형식: [docs/PATTERNS.md](docs/PATTERNS.md)
@@ -1425,102 +1435,281 @@ services:
 
 ### 14.2 프로덕션 환경
 
-#### 인프라 (단일 서버 + 외부 GPU 서버 기준)
-- **Application Server**: EC2 (t3.medium 이상)
-  - **Backend (Django)**: Gunicorn으로 실행 (포트 8000)
-  - **Frontend (정적 파일)**: Vite 빌드 결과물 (dist/)
-  - **PostgreSQL**: Docker 컨테이너로 실행 (이미지: postgres:15, 포트 5432)
-    - 볼륨 마운트: `/var/lib/postgresql/data` (데이터 영속성)
-    - 네트워크: Backend와 동일 Docker 네트워크 격리
-  - **RabbitMQ**: Docker로 실행 (포트 5672)
-  - **Nginx**: Reverse Proxy + Frontend 정적 파일 서빙 + SSL 종료 (포트 80, 443)
-    - Let's Encrypt SSL 인증서 (Certbot 자동 갱신)
-    - 도메인: 별도 구매 예정 (예: stylelicense.com)
-- **AI Servers**: RunPod RTX 4090 24GB GPU Pod (2대)
-  - **Training Server** (1대): LoRA Fine-tuning 전용
-  - **Inference Server** (1대): 이미지 생성 전용
-  - Backend 서버와는 **Public IP + 방화벽 + INTERNAL_API_TOKEN**으로 통신
-    - Backend 도메인으로 Webhook 호출 (예: https://api.stylelicense.com)
-    - 방화벽: Backend EC2 Security Group에서 RunPod IP 허용 (포트 443)
-- **Storage**: AWS S3 (이미지, 모델 파일)
-  - Backend EC2: IAM Role로 S3 접근
-  - RunPod GPU: Access Key로 S3 접근
+#### 인프라 (Google Cloud Platform 기준)
 
-### 14.3 배포 프로젝트 (apps/deploy)
-
-**apps/deploy**는 EC2 배포 전용 독립 프로젝트입니다. 이 폴더만 EC2에 clone/pull하면 전체 스택을 실행할 수 있습니다.
-
-#### 폴더 구조
+**전체 아키텍처**:
 ```
-apps/deploy/
-├── backend/                    # Backend 전문 (Django 코드)
-├── frontend/dist/             # Frontend 빌드 결과물
-├── docker-compose.yml         # 로컬 개발용
-├── nginx.conf                 # Nginx 설정
-├── deploy.sh                  # 배포 스크립트
-└── scripts/
-    ├── setup.sh              # 초기 설정
-    └── backup.sh             # DB 백업
+User → Cloud CDN → Cloud Storage (Frontend)
+User → Cloud Run (Backend API)
+  ↓
+  ├─ Cloud SQL (PostgreSQL 15)
+  ├─ RabbitMQ (GCE VM)
+  └─ Cloud Storage (이미지/모델)
+       ↓
+  ┌────┴────┐
+  ↓         ↓
+Training   Inference
+Server     Server
+(GCE+GPU)  (GCE+GPU)
 ```
 
-#### 배포 프로세스
+#### 서비스별 구성
 
-**초기 배포**:
+##### 1. Backend (API Server)
+- **서비스**: **Google Cloud Run** (서버리스 컨테이너)
+- **설정**:
+  - 최소 인스턴스: 1 (Cold start 방지)
+  - 최대 인스턴스: 100 (자동 확장)
+  - CPU: 1 vCPU
+  - Memory: 512MB
+  - Timeout: 300초
+- **인증**: 서비스 계정 (Cloud SQL, Cloud Storage 권한 자동 부여)
+- **배포**: `gcloud run deploy` 또는 Cloud Build
+- **HTTPS**: 자동 SSL 인증서 발급
+- **도메인**: Custom domain 매핑 가능 (예: api.stylelicense.com)
+
+##### 2. Frontend (SPA)
+- **서비스**: **Google Cloud Storage** (정적 호스팅) + **Cloud CDN**
+- **설정**:
+  - 버킷: `stylelicense-frontend`
+  - 공개 읽기 권한 (allUsers)
+  - Website 설정: index.html, error page: index.html (SPA 라우팅)
+- **CDN**: Cloud CDN으로 글로벌 캐싱
+  - Cache 정책: HTML (5분), JS/CSS/이미지 (1년)
+- **HTTPS**: Google 관리 SSL 인증서 자동 발급
+- **도메인**: Custom domain (예: www.stylelicense.com)
+
+##### 3. Database
+- **서비스**: **Google Cloud SQL** (PostgreSQL 15)
+- **인스턴스 타입**:
+  - **프로덕션**: db-n1-standard-2 (2 vCPU, 7.5GB RAM)
+  - **개발/스테이징**: db-f1-micro (0.6GB RAM) - 비용 절감
+- **스토리지**: 20GB SSD (자동 증가 활성화)
+- **백업**: 자동 백업 (매일, 7일 보관)
+- **고가용성**: 리전 내 HA (선택사항, 추가 비용)
+- **연결**: Cloud Run → Cloud SQL Auth Proxy (자동, 암호화)
+
+##### 4. Message Queue
+- **서비스**: **RabbitMQ on GCE VM** (Docker 컨테이너)
+- **머신 타입**: e2-medium (2 vCPU, 4GB RAM)
+- **디스크**: 20GB Standard Persistent Disk
+- **네트워크**: 내부 IP만 사용 (방화벽으로 5672 포트 제한)
+- **배포**: Docker Compose 또는 단일 컨테이너
+- **모니터링**: Management UI (http://<internal-ip>:15672)
+- **향후 계획**: Cloud Pub/Sub로 마이그레이션 고려 (서버리스, HA 자동)
+
+##### 5. AI Training Server
+- **서비스**: **Google Compute Engine** (GPU VM)
+- **머신 타입**: n2d-standard-4 (4 vCPU, 16GB RAM)
+- **GPU**: NVIDIA L4 (24GB VRAM) 또는 T4 (16GB VRAM)
+- **프로비저닝 모델**: **Spot (선점형)** - 비용 최대 70% 절감
+  - 학습은 중단 후 재시작 가능하므로 Spot VM이 이상적
+  - 체크포인트 자동 저장으로 진행률 손실 방지
+- **부팅 디스크**: Deep Learning on Linux (CUDA 11.8+ 포함, 50GB)
+- **서비스 계정**: Storage 객체 생성자/뷰어 권한
+- **방화벽**: RabbitMQ VM (5672), Backend (443) 트래픽만 허용
+- **배포**: Docker 컨테이너 (`docker run --gpus all`)
+
+##### 6. AI Inference Server
+- **서비스**: **Google Compute Engine** (GPU VM)
+- **머신 타입**: n2d-standard-4 (4 vCPU, 16GB RAM)
+- **GPU**: **NVIDIA T4 (16GB VRAM)** - 추론에 비용 효율적
+- **프로비저닝 모델**: **Standard (표준)** + **1년 약정 사용 할인(CUD)**
+  - 24/7 운영 필요, CUD로 최대 57% 비용 절감
+- **부팅 디스크**: Deep Learning on Linux (CUDA 11.8+ 포함, 50GB)
+- **서비스 계정**: Storage 객체 생성자/뷰어 권한
+- **동시 처리**: MAX_CONCURRENT_GENERATIONS=10
+- **배포**: Docker 컨테이너 (`docker run --gpus all`)
+
+##### 7. Storage
+- **서비스**: **Google Cloud Storage**
+- **버킷 구조**:
+  - `stylelicense-media`: 학습 이미지, 프로필 이미지
+  - `stylelicense-models`: LoRA 모델 파일 (.safetensors)
+  - `stylelicense-generations`: 생성된 이미지
+- **스토리지 클래스**: Standard (자주 액세스)
+- **인증**: 서비스 계정 (키 파일 불필요, IAM으로 권한 부여)
+- **생명주기 정책**: 90일 이상 미사용 객체 → Nearline 이동 (비용 절감)
+
+#### 비용 예상 (월간)
+- Cloud Run (Backend): $20-50
+- Cloud SQL (db-n1-standard-2): $100-150
+- GCE Inference (T4 + CUD): $150-200
+- GCE Training (L4 Spot): $50-100 (사용량에 따라)
+- RabbitMQ VM (e2-medium): $30-40
+- Cloud Storage: $10-30
+- Cloud CDN: $5-20
+- **총 예상: $365-590/월**
+
+#### 네트워크 구성
+- Cloud Run ↔ Cloud SQL: Private IP (Cloud SQL Connector)
+- Cloud Run ↔ RabbitMQ: GCE 내부 IP (VPC 피어링 또는 Serverless VPC Access)
+- AI Servers ↔ RabbitMQ: GCE 내부 IP (동일 VPC)
+- AI Servers → Backend (Webhook): Public URL (HTTPS) + INTERNAL_API_TOKEN 인증
+
+### 14.3 배포 프로젝트 (apps/deploy) - **Deprecated**
+
+⚠️ **경고**: 이 섹션에 설명된 EC2 기반 배포 방법은 더 이상 사용되지 않습니다. 현재 프로젝트는 **Google Cloud Platform (GCP)** 기반 아키텍처로 이전되었습니다.
+
+#### 새로운 배포 방법 (GCP)
+
+각 서비스는 역할에 맞는 최적의 GCP 서비스에 개별적으로 배포됩니다:
+
+**Backend 배포**:
+- 서비스: **Cloud Run** (서버리스 컨테이너)
+- 가이드: [apps/backend/README.md](apps/backend/README.md#deployment-gcp)
+- 배포 명령어:
+  ```bash
+  # Docker 이미지 빌드 및 Cloud Run 배포
+  gcloud builds submit --tag gcr.io/$PROJECT_ID/backend
+  gcloud run deploy backend --image gcr.io/$PROJECT_ID/backend \
+      --add-cloudsql-instances $SQL_INSTANCE \
+      --set-env-vars="RABBITMQ_HOST=10.x.x.x,GCS_BUCKET_NAME=stylelicense-media"
+  ```
+
+**Frontend 배포**:
+- 서비스: **Cloud Storage** + **Cloud CDN**
+- 가이드: [apps/frontend/README.md](apps/frontend/README.md#deployment-gcp)
+- 배포 명령어:
+  ```bash
+  # 정적 파일 빌드 및 Cloud Storage 업로드
+  npm run build
+  gcloud storage cp -r dist/* gs://stylelicense-frontend -m
+  ```
+
+**Database**:
+- 서비스: **Cloud SQL** (PostgreSQL 15)
+- 가이드: [docs/database/README.md](docs/database/README.md)
+- 생성 명령어:
+  ```bash
+  gcloud sql instances create stylelicense-db \
+      --database-version=POSTGRES_15 \
+      --tier=db-n1-standard-2 \
+      --region=asia-northeast3
+  ```
+
+**AI Servers** (Training/Inference):
+- 서비스: **Google Compute Engine** (GPU VM)
+- Training 가이드: [apps/training-server/README.md](apps/training-server/README.md#deployment)
+- Inference 가이드: [apps/inference-server/README.md](apps/inference-server/README.md#deployment)
+- 배포 명령어:
+  ```bash
+  # GCE GPU VM에서 Docker 컨테이너 실행
+  docker run -d --gpus all \
+      -e RABBITMQ_HOST=10.128.0.5 \
+      -e GCS_BUCKET_NAME=stylelicense-media \
+      -e INTERNAL_API_TOKEN=$TOKEN \
+      stylelicense/training-server:latest
+  ```
+
+#### apps/deploy 폴더 용도 (현재)
+
+**apps/deploy** 폴더는 GCP 배포에는 사용되지 않지만, **로컬 개발 환경**을 위한 Docker Compose 설정을 제공합니다:
+
 ```bash
-# EC2에서
-git clone <repository-url>
-cd StyleLicense/apps/deploy
-./scripts/setup.sh  # PostgreSQL(Docker), RabbitMQ(Docker), Nginx, Gunicorn 설정
-./deploy.sh         # 초기 배포
+# 로컬에서 전체 스택 실행 (개발용)
+cd apps/deploy
+docker-compose up -d
 ```
 
-**코드 변경 시 배포**:
-```bash
-# 개발자 로컬에서
-# 1. Backend 변경 시: apps/backend/ 코드 수정 후 apps/deploy/backend/로 복사
-# 2. Frontend 변경 시: apps/frontend/ 코드 수정, 빌드 후 apps/deploy/frontend/dist/로 복사
-git add apps/deploy/
-git commit -m "배포: 변경사항"
-git push origin main
+자세한 내용은 [apps/deploy/README.md](apps/deploy/README.md)를 참고하세요.
 
-# EC2에서
-cd /path/to/StyleLicense/apps/deploy
-git pull origin main
-./deploy.sh  # 자동으로 마이그레이션, Static 수집, 서비스 재시작
+### 14.4 CI/CD
+
+#### 현재 배포 방식
+
+**Backend (Cloud Run)**:
+- 수동 배포: `gcloud builds submit` + `gcloud run deploy`
+- 향후: GitHub Actions → Cloud Build → Cloud Run (자동 배포)
+
+**Frontend (Cloud Storage)**:
+- 수동 배포: `npm run build` + `gcloud storage cp`
+- 향후: GitHub Actions → Cloud Storage + CDN Invalidation
+
+**AI Servers (GCE)**:
+- 수동 배포: SSH → Docker pull/build → 컨테이너 재시작
+- 향후: GitHub Actions → Artifact Registry → GCE 자동 업데이트
+
+#### 향후 CI/CD 파이프라인 계획
+
+**1. Backend 파이프라인** (GitHub Actions):
+```yaml
+main 브랜치 push → Lint → Test → Build Docker Image →
+Push to Artifact Registry → Deploy to Cloud Run → Health Check
 ```
 
-#### deploy.sh 스크립트 역할
-```bash
-1. PostgreSQL 마이그레이션 실행 (python manage.py migrate)
-2. Django Static 파일 수집 (collectstatic)
-3. Frontend 빌드 파일 Nginx 디렉토리로 복사
-4. Gunicorn 재시작
-5. RabbitMQ 상태 확인
-6. Nginx 재시작
-7. Health Check
+**2. Frontend 파이프라인** (GitHub Actions):
+```yaml
+main 브랜치 push → Lint → Test → Build (npm run build) →
+Upload to Cloud Storage → Invalidate CDN Cache
 ```
 
-### 14.4 CI/CD (향후 계획)
+**3. AI Servers 파이프라인** (GitHub Actions):
+```yaml
+main 브랜치 push → Lint → Test → Build Docker Image →
+Push to Artifact Registry →
+SSH to GCE → Pull Image → Restart Container → Health Check
+```
 
-**현재**: 수동/반자동 배포 (`deploy.sh` 스크립트 사용)
-
-**향후 도입 예정**:
-- GitHub Actions 또는 GitLab CI
-- Backend: Lint → Test → Build → Deploy to EC2
-- Frontend: Lint → Test → Build → Deploy to EC2
-- AI Servers: Lint → Test → Build → Deploy to RunPod
-- Blue-Green Deployment (Backend)
-- Rolling Update (AI Servers)
+**배포 전략**:
+- **Backend (Cloud Run)**: Blue-Green Deployment (트래픽 분산 배포)
+- **Frontend (Cloud Storage)**: 캐시 무효화 후 즉시 배포
+- **AI Servers**: Rolling Update (Training은 Spot VM이므로 중단 가능, Inference는 무중단)
 
 ### 14.5 환경 변수 관리
 
-#### Development
+#### Development (로컬 환경)
 - `.env.example` 템플릿 제공
 - 로컬 `.env` 파일로 관리
+- Git에 커밋하지 않음 (`.gitignore`에 포함)
 
-#### Production
-- AWS Systems Manager Parameter Store
-- 민감 정보는 암호화 저장
+#### Production (GCP)
+
+**1. Google Secret Manager** (민감 정보):
+```bash
+# 민감 정보를 Secret Manager에 저장
+gcloud secrets create DJANGO_SECRET_KEY --data-file=-
+gcloud secrets create INTERNAL_API_TOKEN --data-file=-
+gcloud secrets create GOOGLE_CLIENT_SECRET --data-file=-
+gcloud secrets create TOSS_SECRET_KEY --data-file=-
+
+# Cloud Run에서 Secret Manager 접근 (환경 변수로 자동 주입)
+gcloud run deploy backend \
+    --set-secrets="SECRET_KEY=DJANGO_SECRET_KEY:latest,INTERNAL_API_TOKEN=INTERNAL_API_TOKEN:latest"
+```
+
+**2. Cloud Run 환경 변수** (비민감 정보):
+```bash
+# 환경 변수 직접 설정 (비밀번호 등 민감 정보 제외)
+gcloud run deploy backend \
+    --set-env-vars="RABBITMQ_HOST=10.128.0.5,GCS_BUCKET_NAME=stylelicense-media,DEBUG=False"
+```
+
+**3. 서비스 계정 인증** (키 파일 불필요):
+- Cloud Run, GCE VM에 서비스 계정을 연결하여 자동 인증
+- **Cloud SQL**: Cloud SQL Auth Proxy로 자동 연결 (비밀번호 불필요)
+- **Cloud Storage**: 서비스 계정에 Storage 권한 부여 (`roles/storage.objectAdmin`)
+- **장점**: 키 파일 관리 불필요, 보안 강화, IAM으로 권한 제어
+
+**환경 변수 우선순위**:
+1. Secret Manager (민감 정보)
+2. Cloud Run 환경 변수 (비민감 정보)
+3. 서비스 계정 (인증 정보)
+
+**주요 환경 변수 목록**:
+
+| 환경 변수 | 관리 방식 | 설명 |
+|----------|----------|------|
+| `SECRET_KEY` | Secret Manager | Django Secret Key |
+| `INTERNAL_API_TOKEN` | Secret Manager | AI 서버 Webhook 인증 |
+| `GOOGLE_CLIENT_SECRET` | Secret Manager | OAuth2 Client Secret |
+| `TOSS_SECRET_KEY` | Secret Manager | 결제 API Secret |
+| `RABBITMQ_HOST` | 환경 변수 | RabbitMQ 내부 IP |
+| `GCS_BUCKET_NAME` | 환경 변수 | Storage 버킷 이름 |
+| `DEBUG` | 환경 변수 | Debug 모드 (False) |
+| `DATABASE_URL` | 환경 변수 | Cloud SQL 연결 문자열 |
+| `ALLOWED_HOSTS` | 환경 변수 | 허용 도메인 목록 |
+| `CORS_ALLOWED_ORIGINS` | 환경 변수 | CORS 허용 도메인 |
 
 ---
 

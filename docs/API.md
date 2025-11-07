@@ -369,14 +369,16 @@ GET /api/tokens/balance
   "data": {
     "user_id": 1,
     "token_balance": 150,
-    "artist_earned_balance": 500
+    "earned_token_balance": 500
   }
 }
 ```
 
 #### 설명
 - `token_balance`: 사용 가능한 토큰 (사용자)
-- `artist_earned_balance`: 작가가 벌어들인 토큰 (작가만, 현금화 대기 중)
+- `earned_token_balance`: 작가가 벌어들인 토큰 (작가만, 현금화 대기 중)
+
+**Database Reference**: [artists table schema](database/TABLES.md#artists)
 
 ---
 
@@ -552,6 +554,8 @@ GET /api/styles?sort=popular&cursor=...&limit=20&tags=watercolor,portrait
   }
 }
 ```
+
+**Database Reference**: [styles table schema](database/TABLES.md#styles)
 
 #### 정렬 기준
 - `recent`: `created_at DESC`
@@ -1513,6 +1517,10 @@ X-CSRFToken: xyz789...
 
 ## 10. Webhook API (Internal)
 
+**Related Documentation**: 
+- [Training Server Architecture](../apps/training-server/README.md)
+- [Inference Server Architecture](../apps/inference-server/README.md)
+
 **⚠️ 내부 서버 간 통신 전용, 외부 접근 차단**
 
 ### 10.1 인증 방식
@@ -1755,6 +1763,8 @@ Content-Type: application/json
 - Inference Server: 주요 단계(10%, 25%, 50%, 75%, 90%)마다 전송
 - `progress` JSONB 필드에 저장
 - 프론트엔드는 5초마다 폴링하여 최대 30초 지연
+
+**Frontend Implementation**: Poll GET /api/styles/:id or GET /api/generations/:id every 5 seconds to check progress updates.
 
 ---
 
