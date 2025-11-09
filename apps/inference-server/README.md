@@ -23,7 +23,7 @@ Stable Diffusion-based image generation server. Receives generation requests fro
 | Diffusion | Diffusers (Hugging Face) | 0.25+ | Stable Diffusion inference |
 | Image Processing | Pillow (PIL) | 10.1+ | Watermark insertion |
 | Message Queue | RabbitMQ (pika) | 1.3+ | Task queue consumer |
-| Storage | AWS S3 (boto3) | 1.34+ | Image storage |
+| Storage | Google Cloud Storage (google-cloud-storage) | 2.14+ | Image storage |
 | HTTP Client | requests | 2.31+ | Webhook callbacks |
 | GPU | CUDA | 11.8+ | GPU acceleration |
 | Testing | pytest | 8.0+ | Unit tests |
@@ -55,7 +55,7 @@ apps/inference-server/
 │
 ├── services/                   # External service clients
 │   ├── __init__.py
-│   ├── s3_service.py          # S3 upload/download
+│   ├── gcs_service.py           # Cloud Storage upload/download
 │   └── webhook_service.py     # Backend API callbacks
 │
 ├── utils/                      # Utility functions
@@ -91,7 +91,7 @@ RabbitMQ Queue
   ↓
 Generation Consumer (receive message)
   ↓
-S3 Service (download LoRA weights)
+Cloud Storage Service (download LoRA weights)
   ↓
 Image Generator (generate image)
   ├─ Load Stable Diffusion pipeline
@@ -104,7 +104,7 @@ Watermark Inserter (insert watermark)
   ├─ Set position/opacity
   └─ Composite image
   ↓
-S3 Service (upload image)
+Cloud Storage Service (upload image)
   ↓
 Webhook Service (notify generation complete)
 ```
@@ -113,7 +113,7 @@ Webhook Service (notify generation complete)
 - `GenerationConsumer`: Receive generation tasks from RabbitMQ (max 10 simultaneous)
 - `ImageGenerator`: Stable Diffusion v1.5 + LoRA inference
 - `WatermarkInserter`: PIL-based artist signature watermark insertion
-- `S3Service`: Download/upload LoRA models/images
+- `GCSService`: Download/upload LoRA models/images from/to Google Cloud Storage
 - `WebhookService`: Send progress/results to Backend API
 
 ### Data Flow
@@ -122,11 +122,11 @@ Webhook Service (notify generation complete)
 ```
 Backend → RabbitMQ: Publish generation task
 RabbitMQ → Inference Server: Receive task
-Inference Server → S3: Download LoRA weights
+Inference Server → Cloud Storage: Download LoRA weights
 Inference Server: Stable Diffusion inference (50 steps)
-Inference Server → Backend: Report progress (0%, 25%, 50%, 75%, 90%, PATCH /api/webhooks/inference/progress)
+Inference Server → Backend: Report progress (10%, 25%, 50%, 75%, 90%, PATCH /api/webhooks/inference/progress)
 Inference Server: Automatically insert artist signature (watermark)
-Inference Server → S3: Upload generated image (.png)
+Inference Server → Cloud Storage: Upload generated image (.png)
 Inference Server → Backend: POST /api/webhooks/inference/complete
 Backend → Frontend: Return image URL
 ```
@@ -148,9 +148,9 @@ Backend → Frontend: Return image URL
 ### Prerequisites
 - Python 3.11+
 - CUDA 11.8+ (NVIDIA GPU required)
-- GPU Memory: Minimum 6GB VRAM (RTX 3060 or higher recommended)
+- GPU Memory: Minimum 6GB VRAM (NVIDIA T4 or higher recommended)
 - RabbitMQ 3.12+
-- AWS S3: Bucket and IAM permissions
+- Google Cloud Storage: Bucket and IAM permissions
 
 ### Installation
 
@@ -184,11 +184,10 @@ RABBITMQ_PORT=5672
 RABBITMQ_USER=user
 RABBITMQ_PASS=password
 
-# AWS S3 (IAM User Access Key)
-AWS_ACCESS_KEY_ID=your_key
-AWS_SECRET_ACCESS_KEY=your_secret
-AWS_STORAGE_BUCKET_NAME=stylelicense-media
-AWS_S3_REGION_NAME=ap-northeast-2
+# Google Cloud Storage
+# GCE VM에 연결된 서비스 계정을 통해 자동으로 인증되므로 별도 키 파일 불필요.
+# 코드에서는 버킷 이름만 지정하면 됩니다.
+GCS_BUCKET_NAME=stylelicense-media
 
 # Backend API (production server domain - use HTTPS)
 BACKEND_API_URL=https://api.stylelicense.com
@@ -240,7 +239,7 @@ pylint inference/ services/ consumer/ watermark/
 | Type | Coverage | Tools |
 |------|----------|-------|
 | Unit Tests | 60% | pytest |
-| Integration Tests | 30% | pytest + S3/RabbitMQ mocks |
+| Integration Tests | 30% | pytest + GCS/RabbitMQ mocks |
 | GPU Tests | 10% | pytest (requires GPU) |
 
 **Test Fixtures**: `tests/conftest.py`
@@ -250,44 +249,46 @@ pylint inference/ services/ consumer/ watermark/
 
 ## Deployment
 
-### Production Checklist
+### Production Checklist (GCP)
 
-**GPU Server: RunPod RTX 4090 24GB**
+**GPU Server: Google Compute Engine (GCE)**
 
-- [ ] **Create RunPod GPU Pod**
-  - GPU: RTX 4090 (24GB VRAM)
-  - Template: Custom Docker Image
-  - Image: `<registry>/stylelicense-inference:latest`
-- [ ] Use Docker image with CUDA 11.8+
+- [ ] **Create GCE VM Instance**
+  - **머신 타입**: n2d-standard-4 또는 유사 사양
+  - **GPU**: **NVIDIA T4 (16GB VRAM)** - 추론에 가장 비용 효율적
+  - **부팅 디스크**: Deep Learning on Linux 이미지 또는 CUDA 11.8+ 드라이버가 설치된 Ubuntu/Debian
+  - **프로비저닝 모델**: **Standard(표준)**. 24/7 운영을 위해 **1년 약정 사용 할인(CUD)** 적용하여 비용 절감.
+  - **서비스 계정**: Storage 관련 권한(`Storage 객체 생성자/뷰어`)이 있는 서비스 계정 연결
+
 - [ ] **Configure RabbitMQ connection**
-  - `RABBITMQ_HOST=<Backend-EC2-Public-IP>`
-  - Expose Backend EC2's RabbitMQ port (5672) publicly or use VPN
-  - Firewall: Allow RunPod Pod IP in Backend EC2 Security Group
-- [ ] **Configure S3 bucket**
-  - Generated images: Public Bucket (`stylelicense-generations`)
-  - **Set AWS Access Key environment variables** (for S3 access from RunPod Pod)
+  - `RABBITMQ_HOST=<RabbitMQ VM의 내부 IP>`
+  - GCE 방화벽 규칙에서 RabbitMQ 포트(5672)에 대한 내부 트래픽 허용
+
+- [ ] **Configure Cloud Storage bucket**
+  - 생성된 이미지를 저장할 버킷 생성 (`stylelicense-generations`)
+  - LoRA 모델이 저장된 버킷 (`stylelicense-models`)
+  - VM에 연결된 서비스 계정에 해당 버킷 접근 권한 부여
+
 - [ ] **Configure Backend API connection**
-  - `BACKEND_API_URL=https://api.stylelicense.com` (use domain)
-  - `INTERNAL_API_TOKEN=<32-character-UUID>` (for webhook authentication)
-  - Backend EC2 Security Group: Allow port 443 (RunPod IP or all)
-- [ ] GPU memory profiling (within 24GB)
-- [ ] Configure logging (RunPod console or CloudWatch)
+  - `BACKEND_API_URL=https://api.stylelicense.com` (Cloud Run Public URL)
+  - `INTERNAL_API_TOKEN=<32-character-UUID>` (내부 인증용)
+
+- [ ] GPU 메모리 프로파일링
+- [ ] Configure logging (Cloud Logging)
 - [ ] Install font files (for watermark - include in Docker image)
 - [ ] Set concurrent generation limit (`MAX_CONCURRENT_GENERATIONS=10`)
-- [ ] Configure log collection (CloudWatch, Sentry)
 - [ ] Establish model caching strategy
 
 ### Running in Production
 
 ```bash
-# Run with Docker (use GPU)
+# Run with Docker on GCE (use GPU)
 docker run --gpus all \
-    -e RABBITMQ_HOST=rabbitmq \
-    -e AWS_ACCESS_KEY_ID=$AWS_KEY \
-    -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET \
+    -e RABBITMQ_HOST=10.128.0.5 \
+    -e GCS_BUCKET_NAME=stylelicense-media \
     -e INTERNAL_API_TOKEN=$TOKEN \
     -e MAX_CONCURRENT_GENERATIONS=10 \
-    inference-server
+    stylelicense/inference-server:latest
 ```
 
 ---

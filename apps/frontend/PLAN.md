@@ -70,7 +70,7 @@ This document contains detailed subtasks for frontend development. For high-leve
   - [x] Test container starts with docker-compose up frontend
 
 **Exit Criteria**:
-- ✅ npm run dev starts dev server on localhost:3000
+- ✅ npm run dev starts dev server on localhost:5173
 - ✅ Tailwind CSS classes work
 - ✅ All dependencies installed without errors
 

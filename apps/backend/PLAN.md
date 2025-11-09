@@ -78,7 +78,7 @@ This document contains detailed subtasks for backend development. For high-level
 
 - [ ] Google OAuth provider setup
   - [ ] Configure SOCIALACCOUNT_PROVIDERS in settings.py
-  - [ ] Set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET from env
+  - [ ] Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET from env
   - [ ] Configure callback URL: /api/auth/google/callback
 
 - [ ] Session middleware configuration
@@ -92,7 +92,7 @@ This document contains detailed subtasks for backend development. For high-level
   - [ ] GET /api/auth/google/login - OAuth redirect to Google
   - [ ] GET /api/auth/google/callback - OAuth callback handler
     - [ ] Validate Google OAuth code
-    - [ ] Get or create User with google_id
+    - [ ] Get or create User with provider and provider_user_id
     - [ ] Create session
     - [ ] Return user data
   - [ ] POST /api/auth/logout
@@ -104,7 +104,7 @@ This document contains detailed subtasks for backend development. For high-level
 
 - [ ] User model customization
   - [ ] Extend AbstractUser in app/models/user.py
-  - [ ] Add fields: google_id, role, token_balance, profile_image_url
+  - [ ] Add fields: provider, provider_user_id, role, token_balance, profile_image
   - [ ] Create migration
 
 - [ ] URL routing

@@ -22,7 +22,7 @@ LoRA (Low-Rank Adaptation) based Stable Diffusion fine-tuning server. Receives t
 | Diffusion | Diffusers (Hugging Face) | 0.25+ | Stable Diffusion models |
 | LoRA | PEFT | 0.8+ | Parameter-Efficient Fine-Tuning |
 | Message Queue | RabbitMQ (pika) | 1.3+ | Task queue consumer |
-| Storage | AWS S3 (boto3) | 1.34+ | Model weights storage |
+| Storage | Google Cloud Storage (google-cloud-storage) | 2.14+ | Model weights storage |
 | HTTP Client | requests | 2.31+ | Webhook callbacks |
 | GPU | CUDA | 11.8+ | GPU acceleration |
 | Testing | pytest | 8.0+ | Unit tests |
@@ -51,7 +51,7 @@ apps/training-server/
 │
 ├── services/                   # External service clients
 │   ├── __init__.py
-│   ├── s3_service.py          # S3 upload/download
+│   ├── gcs_service.py           # Cloud Storage upload/download
 │   └── webhook_service.py     # Backend API callbacks
 │
 ├── utils/                      # Utility functions
@@ -87,7 +87,7 @@ RabbitMQ Queue
   ↓
 Training Consumer (receive message)
   ↓
-S3 Service (download training images)
+Cloud Storage Service (download training images)
   ↓
 LoRA Trainer (train model)
   ├─ Prepare dataset
@@ -96,7 +96,7 @@ LoRA Trainer (train model)
   ├─ Save checkpoint (every 10 epochs)
   └─ Report progress (every 30 seconds)
   ↓
-S3 Service (upload model weights)
+Cloud Storage Service (upload model weights)
   ↓
 Webhook Service (notify training complete)
 ```
@@ -104,7 +104,7 @@ Webhook Service (notify training complete)
 **Main Components:**
 - `TrainingConsumer`: Receive training tasks from RabbitMQ
 - `LoRATrainer`: Stable Diffusion v1.5 + LoRA training
-- `S3Service`: Download/upload images/models
+- `GCSService`: Download/upload images/models from/to Google Cloud Storage
 - `WebhookService`: Send progress/results to Backend API
 
 ### Data Flow
@@ -113,11 +113,11 @@ Webhook Service (notify training complete)
 ```
 Backend → RabbitMQ: Publish training task
 RabbitMQ → Training Server: Receive task
-Training Server → S3: Download images (10-30 images)
+Training Server → Cloud Storage: Download images (10-30 images)
 Training Server: LoRA Fine-tuning (100-500 epochs)
 Training Server → Backend: Report progress (every 30 seconds, PATCH /api/webhooks/training/progress)
-Training Server → S3: Save checkpoints (every 10 epochs)
-Training Server → S3: Upload final model (.safetensors)
+Training Server → Cloud Storage: Save checkpoints (every 10 epochs)
+Training Server → Cloud Storage: Upload final model (.safetensors)
 Training Server → Backend: POST /api/webhooks/training/complete
 Backend → Frontend: Training complete notification
 ```
@@ -139,9 +139,9 @@ Backend → Frontend: Training complete notification
 ### Prerequisites
 - Python 3.11+
 - CUDA 11.8+ (NVIDIA GPU required)
-- GPU Memory: Minimum 8GB VRAM (RTX 3060 or higher recommended)
+- GPU Memory: Minimum 8GB VRAM (NVIDIA T4 or higher recommended)
 - RabbitMQ 3.12+
-- AWS S3: Bucket and IAM permissions
+- Google Cloud Storage: Bucket and IAM permissions
 
 ### Installation
 
@@ -175,11 +175,10 @@ RABBITMQ_PORT=5672
 RABBITMQ_USER=user
 RABBITMQ_PASS=password
 
-# AWS S3 (IAM User Access Key)
-AWS_ACCESS_KEY_ID=your_key
-AWS_SECRET_ACCESS_KEY=your_secret
-AWS_STORAGE_BUCKET_NAME=stylelicense-media
-AWS_S3_REGION_NAME=ap-northeast-2
+# Google Cloud Storage
+# GCE VM에 연결된 서비스 계정을 통해 자동으로 인증되므로 별도 키 파일 불필요.
+# 코드에서는 버킷 이름만 지정하면 됩니다.
+GCS_BUCKET_NAME=stylelicense-media
 
 # Backend API (production server domain - use HTTPS)
 BACKEND_API_URL=https://api.stylelicense.com
@@ -228,7 +227,7 @@ pylint training/ services/ consumer/
 | Type | Coverage | Tools |
 |------|----------|-------|
 | Unit Tests | 60% | pytest |
-| Integration Tests | 30% | pytest + S3/RabbitMQ mocks |
+| Integration Tests | 30% | pytest + GCS/RabbitMQ mocks |
 | GPU Tests | 10% | pytest (requires GPU) |
 
 **Test Fixtures**: `tests/conftest.py`
@@ -238,42 +237,41 @@ pylint training/ services/ consumer/
 
 ## Deployment
 
-### Production Checklist
+### Production Checklist (GCP)
 
-**GPU Server: RunPod RTX 4090 24GB**
+**GPU Server: Google Compute Engine (GCE)**
 
-- [ ] **Create RunPod GPU Pod**
-  - GPU: RTX 4090 (24GB VRAM)
-  - Template: Custom Docker Image
-  - Image: `<registry>/stylelicense-training:latest`
-- [ ] Use Docker image with CUDA 11.8+
+- [ ] **Create GCE VM Instance**
+  - **머신 타입**: n2d-standard-4 또는 유사 사양
+  - **GPU**: NVIDIA L4 (24GB VRAM) 또는 T4 (16GB VRAM)
+  - **부팅 디스크**: Deep Learning on Linux 이미지 또는 CUDA 11.8+ 드라이버가 설치된 Ubuntu/Debian
+  - **프로비저닝 모델**: **Spot(선점형)** 으로 설정하여 비용 절감 (강력 추천)
+  - **서비스 계정**: Storage 관련 권한(`Storage 객체 생성자/뷰어`)이 있는 서비스 계정 연결
+
 - [ ] **Configure RabbitMQ connection**
-  - `RABBITMQ_HOST=<Backend-EC2-Public-IP>`
-  - Expose Backend EC2's RabbitMQ port (5672) publicly or use VPN
-  - Firewall: Allow RunPod Pod IP in Backend EC2 Security Group
-- [ ] **Configure S3 bucket**
-  - Training images: Private Bucket (`stylelicense-training-data`)
-  - Model files: Private Bucket (`stylelicense-models`)
-  - **Set AWS Access Key environment variables** (for S3 access from RunPod Pod)
+  - `RABBITMQ_HOST=<RabbitMQ VM의 내부 IP>`
+  - GCE 방화벽 규칙에서 RabbitMQ 포트(5672)에 대한 내부 트래픽 허용
+
+- [ ] **Configure Cloud Storage bucket**
+  - 학습 이미지, 모델 파일을 저장할 버킷 생성 (`stylelicense-media`, `stylelicense-models`)
+  - VM에 연결된 서비스 계정에 해당 버킷 접근 권한 부여
+
 - [ ] **Configure Backend API connection**
-  - `BACKEND_API_URL=https://api.stylelicense.com` (use domain)
-  - `INTERNAL_API_TOKEN=<32-character-UUID>` (for webhook authentication)
-  - Backend EC2 Security Group: Allow port 443 (RunPod IP or all)
-- [ ] GPU memory profiling (within 24GB)
-- [ ] Configure logging (RunPod console or CloudWatch)
-- [ ] Set checkpoint save path
-- [ ] Configure log collection (CloudWatch, Sentry)
+  - `BACKEND_API_URL=https://api.stylelicense.com` (Cloud Run Public URL)
+  - `INTERNAL_API_TOKEN=<32-character-UUID>` (내부 인증용)
+
+- [ ] GPU 메모리 프로파일링
+- [ ] Configure logging (Cloud Logging)
 
 ### Running in Production
 
 ```bash
-# Run with Docker (use GPU)
+# Run with Docker on GCE (use GPU)
 docker run --gpus all \
-    -e RABBITMQ_HOST=rabbitmq \
-    -e AWS_ACCESS_KEY_ID=$AWS_KEY \
-    -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET \
+    -e RABBITMQ_HOST=10.128.0.5 \
+    -e GCS_BUCKET_NAME=stylelicense-media \
     -e INTERNAL_API_TOKEN=$TOKEN \
-    training-server
+    stylelicense/training-server:latest
 ```
 
 ---

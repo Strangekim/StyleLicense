@@ -271,206 +271,65 @@ DATABASES = {
 
 ---
 
-## 3. 백업 & 복구
+## 3. 백업 & 복구 (Cloud SQL)
 
-### 정기 백업 스크립트
+**운영 환경: Google Cloud SQL for PostgreSQL**
 
+Cloud SQL은 완전 관리형 서비스이므로, 백업 및 복구가 매우 간단하며 자동화됩니다. EC2에서처럼 `pg_dump`를 수동으로 실행하고 Cron을 설정할 필요가 없습니다.
+
+### 3.1 자동 백업
+- **정책**: Cloud SQL은 하루에 한 번 지정된 시간에 모든 데이터베이스를 자동으로 백업합니다.
+- **보관**: 최근 7개의 자동 백업이 기본적으로 보관되며, 최대 365일까지 보관 기간을 설정할 수 있습니다.
+- **설정**: GCP 콘솔의 Cloud SQL 인스턴스 설정에서 백업 시간과 보관 주기를 설정할 수 있습니다.
+
+### 3.2 특정 시점 복구 (Point-in-Time Recovery, PITR)
+- **기능**: PITR을 활성화하면, 마지막 자동 백업 이후 특정 시점(분 단위)으로 데이터베이스를 복구할 수 있습니다. 트랜잭션 로그(WAL)를 사용하여 정밀한 복구를 지원합니다.
+- **요구사항**: PITR을 사용하려면 자동 백업이 활성화되어 있어야 합니다.
+- **복구 방법**: GCP 콘솔에서 복구하려는 인스턴스를 선택하고 '복제' 또는 '복원' 옵션을 통해 특정 시점을 지정하면, 해당 시점의 데이터를 가진 새로운 인스턴스가 생성됩니다.
+
+### 3.3 수동 백업 (On-Demand)
+- **필요성**: 배포 직전이나 중요한 데이터 변경 작업 전에 안전장치로 수동 백업을 생성할 수 있습니다.
+- **방법**: GCP 콘솔 또는 `gcloud` CLI 명령어를 통해 언제든지 현재 상태의 백업을 생성할 수 있습니다.
 ```bash
-#!/bin/bash
-# /usr/local/bin/daily_backup.sh
-
-DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/var/backups/postgresql"
-DB_NAME="style_license_db"
-
-# Full backup (압축)
-pg_dump -U postgres -Fc $DB_NAME > $BACKUP_DIR/backup_$DATE.dump
-
-# 7일 이상 된 백업 삭제
-find $BACKUP_DIR -name "backup_*.dump" -mtime +7 -delete
-
-echo "Backup completed: backup_$DATE.dump"
+# gcloud를 사용한 수동 백업 생성
+gcloud sql backups create --instance=[INSTANCE_NAME] --description="Pre-deployment backup"
 ```
 
-### Crontab 설정
-
+### 3.4 데이터 내보내기 (Export)
+- **용도**: 다른 PostgreSQL 데이터베이스로 데이터를 이전하거나, 특정 형식(SQL, CSV)으로 데이터를 내보낼 때 사용합니다.
+- **방법**: Cloud Storage 버킷을 지정하여 `pg_dump` 형식의 SQL 파일 또는 CSV 파일로 내보낼 수 있습니다.
 ```bash
-# 매일 새벽 3시 백업
-0 3 * * * /usr/local/bin/daily_backup.sh >> /var/log/backup.log 2>&1
-```
-
-### 복구
-
-```bash
-# 전체 복구
-pg_restore -U postgres -d style_license_db -c backup_20250101.dump
-
-# 특정 테이블만 복구
-pg_restore -U postgres -d style_license_db -t users backup.dump
-
-# SQL 파일 복구
-psql -U postgres style_license_db < backup.sql
-```
-
-### PostgreSQL 로컬 백업 전략
-
-**운영 환경: Backend EC2 로컬 PostgreSQL 15**
-
-#### 수동 백업
-
-```bash
-# 전체 DB 백업 (압축)
-pg_dump -U postgres -Fc style_license_db > /var/backups/postgresql/backup_$(date +%Y%m%d_%H%M%S).dump
-
-# SQL 파일로 백업 (가독성 좋음)
-pg_dump -U postgres style_license_db > /var/backups/postgresql/backup_$(date +%Y%m%d).sql
-
-# 특정 테이블만 백업
-pg_dump -U postgres -t users -t styles style_license_db > users_styles_backup.sql
-```
-
-#### 자동 백업 스크립트 (Cron)
-
-**백업 스크립트** (`/usr/local/bin/postgres_backup.sh`):
-```bash
-#!/bin/bash
-DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/var/backups/postgresql"
-DB_NAME="style_license_db"
-S3_BUCKET="s3://stylelicense-db-backups"
-
-# 1. 로컬 백업
-pg_dump -U postgres -Fc $DB_NAME > $BACKUP_DIR/backup_$DATE.dump
-
-# 2. S3 업로드 (선택사항)
-aws s3 cp $BACKUP_DIR/backup_$DATE.dump $S3_BUCKET/
-
-# 3. 로컬 파일 7일 이상 된 백업 삭제
-find $BACKUP_DIR -name "backup_*.dump" -mtime +7 -delete
-
-echo "Backup completed: backup_$DATE.dump"
-```
-
-**Crontab 설정** (매일 새벽 3시):
-```bash
-0 3 * * * /usr/local/bin/postgres_backup.sh >> /var/log/postgres_backup.log 2>&1
-```
-
-#### 백업 검증
-
-```bash
-# 백업 파일 리스트
-ls -lh /var/backups/postgresql/
-
-# 백업 파일 무결성 확인
-pg_restore --list /var/backups/postgresql/backup_20250130.dump
-
-# S3 백업 확인 (선택사항)
-aws s3 ls s3://stylelicense-db-backups/
+# 특정 데이터베이스를 SQL 형식으로 Cloud Storage에 내보내기
+gcloud sql export sql [INSTANCE_NAME] gs://[BUCKET_NAME]/sqldump.sql --database=[DATABASE_NAME]
 ```
 
 ---
 
-## 4. 모니터링
+## 4. 모니터링 (Cloud SQL)
 
-### 테이블 크기 확인
+Cloud SQL은 Google Cloud의 모니터링 서비스와 완벽하게 통합되어 있어, 별도의 모니터링 에이전트 설치 없이도 상세한 지표를 확인할 수 있습니다.
 
-```sql
--- 테이블별 크기
-SELECT 
-    tablename,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
-FROM pg_tables
-WHERE schemaname = 'public'
-ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
-```
+### 4.1 Cloud SQL 대시보드
+- GCP 콘솔의 Cloud SQL 페이지에서 각 인스턴스에 대한 핵심 성능 지표를 실시간으로 확인할 수 있습니다.
+- **주요 모니터링 항목**:
+  - CPU 사용률
+  - 메모리 사용률
+  - 스토리지 사용률
+  - 활성 연결 수 (Active Connections)
+  - 읽기/쓰기 작업 수 (IOPS)
+  - 트랜잭션 처리량
 
-### 커넥션 모니터링
+### 4.2 Cloud Monitoring (구 Stackdriver)
+- **기능**: 더 상세한 측정항목을 보고, 특정 조건에 대한 알림(Alerting)을 설정할 수 있습니다.
+- **알림 정책 예시**:
+  - CPU 사용률이 10분 동안 80% 이상일 경우 이메일 알림
+  - 사용 가능한 스토리지가 10% 미만일 경우 Slack 알림
+  - 활성 연결 수가 100개를 초과할 경우 PagerDuty 알림
 
-```sql
--- 현재 연결 수
-SELECT count(*) FROM pg_stat_activity;
-
--- 활성 쿼리
-SELECT 
-    pid,
-    usename,
-    state,
-    query_start,
-    now() - query_start AS duration,
-    query
-FROM pg_stat_activity
-WHERE state != 'idle'
-ORDER BY duration DESC;
-
--- 긴 트랜잭션 (30초 이상)
-SELECT 
-    pid,
-    now() - xact_start AS duration,
-    state,
-    query
-FROM pg_stat_activity
-WHERE xact_start IS NOT NULL
-  AND now() - xact_start > interval '30 seconds';
-
--- 락 대기 중인 쿼리
-SELECT 
-    blocked.pid AS blocked_pid,
-    blocked.query AS blocked_query,
-    blocking.pid AS blocking_pid,
-    blocking.query AS blocking_query
-FROM pg_stat_activity blocked
-JOIN pg_locks blocked_locks ON blocked.pid = blocked_locks.pid
-JOIN pg_locks blocking_locks ON blocking_locks.locktype = blocked_locks.locktype
-JOIN pg_stat_activity blocking ON blocking.pid = blocking_locks.pid
-WHERE NOT blocked_locks.granted
-  AND blocking_locks.granted;
-```
-
-### Django 쿼리 로깅
-
-```python
-# settings.py (개발 환경)
-LOGGING = {
-    'version': 1,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'loggers': {
-        'django.db.backends': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-        },
-    },
-}
-```
-
-### Prometheus + Grafana
-
-```python
-# pip install django-prometheus
-
-# settings.py
-INSTALLED_APPS = [
-    'django_prometheus',
-    # ...
-]
-
-MIDDLEWARE = [
-    'django_prometheus.middleware.PrometheusBeforeMiddleware',
-    # ...
-    'django_prometheus.middleware.PrometheusAfterMiddleware',
-]
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django_prometheus.db.backends.postgresql',
-        # ...
-    }
-}
-```
+### 4.3 슬로우 쿼리 분석
+- **기능**: Cloud SQL은 `pg_stat_statements` 확장을 지원하며, 쿼리 실행 통계를 Cloud Logging으로 전송하도록 설정할 수 있습니다.
+- **설정**: 데이터베이스 플래그 `cloudsql.enable_pg_stat_statements`를 `on`으로 설정합니다.
+- **분석**: Cloud Logging에서 `logName="projects/[PROJECT_ID]/logs/cloudsql.googleapis.com%2Fpostgres.log"` 필터를 사용하여 실행 시간이 오래 걸리는 쿼리를 식별하고 분석할 수 있습니다.
 
 ---
 

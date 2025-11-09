@@ -41,8 +41,8 @@ def google_login(google_user_id, email, username, profile_image):
         user.save()
         
         Transaction.objects.create(
-            sender_id=user.id,
-            receiver_id=None,
+            sender_id=None,        # 플랫폼에서 지급
+            receiver_id=user.id,   # 신규 사용자가 수령
             amount=100,
             status='completed',
             memo='Welcome bonus'

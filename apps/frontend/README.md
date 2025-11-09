@@ -738,11 +738,11 @@ npm run dev
 ### Environment Variables
 
 ```bash
-# Backend API URL
+# Backend API URL for local development
 VITE_API_BASE_URL=http://localhost:8000
 
-# S3 image domain (optional)
-VITE_S3_BASE_URL=https://stylelicense-media.s3.ap-northeast-2.amazonaws.com
+# Production API URL (will be proxied by the frontend host or configured directly)
+VITE_PROD_API_BASE_URL=https://api.stylelicense.com
 
 # Default language
 VITE_DEFAULT_LOCALE=ko
@@ -919,61 +919,45 @@ describe('useAuth', () => {
 
 ---
 
-## Deployment
+## Deployment (GCP)
 
-### Production Checklist
+### Production Deployment to Cloud Storage + CDN
 
-- [ ] Set environment variables (`VITE_API_BASE_URL=https://stylelicense.com`)
-- [ ] No build errors (`npm run build`)
-- [ ] E2E tests pass (`npm run test:e2e`)
-- [ ] Lint passes (`npm run lint`)
-- [ ] Create Backend EC2 Nginx directory (`/var/www/stylelicense/frontend/`)
-- [ ] Verify DNS configuration (A record: stylelicense.com → EC2 Public IP)
-- [ ] Verify CORS configuration (Backend)
-- [ ] Set CSP headers (Nginx)
+이 Vue.js 프론트엔드 애플리케이션은 정적 웹사이트로 빌드되어 **Google Cloud Storage**에 호스팅되고, **Google Cloud CDN**을 통해 전 세계 사용자에게 빠르고 안전하게(HTTPS) 제공됩니다.
 
-### Deployment to Backend EC2 (Nginx Static Files)
+### Deployment Steps
 
-```bash
-# 1. Production build
-npm run build
+1.  **Production Build**:
+    로컬 또는 CI/CD 환경에서 프로덕션용 정적 파일을 빌드합니다. 빌드 결과물은 `dist` 폴더에 생성됩니다.
+    ```bash
+    npm run build
+    ```
 
-# 2. Transfer to Backend EC2 (SCP)
-scp -r dist/* ubuntu@stylelicense.com:/var/www/stylelicense/frontend/
+2.  **Upload to Google Cloud Storage**:
+    `gcloud` CLI를 사용하여 `dist` 폴더의 모든 내용을 Cloud Storage 버킷에 업로드합니다. `-r` 플래그는 디렉토리를 재귀적으로 복사합니다.
+    ```bash
+    # -m 플래그는 병렬 업로드를 활성화하여 속도를 높입니다.
+    gcloud storage cp -r dist/* gs://your-frontend-bucket -m
+    ```
 
-# 3. Reload Nginx (if needed)
-ssh ubuntu@stylelicense.com 'sudo systemctl reload nginx'
-```
+3.  **Set Public Access**:
+    업로드된 파일들을 웹에서 접근할 수 있도록 버킷의 모든 객체에 공개 읽기 권한을 부여합니다.
+    ```bash
+    gcloud storage buckets add-iam-policy-binding gs://your-frontend-bucket --member=allUsers --role=roles/storage.objectViewer
+    ```
 
-**Build output**: `dist/` folder (static files)
+4.  **Configure as a Website**:
+    버킷을 웹사이트로 작동하도록 설정하고, SPA(Single Page Application) 라우팅을 위해 에러 페이지를 `index.html`로 지정합니다.
+    ```bash
+    gcloud storage buckets update gs://your-frontend-bucket --web-main-page-suffix=index.html --web-error-page=index.html
+    ```
 
-**Nginx configuration example** (Backend EC2's `/etc/nginx/sites-available/stylelicense`):
-```nginx
-server {
-    listen 443 ssl http2;
-    server_name stylelicense.com;
+5.  **Setup Cloud CDN and HTTPS**:
+    - GCP 콘솔에서 `Cloud CDN`을 설정하고, 백엔드로 Cloud Storage 버킷을 지정합니다.
+    - 이 과정을 통해 생성된 로드밸런서에 Google 관리 SSL 인증서가 자동으로 발급 및 적용되어 커스텀 도메인(예: `www.stylelicense.com`)에 대한 HTTPS가 활성화됩니다.
 
-    # Frontend static files (SPA)
-    location / {
-        root /var/www/stylelicense/frontend;
-        try_files $uri $uri/ /index.html;
-
-        # Caching configuration (static file optimization)
-        location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$ {
-            expires 1y;
-            add_header Cache-Control "public, immutable";
-        }
-    }
-
-    # Backend API proxy
-    location /api/ {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-    }
-}
-```
-
-**Automation**: Automatically executed in GitHub Actions (`.github/workflows/frontend.yml`)
+### Automation
+이 모든 과정은 GitHub Actions와 같은 CI/CD 파이프라인을 통해 자동화하는 것이 권장됩니다. `main` 브랜치에 코드가 머지되면, 빌드, 테스트, GCS 업로드 과정이 자동으로 실행됩니다.
 
 ---
 

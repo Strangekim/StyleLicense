@@ -22,7 +22,7 @@ Style License API server based on Django REST Framework. Provides user authentic
 | Database | PostgreSQL | 15.x | Primary database |
 | Message Queue | RabbitMQ (pika) | 1.3+ | Async task queue |
 | Authentication | django-allauth | 0.57+ | OAuth2 (Google) |
-| Storage | AWS S3 (boto3) | 1.34+ | Image/model storage |
+| Storage | Google Cloud Storage (google-cloud-storage) | 2.14+ | Image/model storage |
 | Testing | pytest, pytest-django | 8.0+, 4.7+ | Unit/integration tests |
 | Code Quality | black, pylint | 23.12+, 3.0+ | Formatting, linting |
 
@@ -73,7 +73,7 @@ apps/backend/
 │   ├── services/              # Business logic layer
 │   │   ├── token_service.py   # Token operations
 │   │   ├── rabbitmq_service.py # Message queue operations
-│   │   ├── s3_service.py      # Storage operations
+│   │   ├── gcs_service.py       # Storage operations
 │   │   └── notification_service.py # Notification operations
 │   │
 │   ├── permissions/           # Custom DRF permissions
@@ -113,7 +113,7 @@ Model (Data Access)
 **Main Services:**
 - `TokenService`: Token consumption/refund (atomicity guaranteed)
 - `RabbitMQService`: Send tasks to AI servers
-- `S3Service`: Image/model file upload/download
+- `GCSService`: Image/model file upload/download to Google Cloud Storage
 - `NotificationService`: Notification creation/delivery
 
 ### Data Flow
@@ -121,28 +121,28 @@ Model (Data Access)
 #### 1. Model Training Flow
 ```
 Artist → Frontend: Upload images
-Frontend → Backend: POST /api/styles/
-Backend → S3: Store images
+Frontend → Backend(Cloud Run): POST /api/styles/
+Backend → Cloud Storage: Store images
 Backend → RabbitMQ: Publish training task
 RabbitMQ → Training Server: Receive task
 Training Server: LoRA Fine-tuning
-Training Server → Backend: PATCH /api/webhooks/training/progress
+Training Server → Backend(Cloud Run): PATCH /api/webhooks/training/progress
 Backend → Frontend: Poll training progress
-Training Server → S3: Store model file
-Training Server → Backend: POST /api/webhooks/training/complete
+Training Server → Cloud Storage: Store model file
+Training Server → Backend(Cloud Run): POST /api/webhooks/training/complete
 Backend → NotificationService: Create notification
 ```
 
 #### 2. Image Generation Flow
 ```
 User → Frontend: Enter prompt
-Frontend → Backend: POST /api/generations/
+Frontend → Backend(Cloud Run): POST /api/generations/
 Backend → TokenService: Deduct tokens
 Backend → RabbitMQ: Publish generation task
 RabbitMQ → Inference Server: Receive task
 Inference Server: Generate image + Insert signature
-Inference Server → S3: Store image
-Inference Server → Backend: POST /api/webhooks/inference/complete
+Inference Server → Cloud Storage: Store image
+Inference Server → Backend(Cloud Run): POST /api/webhooks/inference/complete
 Backend → Frontend: Return image URL
 ```
 
@@ -168,7 +168,7 @@ pip install -r requirements/development.txt
 
 # 3. Set environment variables
 cp .env.example .env
-# Edit .env file (DATABASE_URL, RABBITMQ_HOST, AWS_* etc.)
+# Edit .env file (DATABASE_URL, RABBITMQ_HOST, etc.)
 
 # 4. Run database migrations
 python manage.py migrate
@@ -183,22 +183,21 @@ python manage.py runserver
 ### Environment Variables
 
 ```bash
-# Database
+# Database (Cloud SQL)
+# Cloud Run 환경에서는 Cloud SQL 연결 설정을 통해 자동으로 주입됩니다.
+# 로컬 개발 시에는 Cloud SQL Auth Proxy 또는 로컬 DB 주소를 사용합니다.
 DATABASE_URL=postgresql://user:pass@localhost:5432/stylelicense
 
-# RabbitMQ
+# RabbitMQ (on GCE)
+# 운영 환경에서는 GCE VM의 내부 IP를 사용합니다.
 RABBITMQ_HOST=localhost
 RABBITMQ_PORT=5672
 RABBITMQ_USER=guest
 RABBITMQ_PASS=guest
 
-# AWS S3 (for local development)
-AWS_ACCESS_KEY_ID=your_key
-AWS_SECRET_ACCESS_KEY=your_secret
-AWS_STORAGE_BUCKET_NAME=stylelicense-media
-AWS_S3_REGION_NAME=ap-northeast-2
-
-# Production: Use EC2 IAM Role (no environment variables needed)
+# Google Cloud Storage
+# Cloud Run 서비스 계정에 Storage 권한을 부여하므로, 키가 필요 없습니다.
+GCS_BUCKET_NAME=stylelicense-media
 
 # OAuth
 GOOGLE_CLIENT_ID=your_client_id
@@ -209,7 +208,7 @@ SECRET_KEY=your_django_secret_key
 INTERNAL_API_TOKEN=your_internal_token  # For AI server webhook authentication
 
 # CORS
-CORS_ALLOWED_ORIGINS=http://localhost:5173
+CORS_ALLOWED_ORIGINS=http://localhost:5173,https://your-frontend-domain.com
 ```
 
 ---
@@ -259,36 +258,11 @@ python manage.py migrate app 0002  # Rollback to 0002
 
 For complete API specification, refer to **[docs/API.md](../../docs/API.md)**.
 
-**Main Endpoint Groups:**
-- **Authentication**: `/api/auth/google/login`, `/api/auth/me`, `/api/auth/logout`
-- **User**: `/api/users/:id`, `/api/users/me`, `/api/users/me/upgrade-to-artist`
-- **Token**: `/api/tokens/balance`, `/api/tokens/transactions`, `/api/tokens/purchase`
-- **Style**: `/api/styles`, `/api/styles/:id`, `/api/styles/me`
-- **Generation**: `/api/generations`, `/api/generations/:id`, `/api/generations/feed`, `/api/generations/me`
-- **Social**: `/api/users/:id/follow`, `/api/generations/:id/like`, `/api/generations/:id/comments`
-- **Search**: `/api/search` (query parameter: `?type=styles|artists|all`)
-- **Notification**: `/api/notifications`, `/api/notifications/:id/read`, `/api/notifications/read-all`
-- **Webhook** (Internal): `/api/webhooks/training/*`, `/api/webhooks/inference/*`
-
 ---
 
 ## Database Schema
 
 For complete schema, refer to **[docs/database/README.md](../../docs/database/README.md)**.
-
-**Main Models (15 tables):**
-- **Auth**: users, artists
-- **Token**: transactions, purchases
-- **Style**: styles, artworks
-- **Generation**: generations
-- **Community**: follows, likes, comments
-- **Tagging**: tags, style_tags, artwork_tags, generation_tags
-- **System**: notifications
-
-**Important Field Descriptions**:
-- `users.role`: 'user' or 'artist' (artist permission distinction)
-- `styles.generation_cost_tokens`: Token cost per image
-- `transactions.transaction_type`: Transaction type ('purchase', 'generation', 'withdrawal', 'transfer')
 
 ---
 
@@ -307,58 +281,48 @@ For complete schema, refer to **[docs/database/README.md](../../docs/database/RE
 
 ---
 
-## Deployment
+## Deployment (GCP)
 
-### Production Checklist
+### Production Deployment to Cloud Run
 
-- [ ] `DEBUG = False`
-- [ ] Set `ALLOWED_HOSTS` (add domain: stylelicense.com)
-- [ ] **PostgreSQL 15.x setup (Docker recommended)**
-  - **Using Docker (recommended)**:
+이 Django 백엔드 애플리케이션은 컨테이너화되어 **Google Cloud Run**으로 배포됩니다. Cloud Run은 서버리스 환경으로, 트래픽에 따라 자동으로 확장/축소되며 별도의 웹 서버(Nginx, Gunicorn) 설정이 필요 없습니다.
+
+### Prerequisites
+- `gcloud` CLI 설치 및 인증
+- Google Artifact Registry에 Docker 이미지 Push
+
+### Deployment Steps
+
+1.  **Dockerfile 준비**: 프로젝트 루트의 `Dockerfile`이 컨테이너를 빌드하는 데 사용됩니다. Gunicorn이 Dockerfile 내에서 실행되도록 설정합니다.
+
+2.  **Docker 이미지 빌드 및 Push**:
     ```bash
-    docker run -d --name postgres \
-      -e POSTGRES_PASSWORD=your_password \
-      -v /var/lib/postgresql/data:/var/lib/postgresql/data \
-      -p 5432:5432 postgres:15
+    # GCP Project ID 설정
+    export PROJECT_ID=your-gcp-project-id
+    export REPO_NAME=stylelicense
+    export IMAGE_NAME=backend
+
+    # Artifact Registry에 이미지 Push
+    gcloud builds submit --tag gcr.io/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:latest .
     ```
-  - **Local installation (alternative)**:
+
+3.  **Cloud Run 배포**:
+    `gcloud run deploy` 명령어를 사용하여 컨테이너를 배포합니다. 이 과정에서 필요한 환경 변수와 Cloud SQL 연결을 설정합니다.
+
     ```bash
-    sudo apt install postgresql-15
-    createdb stylelicense_db
+    gcloud run deploy stylelicense-backend \
+      --image gcr.io/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:latest \
+      --platform managed \
+      --region asia-northeast3 \
+      --allow-unauthenticated \
+      --add-cloudsql-instances [INSTANCE_CONNECTION_NAME] \
+      --set-env-vars="SECRET_KEY=your_secret_key,GCS_BUCKET_NAME=stylelicense-media,RABBITMQ_HOST=10.x.x.x"
     ```
-  - `DATABASE_URL=postgresql://user:pass@localhost:5432/stylelicense_db`
-- [ ] **RabbitMQ Docker setup**
-  - `docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management`
-  - `RABBITMQ_HOST=localhost`
-  - Management UI accessible only via SSH tunnel
-- [ ] S3 bucket setup and IAM permissions (**Use EC2 IAM Role**)
-  - Assign S3 Full Access IAM Role to EC2
-  - Training images: Private Bucket
-  - Generated images: Public Bucket
-- [ ] Manage `SECRET_KEY` via environment variable (32+ random characters)
-- [ ] **Nginx configuration**
-  - Reverse Proxy: Gunicorn (:8000) proxy
-  - Serve Frontend static files (/var/www/stylelicense/frontend/)
-  - Serve Django Static files (/home/ubuntu/stylelicense/apps/backend/staticfiles/)
-  - Config file: `/etc/nginx/sites-available/stylelicense`
-- [ ] **Let's Encrypt SSL certificate setup**
-  - `sudo certbot --nginx -d stylelicense.com -d www.stylelicense.com`
-  - Verify auto-renewal: `sudo certbot renew --dry-run`
-- [ ] **DNS configuration**
-  - A record: stylelicense.com → Backend EC2 Public IP
-- [ ] Collect static files: `python manage.py collectstatic --noinput`
-- [ ] Gunicorn/uWSGI configuration (workers: CPU cores * 2 + 1)
-- [ ] Sentry error monitoring (`SENTRY_DSN` environment variable)
 
-### Running in Production
-
-```bash
-# Run with Gunicorn
-gunicorn config.wsgi:application \
-    --bind 0.0.0.0:8000 \
-    --workers 4 \
-    --timeout 120
-```
+### 주요 설정
+- **데이터베이스 연결**: `--add-cloudsql-instances` 플래그를 사용하여 Cloud SQL Auth Proxy를 자동으로 활성화하고 안전하게 DB에 연결합니다. `DATABASE_URL`은 Cloud Run 환경에 맞게 설정됩니다.
+- **환경 변수**: `--set-env-vars` 플래그를 사용하여 민감하지 않은 환경 변수를 설정합니다. 민감한 정보(API 키 등)는 **Secret Manager**를 사용하는 것이 권장됩니다.
+- **자동 확장**: Cloud Run은 요청 수에 따라 인스턴스 수를 0에서 설정된 최대값까지 자동으로 조절합니다.
 
 ---
 

@@ -1,6 +1,6 @@
-# Production Docker Compose Configuration
-# For deployment on EC2 with PostgreSQL and RabbitMQ
-# AI servers (training/inference) run on separate RunPod GPU instances
+# Legacy Production Docker Compose Configuration (Deprecated)
+# ⚠️ This configuration is no longer used for production deployment
+# Current production uses Google Cloud Platform (GCP) services - see DOCKER.md for details
 
 version: '3.8'
 
@@ -77,8 +77,8 @@ services:
       - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN}
       - SENTRY_DSN=${SENTRY_DSN}
       # Google OAuth
-      - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
-      - GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GOOGLE_OAUTH_REDIRECT_URI=${GOOGLE_OAUTH_REDIRECT_URI}
       # Toss Payment
       - TOSS_CLIENT_KEY=${TOSS_CLIENT_KEY}

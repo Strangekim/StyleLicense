@@ -101,7 +101,7 @@ class StyleModel(models.Model):
     # Fields
     artist = models.ForeignKey(
         User,
-        on_delete=models.RESTRICT,  # Restrict artist deletion
+        on_delete=models.CASCADE,  # Cascade artist deletion
         related_name='styles'
     )
     name = models.CharField(max_length=200)
@@ -172,8 +172,8 @@ class TokenTransaction(models.Model):
         """
         Check if refundable.
 
-        Note: transaction_type is not a DB column but dynamically calculated in Serializer.
-        Actual implementation determines by combination of sender_id, receiver_id, related_generation_id.
+        Only generation transactions (where sender, receiver, and related_generation are all present)
+        are eligible for refunds.
         """
         # Only image generation payments are refundable
         is_generation_payment = (

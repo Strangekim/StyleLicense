@@ -497,8 +497,8 @@ GET /api/generations?cursor=2025-01-15T12:34:56Z&limit=20
   "data": {
     "style_id": 123,
     "images": [
-      "s3://bucket/training/image1.jpg",
-      "s3://bucket/training/image2.jpg"
+      "gs://stylelicense-media/training/image1.jpg",
+      "gs://stylelicense-media/training/image2.jpg"
     ],
     "tags": ["watercolor", "portrait", "vintage"],
     "parameters": {
@@ -562,8 +562,8 @@ GET /api/generations?cursor=2025-01-15T12:34:56Z&limit=20
   "success": true,
   "data": {
     "style_id": 123,
-    "model_file_url": "s3://bucket/models/style-123.safetensors",
-    "training_logs": "s3://bucket/logs/style-123.log"
+    "model_file_url": "gs://stylelicense-models/style-123.safetensors",
+    "training_logs": "gs://stylelicense-logs/style-123.log"
   },
   "completed_at": "2025-01-20T10:30:00.000Z"
 }

@@ -569,6 +569,7 @@ CREATE TABLE tags;
 
 -- 2. users 의존
 CREATE TABLE artists;
+CREATE TABLE purchases;
 CREATE TABLE styles;
 CREATE TABLE generations;
 CREATE TABLE follows;
@@ -576,19 +577,16 @@ CREATE TABLE notifications;
 
 -- 3. styles 의존
 CREATE TABLE artworks;
-CREATE TABLE transactions;
 
 -- 4. generations 의존
 CREATE TABLE likes;
 CREATE TABLE comments;
+CREATE TABLE transactions;
 
 -- 5. M:N 테이블
 CREATE TABLE style_tags;
 CREATE TABLE artwork_tags;
 CREATE TABLE generation_tags;
-
--- 6. 외부 시스템
-CREATE TABLE purchases;
 ```
 
 ---
