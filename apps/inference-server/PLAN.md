@@ -21,25 +21,25 @@ This document contains detailed subtasks for inference server development. For h
 
 ### M1-Initialization
 
-**Referenced by**: Root PLAN.md → PT-M1-Inference  
+**Referenced by**: Root PLAN.md → PT-M1-Inference
 **Status**: PLANNED
 
 #### Subtasks
 
-- [x] Install Stable Diffusion dependencies
-  - [x] Create requirements.txt with diffusers, transformers
-  - [x] Install pillow for image processing
-  - [x] Verify CUDA availability
+- [ ] Install Stable Diffusion dependencies
+  - [ ] Create requirements.txt with diffusers, transformers
+  - [ ] Install pillow for image processing
+  - [ ] Verify CUDA availability
 
-- [x] RabbitMQ connection test
-  - [x] Install pika library
-  - [x] Test connection to RabbitMQ
-  - [x] Declare image_generation queue
+- [ ] RabbitMQ connection test
+  - [ ] Install pika library
+  - [ ] Test connection to RabbitMQ
+  - [ ] Declare image_generation queue
 
-- [x] Test inference with base model
-  - [x] Load Stable Diffusion v1.5
-  - [x] Generate test image with default prompt
-  - [x] Verify image quality
+- [ ] Test inference with base model
+  - [ ] Load Stable Diffusion v1.5
+  - [ ] Generate test image with default prompt
+  - [ ] Verify image quality
 
 **Exit Criteria**:
 - [ ] Stable Diffusion loads without errors

@@ -21,25 +21,25 @@ This document contains detailed subtasks for training server development. For hi
 
 ### M1-Initialization
 
-**Referenced by**: Root PLAN.md → PT-M1-Training  
+**Referenced by**: Root PLAN.md → PT-M1-Training
 **Status**: PLANNED
 
 #### Subtasks
 
-- [x] Install PyTorch and Diffusers
-  - [x] Create requirements.txt with torch, diffusers, transformers, peft
-  - [x] Install accelerate for distributed training
-  - [x] Verify CUDA availability
+- [ ] Install PyTorch and Diffusers
+  - [ ] Create requirements.txt with torch, diffusers, transformers, peft
+  - [ ] Install accelerate for distributed training
+  - [ ] Verify CUDA availability
 
-- [x] RabbitMQ connection test
-  - [x] Install pika library
-  - [x] Test connection to RabbitMQ
-  - [x] Declare model_training queue
+- [ ] RabbitMQ connection test
+  - [ ] Install pika library
+  - [ ] Test connection to RabbitMQ
+  - [ ] Declare model_training queue
 
-- [x] CUDA availability check
-  - [x] Check torch.cuda.is_available()
-  - [x] Log GPU name and memory
-  - [x] Test simple tensor operation on GPU
+- [ ] CUDA availability check
+  - [ ] Check torch.cuda.is_available()
+  - [ ] Log GPU name and memory
+  - [ ] Test simple tensor operation on GPU
 
 **Exit Criteria**:
 - [ ] PyTorch imports without errors

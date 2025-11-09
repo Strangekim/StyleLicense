@@ -22,40 +22,40 @@ This document contains detailed subtasks for backend development. For high-level
 
 ### M1-Initialization
 
-**Referenced by**: Root PLAN.md → PT-M1-Backend  
+**Referenced by**: Root PLAN.md → PT-M1-Backend
 **Status**: PLANNED
 
 #### Subtasks
 
-- [x] Create Django project structure
-  - [x] django-admin startproject config .
-  - [x] Create app/ directory for main application
-  - [x] Configure config/settings.py with app registration
+- [ ] Create Django project structure
+  - [ ] django-admin startproject config .
+  - [ ] Create app/ directory for main application
+  - [ ] Configure config/settings.py with app registration
 
-- [x] Install and configure dependencies
-  - [x] Create requirements.txt with Django, DRF, psycopg2, gunicorn
-  - [x] Install django-cors-headers
-  - [x] Install pika (RabbitMQ client)
-  - [x] Install pillow for image handling
+- [ ] Install and configure dependencies
+  - [ ] Create requirements.txt with Django, DRF, psycopg2, gunicorn
+  - [ ] Install django-cors-headers
+  - [ ] Install pika (RabbitMQ client)
+  - [ ] Install pillow for image handling
 
-- [x] PostgreSQL connection configuration
-  - [x] Configure DATABASES in settings.py with DATABASE_URL
-  - [x] Install dj-database-url for connection parsing
-  - [x] Test connection with python manage.py dbshell
+- [ ] PostgreSQL connection configuration
+  - [ ] Configure DATABASES in settings.py with DATABASE_URL
+  - [ ] Install dj-database-url for connection parsing
+  - [ ] Test connection with python manage.py dbshell
 
-- [x] Django REST Framework setup
-  - [x] Add rest_framework to INSTALLED_APPS
-  - [x] Configure REST_FRAMEWORK settings (pagination, authentication)
-  - [x] Set default renderer and parser classes
+- [ ] Django REST Framework setup
+  - [ ] Add rest_framework to INSTALLED_APPS
+  - [ ] Configure REST_FRAMEWORK settings (pagination, authentication)
+  - [ ] Set default renderer and parser classes
 
-- [x] Health check endpoint
-  - [x] Create app/views/health.py with HealthCheckView
-  - [x] Add route: GET /api/health returns {"status": "ok", "database": "connected"}
-  - [x] Test database connectivity in health check
+- [ ] Health check endpoint
+  - [ ] Create app/views/health.py with HealthCheckView
+  - [ ] Add route: GET /api/health returns {"status": "ok", "database": "connected"}
+  - [ ] Test database connectivity in health check
 
 - [x] Docker configuration
   - [x] Verify Dockerfile builds successfully
-  - [x] Test container starts with docker-compose up backend
+  - [ ] Test container starts with docker-compose up backend
 
 **Exit Criteria**:
 - [ ] python manage.py runserver starts without errors
@@ -66,8 +66,8 @@ This document contains detailed subtasks for backend development. For high-level
 
 ### M1-Auth-Backend
 
-**Referenced by**: Root PLAN.md → CP-M1-3  
-**Status**: IN_PROGRESS
+**Referenced by**: Root PLAN.md → CP-M1-3
+**Status**: PLANNED
 
 #### Subtasks
 

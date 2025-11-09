@@ -10,7 +10,7 @@
 ```
 Total Progress: ██░░░░░░░░░░░░░░░░░░ 10%
 
-M1 Foundation        ██████░░░░░░░░░░░░░░ 30%
+M1 Foundation        ████░░░░░░░░░░░░░░░░ 20%
 M2 Core Backend      ░░░░░░░░░░░░░░░░░░░░  0%
 M3 Core Frontend     ░░░░░░░░░░░░░░░░░░░░  0%
 M4 AI Integration    ░░░░░░░░░░░░░░░░░░░░  0%
@@ -39,15 +39,15 @@ M4: Training ⫽ Inference (병렬 가능)
 
 ## M1: Foundation
 
-**ID**: M1  
-**Status**: IN_PROGRESS  
-**Dependencies**: []  
-**Blocking**: [M2, M3]  
-**Completion**: 30%
+**ID**: M1
+**Status**: IN_PROGRESS
+**Dependencies**: []
+**Blocking**: [M2, M3]
+**Completion**: 20%
 
 ### Objectives
 - [x] Docker infrastructure setup
-- [x] Database schema creation
+- [ ] Database schema creation
 - [ ] Authentication system implementation
 - [ ] All services health check passing
 
@@ -90,7 +90,7 @@ CP-M1-1 → CP-M1-2 → CP-M1-3
 - **Reference**: [docs/database/README.md](docs/database/README.md)
 
 #### CP-M1-3: Authentication Flow
-- **Status**: IN_PROGRESS
+- **Status**: PLANNED
 - **Type**: SEQUENTIAL
 - **Dependencies**: [CP-M1-2]
 - **Owners**: [Backend, Frontend]
