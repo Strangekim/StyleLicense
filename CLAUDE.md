@@ -121,32 +121,76 @@
 
 ### Step 4: Finalize and Commit
 
-1.  **App PLAN.md 업데이트**:
-    *   완료한 Subtask에 `[x]`를 체크합니다.
+⚠️ **중요**: 아래 순서를 **반드시 따라야** 합니다. 순서를 지키지 않으면 PLAN.md가 동기화되지 않습니다.
 
-2.  **개발 브랜치로 전환 및 동기화**:
+#### 4.1. 코드 변경사항 커밋
+
+1.  **개발 브랜치로 전환 및 동기화**:
     *   `git checkout dev` 명령어로 공용 개발 브랜치인 `dev`로 전환합니다.
     *   `git pull origin dev` 명령어로 최신 코드를 반영합니다.
 
-3.  **변경사항 스테이징 및 커밋**:
+2.  **변경사항 스테이징 및 커밋 (코드만)**:
     *   `git add .` 명령어로 변경된 모든 파일을 스테이징합니다.
     *   `git commit -m "feat(app): description"` 형식으로 커밋 메시지를 작성하여 커밋합니다.
+    *   ⚠️ **주의**: PLAN.md 파일은 **아직 커밋하지 않습니다**.
 
-4.  **원격 저장소에 푸시**:
+3.  **원격 저장소에 푸시**:
     *   `git push origin dev` 명령어로 `dev` 브랜치에 변경사항을 푸시합니다.
 
-5.  **커밋 해시 기록**:
-    *   `git rev-parse HEAD` 명령어로 방금 생성한 커밋의 고유 해시값(예: `a1b2c3d`)을 가져옵니다.
-    *   `apps/{app-name}/PLAN.md` 파일의 완료한 subtask 옆에 커밋 해시를 기록합니다.
-        ```markdown
-        - [x] GET /api/tokens/balance endpoint (Commit: a1b2c3d)
-        ```
+4.  **커밋 해시 저장**:
+    *   `git rev-parse HEAD` 명령어로 방금 생성한 커밋의 고유 해시값을 가져옵니다.
+    *   예: `a1b2c3d` (처음 7자리만 사용)
 
-6.  **Root PLAN.md 업데이트**:
-    *   만약 해당 작업으로 인해 상위 태스크의 모든 Subtask가 완료되었다면, 루트 `PLAN.md`의 태스크에도 `[x]`를 체크합니다.
+#### 4.2. PLAN.md 업데이트 (⚠️ 반드시 순서대로!)
 
-7.  **사용자에게 알림**:
-    *   모든 과정이 끝나면, "작업이 완료되어 `dev` 브랜치에 커밋(a1b2c3d)하고 푸시했습니다. `PLAN.md`에 커밋 정보를 기록했습니다." 와 같이 최종 결과를 보고합니다.
+**체크리스트**를 따라 진행하세요:
+
+- [ ] **Step 1**: `apps/{app-name}/PLAN.md` 열기
+  - 예: `apps/backend/PLAN.md`, `apps/frontend/PLAN.md`
+
+- [ ] **Step 2**: 완료한 Subtask 찾기
+  - 현재 작업한 섹션 (예: M1-Initialization, M2-Token-Service 등)
+
+- [ ] **Step 3**: Subtask에 체크 및 커밋 해시 기록
+  ```markdown
+  - [x] GET /api/tokens/balance endpoint (Commit: a1b2c3d)
+  - [x] POST /api/tokens/purchase endpoint (Commit: a1b2c3d)
+  ```
+
+- [ ] **Step 4**: 섹션 상태 업데이트 (필요시)
+  - 모든 subtask가 완료되었다면 `Status: PLANNED` → `Status: DONE`으로 변경
+
+- [ ] **Step 5**: `PLAN.md` (루트) 열기
+
+- [ ] **Step 6**: 상위 태스크 확인
+  - App PLAN.md의 모든 subtask가 완료되었다면, Root PLAN.md의 해당 태스크도 체크
+  - 예: `apps/backend/PLAN.md#m1-initialization`의 모든 subtask 완료 → Root `PLAN.md`의 `PT-M1-Backend` 체크
+
+- [ ] **Step 7**: Root PLAN.md에 커밋 해시 기록
+  ```markdown
+  - [x] CP-M2-3: Token Transaction Atomicity (Commit: a1b2c3d)
+  ```
+
+#### 4.3. PLAN.md 커밋
+
+1.  **PLAN.md 파일 스테이징 및 커밋**:
+    ```bash
+    git add apps/{app-name}/PLAN.md PLAN.md
+    git commit -m "docs: update PLAN.md - {task-name} completed (commit a1b2c3d)"
+    git push origin dev
+    ```
+
+#### 4.4. 사용자에게 보고
+
+*   "작업이 완료되어 `dev` 브랜치에 커밋(a1b2c3d)하고 푸시했습니다. `apps/{app-name}/PLAN.md`와 `PLAN.md`에 커밋 정보를 기록했습니다." 형식으로 보고합니다.
+
+---
+
+**⚠️ 자주 하는 실수**:
+- ❌ Root PLAN.md만 업데이트하고 App PLAN.md를 빠뜨림
+- ❌ 커밋 해시를 기록하지 않음
+- ❌ App PLAN.md와 Root PLAN.md가 불일치
+- ❌ PLAN.md 업데이트를 별도로 커밋하지 않음
 
 ---
 

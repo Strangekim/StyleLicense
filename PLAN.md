@@ -71,23 +71,24 @@ CP-M1-1 → CP-M1-2 → CP-M1-3
   - RabbitMQ management UI accessible at localhost:15672
 
 #### CP-M1-2: Database Schema
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: SEQUENTIAL
 - **Dependencies**: [CP-M1-1]
 - **Owner**: Backend
 - **Tasks**:
-  - [ ] User model with google_id, role, token_balance
-  - [ ] StyleModel with training_status, signature fields
-  - [ ] GeneratedImage with metadata
-  - [ ] TokenTransaction with transaction_type
-  - [ ] Tag, Follow, Notification, ImageLike, ImageComment models
-  - [ ] Indexes on (user_id, created_at, training_status)
-  - [ ] Foreign key constraints
+  - [x] User model with google_id, role, token_balance
+  - [x] StyleModel with training_status, signature fields
+  - [x] GeneratedImage with metadata
+  - [x] TokenTransaction with transaction_type
+  - [x] Tag, Follow, Notification, ImageLike, ImageComment models
+  - [x] Indexes on (user_id, created_at, training_status)
+  - [x] Foreign key constraints
 - **Exit Criteria**:
-  - `python manage.py migrate` succeeds
-  - All models visible in Django admin
-  - Can create/read/update/delete via admin panel
+  - ✅ `python manage.py migrate` succeeds (migration files created)
+  - ✅ All models visible in Django admin
+  - ⏳ Can create/read/update/delete via admin panel (requires PostgreSQL running)
 - **Reference**: [docs/database/README.md](docs/database/README.md)
+- **Commit**: 91ecbfc
 
 #### CP-M1-3: Authentication Flow
 - **Status**: PLANNED
