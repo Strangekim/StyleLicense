@@ -534,6 +534,86 @@ When implementing a new page:
 
 ---
 
+### Router Configuration
+
+Complete route definitions with authentication requirements and meta information:
+
+```javascript
+// router/routes.js
+const routes = [
+  {
+    path: '/',
+    name: 'Main',
+    component: () => import('@/pages/MainPage.vue'),
+    meta: { requiresAuth: false, title: 'Style License' }
+  },
+  {
+    path: '/feed/:id',
+    name: 'FeedDetail',
+    component: () => import('@/pages/FeedDetailPage.vue'),
+    meta: { requiresAuth: false, title: 'Feed Detail' }
+  },
+  {
+    path: '/search',
+    name: 'Search',
+    component: () => import('@/pages/SearchPage.vue'),
+    meta: { requiresAuth: false, title: 'Search & Following' }
+  },
+  {
+    path: '/styles/:id',
+    name: 'StyleDetail',
+    component: () => import('@/pages/StyleDetailPage.vue'),
+    meta: { requiresAuth: false, title: 'Style Detail' }
+  },
+  {
+    path: '/me',
+    name: 'MyPage',
+    component: () => import('@/pages/MyPage.vue'),
+    meta: { requiresAuth: true, title: 'My Page' }
+  },
+  {
+    path: '/styles/create',
+    name: 'StyleCreate',
+    component: () => import('@/pages/EditStylePage.vue'),
+    meta: { requiresAuth: true, requiresArtist: true, title: 'Create Style' }
+  },
+  {
+    path: '/styles/:id/edit',
+    name: 'StyleEdit',
+    component: () => import('@/pages/EditStylePage.vue'),
+    meta: { requiresAuth: true, requiresArtist: true, title: 'Edit Style' }
+  },
+  {
+    path: '/me/edit',
+    name: 'ProfileEdit',
+    component: () => import('@/pages/EditProfilePage.vue'),
+    meta: { requiresAuth: true, title: 'Edit Profile' }
+  },
+  {
+    path: '/me/tokens',
+    name: 'Payment',
+    component: () => import('@/pages/PaymentPage.vue'),
+    meta: { requiresAuth: true, title: 'Token History' }
+  },
+  {
+    path: '/notifications',
+    name: 'Notifications',
+    component: () => import('@/pages/NotificationPage.vue'),
+    meta: { requiresAuth: true, title: 'Notifications' }
+  }
+]
+```
+
+**Meta Fields**:
+- `requiresAuth`: Requires user authentication (redirects to /login if not logged in)
+- `requiresArtist`: Requires artist role (redirects to / if user is not an artist)
+- `title`: Page title for browser tab
+
+**Navigation Guards Implementation**:
+See [Routing Strategy](#routing-strategy) section for guard implementation details.
+
+---
+
 ### State Management Strategy
 
 Pinia stores are separated by domain.

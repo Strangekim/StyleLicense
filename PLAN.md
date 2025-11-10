@@ -8,9 +8,9 @@
 
 ## Overview
 ```
-Total Progress: ██░░░░░░░░░░░░░░░░░░ 10%
+Total Progress: █░░░░░░░░░░░░░░░░░░░ 7%
 
-M1 Foundation        ████░░░░░░░░░░░░░░░░ 20%
+M1 Foundation        ███░░░░░░░░░░░░░░░░░ 14%
 M2 Core Backend      ░░░░░░░░░░░░░░░░░░░░  0%
 M3 Core Frontend     ░░░░░░░░░░░░░░░░░░░░  0%
 M4 AI Integration    ░░░░░░░░░░░░░░░░░░░░  0%
@@ -43,7 +43,7 @@ M4: Training ⫽ Inference (병렬 가능)
 **Status**: IN_PROGRESS
 **Dependencies**: []
 **Blocking**: [M2, M3]
-**Completion**: 20%
+**Completion**: 14%
 
 ### Objectives
 - [x] Docker infrastructure setup

@@ -54,7 +54,7 @@ This document contains detailed subtasks for backend development. For high-level
   - [ ] Test database connectivity in health check
 
 - [x] Docker configuration
-  - [x] Verify Dockerfile builds successfully
+  - [ ] Verify Dockerfile builds successfully
   - [ ] Test container starts with docker-compose up backend
 
 **Exit Criteria**:
@@ -93,6 +93,10 @@ This document contains detailed subtasks for backend development. For high-level
   - [ ] GET /api/auth/google/callback - OAuth callback handler
     - [ ] Validate Google OAuth code
     - [ ] Get or create User with provider and provider_user_id
+    - [ ] Grant welcome tokens for new users
+      - [ ] Check if user is newly created (first login)
+      - [ ] Call TokenService.add_tokens(user_id, 100, 'welcome_bonus')
+      - [ ] Create TokenTransaction record with type='earn'
     - [ ] Create session
     - [ ] Return user data
   - [ ] POST /api/auth/logout
