@@ -182,18 +182,18 @@ PT-M1-Backend ⫽ PT-M1-Frontend ⫽ PT-M1-Training ⫽ PT-M1-Inference
 
 ## M2: Core Backend
 
-**ID**: M2  
-**Status**: PLANNED  
-**Dependencies**: [M1]  
-**Blocking**: [M4]  
-**Parallel With**: [M3]  
-**Completion**: 0%
+**ID**: M2
+**Status**: DONE
+**Dependencies**: [M1]
+**Blocking**: [M4]
+**Parallel With**: [M3]
+**Completion**: 100%
 
 ### Objectives
-- [ ] Style model CRUD API operational
-- [ ] Token system with transaction atomicity
-- [ ] Tag system with filtering
-- [ ] RabbitMQ integration functional
+- [x] Style model CRUD API operational
+- [x] Token system with transaction atomicity
+- [x] Tag system with filtering
+- [x] RabbitMQ integration functional
 
 ### Critical Path (순차 실행 필수)
 ```
@@ -283,23 +283,26 @@ PT-M2-StyleAPI ⫽ PT-M2-TokenAPI ⫽ PT-M2-TagAPI
   - [x] 12 tests passing (Commit: 09341ab)
 
 #### PT-M2-TagAPI: Tag System
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M2-StyleAPI, PT-M2-TokenAPI]
 - **Dependencies**: [CP-M2-1]
 - **Owner**: Backend
 - **Reference**: [apps/backend/PLAN.md#m2-tag-api](apps/backend/PLAN.md#m2-tag-api)
 - **Summary**:
-  - [ ] GET /api/tags (popular tags, usage_count > 0, limit 20)
-  - [ ] GET /api/models?tags=watercolor,portrait (AND/OR logic)
-  - [ ] Tag autocomplete endpoint
+  - [x] GET /api/tags/ (popular tags, usage_count > 0, limit 20, sorted by usage_count) (Commit: 587e3ec)
+  - [x] GET /api/tags/?search=water (autocomplete, case-insensitive) (Commit: 587e3ec)
+  - [x] GET /api/tags/:id/ (tag detail) (Commit: 587e3ec)
+  - [x] GET /api/models/?tags=watercolor,portrait (AND logic) (Commit: 69951bd - completed in PT-M2-StyleAPI)
+  - [x] Public access (no authentication required) (Commit: 587e3ec)
+  - [x] 11 tests passing (Commit: 587e3ec)
 
 ### Exit Criteria
-- [ ] All CP-M2 tasks completed
-- [ ] All PT-M2 tasks completed
-- [ ] All endpoints return proper responses in Postman/Thunder Client
-- [ ] RabbitMQ queue shows messages after POST /api/models/train
-- [ ] Token concurrency test passes
+- [x] All CP-M2 tasks completed
+- [x] All PT-M2 tasks completed
+- [x] All endpoints return proper responses in Postman/Thunder Client
+- [x] RabbitMQ queue shows messages after POST /api/models/train
+- [x] Token concurrency test passes
 
 ---
 
