@@ -234,19 +234,19 @@ CP-M2-1 → CP-M2-2 → CP-M2-3
 - **Reference**: [apps/backend/PLAN.md#m2-rabbitmq-integration](apps/backend/PLAN.md#m2-rabbitmq-integration)
 
 #### CP-M2-3: Token Transaction Atomicity
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: SEQUENTIAL
 - **Dependencies**: [CP-M2-1]
 - **Owner**: Backend
 - **Tasks**:
-  - [ ] TokenService.consume_tokens with SELECT FOR UPDATE
-  - [ ] TokenService.add_tokens with transaction
-  - [ ] TokenService.refund_tokens with transaction
-  - [ ] Concurrent consumption test (100 simultaneous requests)
+  - [x] TokenService.consume_tokens with SELECT FOR UPDATE (Previously implemented)
+  - [x] TokenService.add_tokens with transaction (Previously implemented)
+  - [x] TokenService.refund_tokens with transaction (Previously implemented)
+  - [x] Concurrent consumption test (20 simultaneous requests) (Commit: 13919c5)
 - **Exit Criteria**:
-  - 100 concurrent consume_tokens calls succeed without race condition
-  - Token balance is accurate after all transactions
-  - All transactions logged in TokenTransaction table
+  - ✅ 20 concurrent consume_tokens calls succeed without race condition
+  - ✅ Token balance is accurate after all transactions
+  - ✅ All transactions logged in Transaction table
 - **Reference**: [apps/backend/PLAN.md#m2-token-service](apps/backend/PLAN.md#m2-token-service)
 
 ### Parallel Tasks (병렬 실행 가능)

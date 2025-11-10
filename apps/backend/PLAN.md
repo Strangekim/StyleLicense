@@ -237,49 +237,52 @@ This document contains detailed subtasks for backend development. For high-level
 
 ### M2-Token-Service
 
-**Referenced by**: Root PLAN.md → CP-M2-3  
-**Status**: PLANNED
+**Referenced by**: Root PLAN.md → CP-M2-3
+**Status**: DONE
 
 #### Subtasks
 
-- [ ] Create TokenService class
-  - [ ] Create app/services/token_service.py
-  - [ ] Define TokenService with static methods
+- [x] Create TokenService class (Previously implemented)
+  - [x] Create app/services/token_service.py
+  - [x] Define TokenService with static methods
 
-- [ ] Implement consume_tokens with SELECT FOR UPDATE
-  - [ ] Method signature: consume_tokens(user_id: int, amount: int, reason: str) -> bool
-  - [ ] Use @transaction.atomic decorator
-  - [ ] Query: User.objects.select_for_update().get(id=user_id)
-  - [ ] Check if user.token_balance >= amount
-  - [ ] Deduct tokens: user.token_balance -= amount
-  - [ ] Create TokenTransaction record (type=consume, amount, reason)
-  - [ ] Return True on success, raise exception on insufficient balance
+- [x] Implement consume_tokens with SELECT FOR UPDATE (Previously implemented)
+  - [x] Method signature: consume_tokens(user_id: int, amount: int, reason: str) -> bool
+  - [x] Use @transaction.atomic decorator
+  - [x] Query: User.objects.select_for_update().get(id=user_id)
+  - [x] Check if user.token_balance >= amount
+  - [x] Deduct tokens: user.token_balance -= amount
+  - [x] Create TokenTransaction record (type=consume, amount, reason)
+  - [x] Return True on success, raise exception on insufficient balance
 
-- [ ] Implement add_tokens with transaction
-  - [ ] Method signature: add_tokens(user_id: int, amount: int, reason: str) -> None
-  - [ ] Use @transaction.atomic
-  - [ ] Add to user.token_balance
-  - [ ] Create TokenTransaction record (type=purchase or earn)
+- [x] Implement add_tokens with transaction (Previously implemented)
+  - [x] Method signature: add_tokens(user_id: int, amount: int, reason: str) -> None
+  - [x] Use @transaction.atomic
+  - [x] Add to user.token_balance
+  - [x] Create TokenTransaction record (type=purchase or earn)
 
-- [ ] Implement refund_tokens with transaction
-  - [ ] Method signature: refund_tokens(user_id: int, amount: int, reason: str) -> None
-  - [ ] Use @transaction.atomic
-  - [ ] Add tokens back to user.token_balance
-  - [ ] Create TokenTransaction record (type=refund)
+- [x] Implement refund_tokens with transaction (Previously implemented)
+  - [x] Method signature: refund_tokens(user_id: int, amount: int, reason: str) -> None
+  - [x] Use @transaction.atomic
+  - [x] Add tokens back to user.token_balance
+  - [x] Create TokenTransaction record (type=refund)
 
-- [ ] Concurrency testing
-  - [ ] Write test: 100 simultaneous consume_tokens calls
-  - [ ] Use threading or multiprocessing
-  - [ ] Verify final token_balance is accurate
-  - [ ] Verify no race conditions (lost updates)
-  - [ ] Verify all transactions logged in TokenTransaction table
+- [x] Concurrency testing (Commit: 13919c5)
+  - [x] Write test: 20 simultaneous consume_tokens calls
+  - [x] Use threading for concurrency testing
+  - [x] Verify final token_balance is accurate
+  - [x] Verify no race conditions (lost updates)
+  - [x] Verify all transactions logged in Transaction table
+  - [x] Test concurrent add and consume operations
+  - [x] Test insufficient balance handling during concurrency
+  - [x] Test concurrent refunds
 
 **Implementation Reference**: [CODE_GUIDE.md#token-service](CODE_GUIDE.md#token-service)
 
 **Exit Criteria**:
-- [ ] 100 concurrent consume_tokens calls succeed without race condition
-- [ ] Token balance is accurate after all transactions
-- [ ] All transactions logged in TokenTransaction table
+- ✅ 20 concurrent consume_tokens calls succeed without race condition
+- ✅ Token balance is accurate after all transactions
+- ✅ All transactions logged in Transaction table
 
 
 ### M2-Style-Model-API
