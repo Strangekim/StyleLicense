@@ -164,7 +164,7 @@ def get_resolution(aspect_ratio: str) -> tuple[int, int]:
     """Calculate resolution based on aspect ratio."""
     resolutions = {
         "1:1": (512, 512),
-        "2:2": (768, 768),
+        "2:2": (1024, 1024),
         "1:2": (512, 1024)
     }
     return resolutions.get(aspect_ratio, (512, 512))

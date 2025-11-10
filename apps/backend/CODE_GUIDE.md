@@ -262,10 +262,25 @@ class TrainingImageSerializer(serializers.ModelSerializer):
 
 class StyleModelDetailSerializer(serializers.ModelSerializer):
     training_images = TrainingImageSerializer(many=True, read_only=True)
+    progress = serializers.SerializerMethodField()
 
     class Meta:
         model = StyleModel
-        fields = ['id', 'name', 'training_status', 'training_images', 'created_at']
+        fields = [
+            'id', 
+            'name', 
+            'training_status', 
+            'progress',  # Add progress field
+            'training_images', 
+            'created_at'
+        ]
+
+    def get_progress(self, obj):
+        """Return progress only when training."""
+        if obj.training_status == 'training':
+            # Assuming 'training_progress' is a JSONB field in the model
+            return obj.training_progress
+        return None
 ```
 
 ### 3.3 Writable Nested Serializers
@@ -410,16 +425,6 @@ class StyleViewSet(viewsets.ModelViewSet):
 
 ```python
 class GenerationViewSet(viewsets.ModelViewSet):
-
-    @action(detail=True, methods=['get'])
-    def progress(self, request, pk=None):
-        """Query generation progress (for polling)"""
-        generation = self.get_object()
-        return Response({
-            'status': generation.status,  # generations table uses 'status'
-            'progress': generation.progress_percent,
-            'estimated_time_remaining': generation.estimated_seconds,
-        })
 
     @action(detail=False, methods=['get'])
     def my_generations(self, request):
