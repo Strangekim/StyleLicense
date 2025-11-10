@@ -1,0 +1,64 @@
+{
+  "app": {
+    "name": "Style License",
+    "tagline": "Transform your ideas into art with AI"
+  },
+  "nav": {
+    "home": "Home",
+    "marketplace": "Marketplace",
+    "generate": "Generate",
+    "profile": "Profile",
+    "tokens": "Tokens",
+    "login": "Login",
+    "logout": "Logout"
+  },
+  "auth": {
+    "loginWithGoogle": "Login with Google",
+    "loggingIn": "Logging in...",
+    "loginSuccess": "Successfully logged in",
+    "loginError": "Login failed",
+    "logoutSuccess": "Successfully logged out"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort"
+  },
+  "tokens": {
+    "balance": "Token Balance",
+    "purchase": "Purchase Tokens",
+    "cost": "Cost",
+    "insufficient": "Insufficient tokens"
+  },
+  "generation": {
+    "title": "Generate Image",
+    "selectStyle": "Select Style",
+    "prompt": "Prompt",
+    "aspectRatio": "Aspect Ratio",
+    "generate": "Generate",
+    "generating": "Generating...",
+    "status": {
+      "queued": "Queued",
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed"
+    }
+  },
+  "marketplace": {
+    "title": "Style Marketplace",
+    "search": "Search styles...",
+    "filterByTag": "Filter by tag",
+    "sortBy": "Sort by",
+    "popularity": "Popularity",
+    "newest": "Newest",
+    "price": "Price"
+  }
+}
