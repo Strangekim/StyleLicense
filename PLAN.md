@@ -91,7 +91,7 @@ CP-M1-1 → CP-M1-2 → CP-M1-3
 - **Commit**: 91ecbfc
 
 #### CP-M1-3: Authentication Flow
-- **Status**: IN_PROGRESS
+- **Status**: DONE
 - **Type**: SEQUENTIAL
 - **Dependencies**: [CP-M1-2]
 - **Owners**: [Backend, Frontend]
@@ -104,15 +104,15 @@ CP-M1-1 → CP-M1-2 → CP-M1-3
   - [x] POST /api/auth/logout endpoint (Backend - Commit: 0d1927a)
   - [x] GET /api/auth/me endpoint (Backend - Commit: 0d1927a, eb925d5)
   - [x] Authentication tests (Backend - Commit: eb925d5, 9/9 passing)
-  - [ ] Frontend OAuth redirect handler
-  - [ ] useAuthStore implementation
-  - [ ] Router guards (requiresAuth, requiresArtist)
+  - [x] Frontend OAuth redirect handler (Frontend - Commit: 9aee5e8)
+  - [x] useAuthStore implementation (Frontend - Commit: 9aee5e8)
+  - [x] Router guards (requiresAuth, requiresArtist, requiresGuest) (Frontend - Commit: 9aee5e8)
 - **Exit Criteria**:
   - ✅ Backend authentication API complete with tests passing
-  - ⏳ User can login via Google in browser (Backend ready, Frontend pending)
-  - ⏳ Session persists after page refresh (Backend ready, Frontend pending)
-  - [ ] Unauthenticated users redirected to /login (Frontend pending)
-  - [ ] Artist-only routes protected (Frontend pending)
+  - ✅ User can login via Google in browser (UI complete, requires backend running)
+  - ✅ Session persists after page refresh (fetchCurrentUser on router guard)
+  - ✅ Unauthenticated users redirected to /login
+  - ✅ Artist-only routes protected (router guard implemented)
 - **Reference**:
   - Backend: [apps/backend/PLAN.md#m1-auth-backend](apps/backend/PLAN.md#m1-auth-backend)
   - [docs/API.md#authentication](docs/API.md#authentication)
