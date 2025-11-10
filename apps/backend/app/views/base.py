@@ -32,6 +32,20 @@ class BaseViewSet(viewsets.ModelViewSet):
         """
         return super().get_queryset()
 
+    def get_paginated_response(self, data):
+        """
+        Override to wrap paginated response with success/data structure.
+        """
+        paginator = self.paginator
+        return Response({
+            'success': True,
+            'data': {
+                'next': paginator.get_next_link(),
+                'previous': paginator.get_previous_link(),
+                'results': data,
+            }
+        })
+
     def list(self, request, *args, **kwargs):
         """
         Override list to provide consistent response format.
