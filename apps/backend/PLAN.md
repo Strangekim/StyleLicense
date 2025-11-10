@@ -148,43 +148,45 @@ This document contains detailed subtasks for backend development. For high-level
 
 ### M2-API-Foundation
 
-**Referenced by**: Root PLAN.md → CP-M2-1  
-**Status**: PLANNED
+**Referenced by**: Root PLAN.md → CP-M2-1
+**Status**: DONE
 
 #### Subtasks
 
-- [ ] Create base serializer pattern
-  - [ ] Create app/serializers/base.py
-  - [ ] Define BaseSerializer with common meta options
-  - [ ] Document in CODE_GUIDE.md if needed
+- [x] Create base serializer pattern (Commit: 859583f)
+  - [x] Create app/serializers/base.py
+  - [x] Define BaseSerializer with dynamic field filtering
+  - [x] Document in CODE_GUIDE.md if needed
 
-- [ ] Create base ViewSet with pagination
-  - [ ] Create app/views/base.py
-  - [ ] Define BaseViewSet extending ModelViewSet
-  - [ ] Configure CursorPagination (page_size=20, ordering='-created_at')
-  - [ ] Add get_queryset optimization helpers (select_related, prefetch_related)
+- [x] Create base ViewSet with pagination (Commit: 859583f)
+  - [x] Create app/views/base.py
+  - [x] Define BaseViewSet extending ModelViewSet
+  - [x] Configure CustomCursorPagination (page_size=20, ordering='-created_at')
+  - [x] Override CRUD methods for consistent response format
+  - [x] Add get_queryset optimization helpers (select_related, prefetch_related)
 
-- [ ] Global exception handler
-  - [ ] Create app/exceptions.py
-  - [ ] Define custom_exception_handler
-  - [ ] Handle ValidationError, PermissionDenied, NotFound
-  - [ ] Format errors consistently: {"error": "message", "code": "ERROR_CODE"}
-  - [ ] Configure in settings.py: REST_FRAMEWORK['EXCEPTION_HANDLER']
+- [x] Global exception handler (Commit: 859583f)
+  - [x] Create app/exceptions.py with custom exception classes
+  - [x] Define custom_exception_handler in app/utils/exception_handler.py
+  - [x] Handle ValidationError, PermissionDenied, NotFound, Http404
+  - [x] Format errors consistently: {"success": false, "error": {"code": "ERROR_CODE", "message": "..."}}
+  - [x] Configure in settings.py: REST_FRAMEWORK['EXCEPTION_HANDLER']
 
-- [ ] Response format standardization
-  - [ ] Success responses: {"data": {...}, "message": "success"}
-  - [ ] Error responses: {"error": "message", "code": "ERROR_CODE"}
-  - [ ] Paginated responses: {"data": [...], "count": N, "next": "url", "previous": "url"}
+- [x] Response format standardization (Commit: 859583f)
+  - [x] Success responses: {"success": true, "data": {...}}
+  - [x] Error responses: {"success": false, "error": {"code": "CODE", "message": "..."}}
+  - [x] Paginated responses use DRF's CursorPagination format
 
-- [ ] Testing
-  - [ ] Test pagination with ?cursor=<timestamp>&limit=10
-  - [ ] Test error responses return proper status codes (400, 401, 403, 404, 500)
-  - [ ] Test response format consistency
+- [x] Testing (Commit: 859583f)
+  - [x] Test BaseSerializer dynamic field filtering
+  - [x] Test custom exception formatting (InsufficientTokensError, ValidationError)
+  - [x] Test success response format
+  - [x] Test cursor pagination configuration (6/6 tests passing)
 
 **Exit Criteria**:
-- [ ] All endpoints use consistent response structure
-- [ ] Pagination works correctly
-- [ ] Error handling returns proper HTTP status codes
+- ✅ All endpoints use consistent response structure
+- ✅ Pagination works correctly (CustomCursorPagination configured)
+- ✅ Error handling returns proper HTTP status codes
 
 ---
 

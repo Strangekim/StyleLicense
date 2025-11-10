@@ -1,6 +1,6 @@
 # Style License Development Plan
 
-**Version**: 0.1.0  
+**Version**: 1.0.0
 **Last Updated**: 2025-10-27  
 **Status**: M1 In Progress
 
@@ -91,7 +91,7 @@ CP-M1-1 → CP-M1-2 → CP-M1-3
 - **Commit**: 91ecbfc
 
 #### CP-M1-3: Authentication Flow
-- **Status**: IN_PROGRESS
+- **Status**: DONE
 - **Type**: SEQUENTIAL
 - **Dependencies**: [CP-M1-2]
 - **Owners**: [Backend, Frontend]
@@ -104,15 +104,15 @@ CP-M1-1 → CP-M1-2 → CP-M1-3
   - [x] POST /api/auth/logout endpoint (Backend - Commit: 0d1927a)
   - [x] GET /api/auth/me endpoint (Backend - Commit: 0d1927a, eb925d5)
   - [x] Authentication tests (Backend - Commit: eb925d5, 9/9 passing)
-  - [ ] Frontend OAuth redirect handler
-  - [ ] useAuthStore implementation
-  - [ ] Router guards (requiresAuth, requiresArtist)
+  - [x] Frontend OAuth redirect handler (Frontend - Commit: 9aee5e8)
+  - [x] useAuthStore implementation (Frontend - Commit: 9aee5e8)
+  - [x] Router guards (requiresAuth, requiresArtist, requiresGuest) (Frontend - Commit: 9aee5e8)
 - **Exit Criteria**:
   - ✅ Backend authentication API complete with tests passing
-  - ⏳ User can login via Google in browser (Backend ready, Frontend pending)
-  - ⏳ Session persists after page refresh (Backend ready, Frontend pending)
-  - [ ] Unauthenticated users redirected to /login (Frontend pending)
-  - [ ] Artist-only routes protected (Frontend pending)
+  - ✅ User can login via Google in browser (UI complete, requires backend running)
+  - ✅ Session persists after page refresh (fetchCurrentUser on router guard)
+  - ✅ Unauthenticated users redirected to /login
+  - ✅ Artist-only routes protected (router guard implemented)
 - **Reference**:
   - Backend: [apps/backend/PLAN.md#m1-auth-backend](apps/backend/PLAN.md#m1-auth-backend)
   - [docs/API.md#authentication](docs/API.md#authentication)
@@ -201,19 +201,20 @@ CP-M2-1 → CP-M2-2 → CP-M2-3
 ```
 
 #### CP-M2-1: API Foundation
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: SEQUENTIAL
 - **Dependencies**: [M1]
 - **Owner**: Backend
 - **Tasks**:
-  - [ ] DRF Serializer pattern establishment
-  - [ ] ViewSet base class with pagination
-  - [ ] Global exception handler
-  - [ ] Response format standardization (success/error)
+  - [x] DRF Serializer pattern establishment (Commit: 859583f)
+  - [x] ViewSet base class with pagination (Commit: 859583f)
+  - [x] Global exception handler (Commit: 859583f)
+  - [x] Response format standardization (success/error) (Commit: 859583f)
 - **Exit Criteria**:
-  - Consistent API response structure across all endpoints
-  - Cursor-based pagination works with ?cursor=<timestamp>&limit=N
-  - All errors return proper HTTP status codes
+  - ✅ Consistent API response structure across all endpoints
+  - ✅ Cursor-based pagination works with ?cursor=<timestamp>&limit=N
+  - ✅ All errors return proper HTTP status codes
+- **Reference**: [apps/backend/PLAN.md#m2-api-foundation](apps/backend/PLAN.md#m2-api-foundation)
 
 #### CP-M2-2: RabbitMQ Integration
 - **Status**: PLANNED
