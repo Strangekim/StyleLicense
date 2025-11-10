@@ -1,0 +1,64 @@
+{
+  "app": {
+    "name": "스타일 라이선스",
+    "tagline": "AI로 아이디어를 예술로 변환하세요"
+  },
+  "nav": {
+    "home": "홈",
+    "marketplace": "마켓플레이스",
+    "generate": "생성",
+    "profile": "프로필",
+    "tokens": "토큰",
+    "login": "로그인",
+    "logout": "로그아웃"
+  },
+  "auth": {
+    "loginWithGoogle": "Google로 로그인",
+    "loggingIn": "로그인 중...",
+    "loginSuccess": "로그인 성공",
+    "loginError": "로그인 실패",
+    "logoutSuccess": "로그아웃 되었습니다"
+  },
+  "common": {
+    "loading": "로딩 중...",
+    "error": "오류",
+    "success": "성공",
+    "cancel": "취소",
+    "confirm": "확인",
+    "save": "저장",
+    "delete": "삭제",
+    "edit": "수정",
+    "search": "검색",
+    "filter": "필터",
+    "sort": "정렬"
+  },
+  "tokens": {
+    "balance": "토큰 잔액",
+    "purchase": "토큰 구매",
+    "cost": "비용",
+    "insufficient": "토큰이 부족합니다"
+  },
+  "generation": {
+    "title": "이미지 생성",
+    "selectStyle": "스타일 선택",
+    "prompt": "프롬프트",
+    "aspectRatio": "종횡비",
+    "generate": "생성",
+    "generating": "생성 중...",
+    "status": {
+      "queued": "대기 중",
+      "processing": "처리 중",
+      "completed": "완료",
+      "failed": "실패"
+    }
+  },
+  "marketplace": {
+    "title": "스타일 마켓플레이스",
+    "search": "스타일 검색...",
+    "filterByTag": "태그로 필터",
+    "sortBy": "정렬 기준",
+    "popularity": "인기순",
+    "newest": "최신순",
+    "price": "가격"
+  }
+}

@@ -124,28 +124,30 @@ PT-M1-Backend ⫽ PT-M1-Frontend ⫽ PT-M1-Training ⫽ PT-M1-Inference
 ```
 
 #### PT-M1-Backend: Backend Initialization
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M1-Frontend, PT-M1-Training, PT-M1-Inference]
 - **Owner**: Backend
 - **Reference**: [apps/backend/PLAN.md#m1-initialization](apps/backend/PLAN.md#m1-initialization)
 - **Summary**:
-  - [ ] Django project creation
-  - [ ] PostgreSQL connection configuration
-  - [ ] Django REST Framework setup
-  - [ ] Health check endpoint: GET /api/health
+  - [x] Django project creation (Commit: 91ecbfc)
+  - [x] PostgreSQL connection configuration (Commit: 91ecbfc, 0bb8e02)
+  - [x] Django REST Framework setup (Commit: 91ecbfc)
+  - [x] Health check endpoint: GET /api/health (Commit: 0bb8e02)
 
 #### PT-M1-Frontend: Frontend Initialization
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M1-Backend, PT-M1-Training, PT-M1-Inference]
 - **Owner**: Frontend
 - **Reference**: [apps/frontend/PLAN.md#m1-initialization](apps/frontend/PLAN.md#m1-initialization)
 - **Summary**:
-  - [ ] Vite + Vue 3 project setup
-  - [ ] Tailwind CSS configuration
-  - [ ] Pinia, Vue Router, Axios installation
-  - [ ] i18n setup (en, ko)
+  - [x] Vite + Vue 3 project setup (Commit: 275e328)
+  - [x] Tailwind CSS configuration (Commit: 275e328)
+  - [x] Pinia, Vue Router, Axios installation (Commit: 275e328)
+  - [x] i18n setup (en, ko) (Commit: 275e328)
+  - [x] Directory structure created (Commit: 275e328)
+  - [x] Dev server verified on port 5173 (Commit: 275e328)
 
 #### PT-M1-Training: Training Server Initialization
 - **Status**: PLANNED

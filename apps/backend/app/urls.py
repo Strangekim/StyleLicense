@@ -3,8 +3,11 @@ URL configuration for app.
 """
 from django.urls import path, include
 from app.views.auth import LogoutView, MeView, GoogleCallbackView
+from app.views.health import HealthCheckView
 
 urlpatterns = [
+    # Health check endpoint
+    path("health", HealthCheckView.as_view(), name="health"),
     # Authentication endpoints
     path("auth/logout", LogoutView.as_view(), name="logout"),
     path("auth/me", MeView.as_view(), name="me"),

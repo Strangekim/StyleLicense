@@ -30,49 +30,49 @@ This document contains detailed subtasks for frontend development. For high-leve
 ### M1-Initialization
 
 **Referenced by**: Root PLAN.md → PT-M1-Frontend
-**Status**: PLANNED
+**Status**: DONE
 
 #### Subtasks
 
-- [ ] Vite + Vue 3 project setup
-  - [ ] npm create vite@latest . -- --template vue
-  - [ ] Configure vite.config.js with alias (@/ for src/)
-  - [ ] Set up development server on port 3000
+- [x] Vite + Vue 3 project setup (Commit: 275e328)
+  - [x] npm create vite@latest . -- --template vue
+  - [x] Configure vite.config.js with alias (@/ for src/)
+  - [x] Set up development server on port 5173
 
-- [ ] Tailwind CSS configuration
-  - [ ] Install tailwindcss, postcss, autoprefixer
-  - [ ] Create tailwind.config.js
-  - [ ] Add Tailwind directives to src/assets/main.css
-  - [ ] Test Tailwind classes render correctly
+- [x] Tailwind CSS configuration (Commit: 275e328)
+  - [x] Install tailwindcss, postcss, autoprefixer
+  - [x] Create tailwind.config.js
+  - [x] Add Tailwind directives to src/style.css
+  - [x] Test Tailwind classes render correctly
 
-- [ ] Install core dependencies
-  - [ ] Install Pinia for state management
-  - [ ] Install Vue Router for routing
-  - [ ] Install Axios for HTTP requests
-  - [ ] Install vue-i18n for internationalization
+- [x] Install core dependencies (Commit: 275e328)
+  - [x] Install Pinia for state management
+  - [x] Install Vue Router for routing
+  - [x] Install Axios for HTTP requests
+  - [x] Install vue-i18n for internationalization
 
-- [ ] i18n setup (en, ko)
-  - [ ] Create src/i18n/index.js
-  - [ ] Create src/locales/en.json and ko.json
-  - [ ] Configure default locale: en
-  - [ ] Add language switcher to header (optional)
+- [x] i18n setup (en, ko) (Commit: 275e328)
+  - [x] Create src/i18n/index.js
+  - [x] Create src/locales/en.json and ko.json
+  - [x] Configure default locale: en
+  - [ ] Add language switcher to header (optional, deferred to Header component)
 
-- [ ] Directory structure setup
-  - [ ] Create src/components/ (shared, features/)
-  - [ ] Create src/pages/
-  - [ ] Create src/stores/
-  - [ ] Create src/composables/
-  - [ ] Create src/services/
+- [x] Directory structure setup (Commit: 275e328)
+  - [x] Create src/components/ (shared, features/, layout)
+  - [x] Create src/pages/
+  - [x] Create src/stores/
+  - [x] Create src/composables/
+  - [x] Create src/services/
   - [x] Create src/assets/ (images and icons already exist)
 
 - [x] Docker configuration
   - [x] Verify Dockerfile multi-stage build
-  - [ ] Test container starts with docker-compose up frontend
+  - [ ] Test container starts with docker-compose up frontend (deferred to later)
 
 **Exit Criteria**:
-- [ ] npm run dev starts dev server on localhost:5173
-- [ ] Tailwind CSS classes work
-- [ ] All dependencies installed without errors
+- ✅ npm run dev starts dev server on localhost:5173
+- ✅ Tailwind CSS classes work
+- ✅ All dependencies installed without errors
 
 ---
 
