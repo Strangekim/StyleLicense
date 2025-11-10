@@ -170,6 +170,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.CursorPagination",
     "PAGE_SIZE": 20,
+    "EXCEPTION_HANDLER": "app.utils.exception_handler.custom_exception_handler",
 }
 
 # Django Sites Framework
