@@ -1,0 +1,7 @@
+-r base.txt
+
+# Monitoring and logging
+sentry-sdk==1.40.0
+
+# Performance
+django-redis==5.4.0
