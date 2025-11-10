@@ -386,25 +386,6 @@ docker-compose build
 docker-compose pull
 ```
 
-### Production
-
-```bash
-# Start services
-docker-compose -f docker-compose.prod.yml up -d
-
-# View logs
-docker-compose -f docker-compose.prod.yml logs -f
-
-# Restart services
-docker-compose -f docker-compose.prod.yml restart
-
-# Database backup
-docker-compose -f docker-compose.prod.yml exec postgres pg_dump -U postgres stylelicense_db > backup.sql
-
-# Database restore
-docker-compose -f docker-compose.prod.yml exec -T postgres psql -U postgres stylelicense_db < backup.sql
-```
-
 ### Monitoring
 
 ```bash
