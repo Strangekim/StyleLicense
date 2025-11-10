@@ -163,7 +163,7 @@ docker-compose exec backend python manage.py migrate
 docker-compose exec backend python manage.py createsuperuser
 
 # 5. Access the application
-# Frontend: http://localhost:3000
+# Frontend: http://localhost:5173
 # Backend API: http://localhost:8000
 # RabbitMQ Management: http://localhost:15672
 ```

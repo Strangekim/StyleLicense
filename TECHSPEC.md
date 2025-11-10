@@ -69,7 +69,7 @@
   - 스타일 설명 (Description)
   - 이미지당 가격 (토큰 단가) — 1장 생성 시 소모되는 토큰 수
 - 업로드된 이미지는 서버에서 검증(형식·크기 등) 후, RabbitMQ를 통해 학습 큐로 전달 → LoRA Fine-tuning 자동 실행
-- 학습 완료 후 결과는 모델 파일(S3 저장) + Style 등록 완료 알림으로 작가에게 전달
+- 학습 완료 후 결과는 모델 파일(Cloud Storage 저장) + Style 등록 완료 알림으로 작가에게 전달
 - 학습된 모델 (스타일) 작가 임의로 삭제 불가능
 
 #### 학습 진행 상황 추적
@@ -341,7 +341,7 @@
 - 생성 완료 시 Backend Webhook 호출
 
 #### Cloud Storage
-- **(구 S3)**
+- **(GCS)**
 - **프론트엔드 파일** 호스팅
 - **학습/생성 이미지** 저장
 - **학습 완료 모델 파일** 저장
@@ -694,7 +694,7 @@ POST /api/generations
 2. RabbitMQ 큐 전송 (status='queued')
 3. Inference Server 처리 (status='processing')
 4. 이미지 생성 + 서명 삽입
-5. S3 업로드 (status='completed')
+5. Cloud Storage 업로드 (status='completed')
 6. 알림 전송
 ```
 
@@ -1289,7 +1289,7 @@ CSRF_COOKIE_SECURE = True  # Production only
 ### 11.3 모니터링
 
 - **Sentry**: 에러 추적 (Backend, Frontend)
-- **CloudWatch** (AWS): 서버 리소스 모니터링
+- **Cloud Monitoring** (GCP): 서버 리소스 모니터링
 - **RabbitMQ Management UI**: 큐 길이, 처리 속도
 
 ---
@@ -1806,7 +1806,7 @@ project-root/
 | GPU 서버 비용 초과 | 중간 | 높음 | 사용량 모니터링, 배치 처리 최적화, 자동 스케일링 |
 | 모델 학습 실패율 증가 | 낮음 | 중간 | 재시도 로직, 에러 로깅, 사전 이미지 검증 |
 | 동시 접속 증가로 인한 성능 저하 | 중간 | 높음 | 부하 테스트, 캐싱, Auto Scaling 준비 |
-| S3 비용 증가 | 중간 | 중간 | 이미지 압축, 오래된 이미지 자동 삭제 정책 |
+| Cloud Storage 비용 증가 | 중간 | 중간 | 이미지 압축, 오래된 이미지 자동 삭제 정책 |
 | RabbitMQ 큐 적체 | 낮음 | 높음 | 큐 길이 모니터링, Worker 수평 확장 |
 
 ### 17.2 비즈니스 위험
@@ -1822,7 +1822,7 @@ project-root/
 
 | 위험 | 발생 확률 | 영향도 | 완화 전략 |
 |------|-----------|--------|-----------|
-| 데이터베이스 장애 | 중간 | 치명적 | 정기적인 `pg_dump` 실행 및 백업 파일 S3 업로드 |
+| 데이터베이스 장애 | 중간 | 치명적 | 정기적인 `pg_dump` 실행 및 백업 파일 Cloud Storage 업로드 |
 | GPU 서버 다운 | 중간 | 높음 | Health Check, 자동 재시작, 예비 서버 |
 | 보안 침해 | 낮음 | 치명적 | 정기 보안 감사, HTTPS 강제, Rate Limiting |
 
