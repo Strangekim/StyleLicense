@@ -10,7 +10,9 @@ class TokenService:
 
     @staticmethod
     @transaction.atomic
-    def add_tokens(user_id: int, amount: int, reason: str, transaction_type: str = 'purchase'):
+    def add_tokens(
+        user_id: int, amount: int, reason: str, transaction_type: str = "purchase"
+    ):
         """
         Add tokens to user balance atomically.
 
@@ -35,22 +37,28 @@ class TokenService:
 
         # Update balance
         user.token_balance += amount
-        user.save(update_fields=['token_balance', 'updated_at'])
+        user.save(update_fields=["token_balance", "updated_at"])
 
         # Create transaction record
         trans = Transaction.objects.create(
             receiver=user,
             amount=amount,
             transaction_type=transaction_type,
-            status='completed',
-            memo=reason
+            status="completed",
+            memo=reason,
         )
 
         return trans
 
     @staticmethod
     @transaction.atomic
-    def consume_tokens(user_id: int, amount: int, reason: str, related_generation_id=None, related_style_id=None):
+    def consume_tokens(
+        user_id: int,
+        amount: int,
+        reason: str,
+        related_generation_id=None,
+        related_style_id=None,
+    ):
         """
         Consume tokens from user balance atomically.
 
@@ -82,24 +90,26 @@ class TokenService:
 
         # Update balance
         user.token_balance -= amount
-        user.save(update_fields=['token_balance', 'updated_at'])
+        user.save(update_fields=["token_balance", "updated_at"])
 
         # Create transaction record
         trans = Transaction.objects.create(
             sender=user,
             amount=amount,
-            transaction_type='generation',
-            status='completed',
+            transaction_type="consume",
+            status="completed",
             memo=reason,
             related_generation_id=related_generation_id,
-            related_style_id=related_style_id
+            related_style_id=related_style_id,
         )
 
         return trans
 
     @staticmethod
     @transaction.atomic
-    def refund_tokens(user_id: int, amount: int, reason: str, related_generation_id=None):
+    def refund_tokens(
+        user_id: int, amount: int, reason: str, related_generation_id=None
+    ):
         """
         Refund tokens to user balance atomically.
 
@@ -124,17 +134,17 @@ class TokenService:
 
         # Update balance
         user.token_balance += amount
-        user.save(update_fields=['token_balance', 'updated_at'])
+        user.save(update_fields=["token_balance", "updated_at"])
 
         # Create transaction record (marked as refund)
         trans = Transaction.objects.create(
             receiver=user,
             amount=amount,
-            transaction_type='generation',
-            status='completed',
+            transaction_type="generation",
+            status="completed",
             memo=reason,
             related_generation_id=related_generation_id,
-            refunded=True
+            refunded=True,
         )
 
         return trans
