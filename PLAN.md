@@ -270,16 +270,17 @@ PT-M2-StyleAPI ⫽ PT-M2-TokenAPI ⫽ PT-M2-TagAPI
   - [x] 13 tests passing (Commit: 69951bd)
 
 #### PT-M2-TokenAPI: Token System API
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M2-StyleAPI, PT-M2-TagAPI]
 - **Dependencies**: [CP-M2-1, CP-M2-3]
 - **Owner**: Backend
 - **Reference**: [apps/backend/PLAN.md#m2-token-api](apps/backend/PLAN.md#m2-token-api)
 - **Summary**:
-  - [ ] GET /api/tokens/balance
-  - [ ] POST /api/tokens/purchase (payment gateway mock)
-  - [ ] GET /api/tokens/transactions (filter by type, pagination)
+  - [x] GET /api/tokens/balance/ (Commit: 09341ab)
+  - [x] POST /api/tokens/purchase/ (mock payment, validation) (Commit: 09341ab)
+  - [x] GET /api/tokens/transactions/ (filter by type, pagination, direction) (Commit: 09341ab)
+  - [x] 12 tests passing (Commit: 09341ab)
 
 #### PT-M2-TagAPI: Tag System
 - **Status**: PLANNED

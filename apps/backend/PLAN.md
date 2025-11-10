@@ -369,49 +369,58 @@ This document contains detailed subtasks for backend development. For high-level
 
 ### M2-Token-API
 
-**Referenced by**: Root PLAN.md → PT-M2-TokenAPI  
-**Status**: PLANNED
+**Referenced by**: Root PLAN.md → PT-M2-TokenAPI
+**Status**: DONE
 
 #### Subtasks
 
-- [ ] Create Token serializers
-  - [ ] TokenBalanceSerializer (balance)
-  - [ ] TokenPurchaseSerializer (amount, payment_method)
-  - [ ] TokenTransactionSerializer (id, type, amount, reason, created_at)
+- [x] Create Token serializers (Commit: 09341ab)
+  - [x] TokenBalanceSerializer (balance)
+  - [x] TokenPurchaseSerializer (amount, payment_method with validation)
+  - [x] TokenTransactionSerializer (id, type, amount, direction, created_at, etc.)
 
-- [ ] Create TokenViewSet
-  - [ ] Create app/views/token.py
-  - [ ] Use custom ViewSet (not ModelViewSet)
+- [x] Create TokenViewSet (Commit: 09341ab)
+  - [x] Create app/views/token.py
+  - [x] Use GenericViewSet (not ModelViewSet)
+  - [x] Custom actions: balance, purchase, transactions
 
-- [ ] GET /api/tokens/balance endpoint
-  - [ ] Return current user token_balance
-  - [ ] Require authentication
+- [x] GET /api/tokens/balance/ endpoint (Commit: 09341ab)
+  - [x] Return current user token_balance
+  - [x] Require authentication
 
-- [ ] POST /api/tokens/purchase endpoint
-  - [ ] Accept: amount (number of tokens), payment_method
-  - [ ] Mock payment gateway for now (always success)
-  - [ ] Call TokenService.add_tokens(user_id, amount, purchase)
-  - [ ] Create PaymentTransaction record
-  - [ ] Return new balance
+- [x] POST /api/tokens/purchase/ endpoint (Commit: 09341ab)
+  - [x] Accept: amount (100-1,000,000, multiples of 100), payment_method
+  - [x] Mock payment gateway (always success for testing)
+  - [x] Call TokenService.add_tokens(user_id, amount, "purchase")
+  - [x] Return new balance and transaction details
 
-- [ ] GET /api/tokens/transactions endpoint
-  - [ ] List user TokenTransaction history
-  - [ ] Filter by type: ?type=consume or ?type=purchase
-  - [ ] Paginate results (20 per page)
-  - [ ] Sort by created_at DESC
+- [x] GET /api/tokens/transactions/ endpoint (Commit: 09341ab)
+  - [x] List user Transaction history (sender or receiver)
+  - [x] Filter by type: ?type=consume, purchase, earn, etc.
+  - [x] Paginate results (cursor-based, 20 per page)
+  - [x] Sort by created_at DESC
+  - [x] Include direction field (incoming/outgoing/system)
 
-- [ ] Testing
-  - [ ] Test balance endpoint returns correct value
-  - [ ] Test purchase adds tokens and creates transaction
-  - [ ] Test transactions list with pagination
-  - [ ] Test transactions filter by type
+- [x] Testing (Commit: 09341ab)
+  - [x] Test balance endpoint requires authentication
+  - [x] Test balance endpoint returns correct value
+  - [x] Test purchase requires authentication
+  - [x] Test purchase adds tokens and creates transaction
+  - [x] Test purchase validation (min, max, multiples of 100)
+  - [x] Test transactions requires authentication
+  - [x] Test transactions list with pagination
+  - [x] Test transactions filter by type
+  - [x] Test transactions ordering (DESC)
+  - [x] Test transaction direction field
+  - [x] Test user only sees own transactions
+  - [x] 12 tests passing
 
 **Implementation Reference**: [CODE_GUIDE.md#custom-viewsets](CODE_GUIDE.md#custom-viewsets)
 
 **Exit Criteria**:
-- [ ] Balance endpoint works
-- [ ] Purchase flow completes successfully
-- [ ] Transaction history displays correctly
+- ✅ Balance endpoint works
+- ✅ Purchase flow completes successfully
+- ✅ Transaction history displays correctly with filtering
 
 ---
 
