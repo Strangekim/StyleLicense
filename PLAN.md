@@ -1,6 +1,6 @@
 # Style License Development Plan
 
-**Version**: 0.1.0  
+**Version**: 1.0.0
 **Last Updated**: 2025-10-27  
 **Status**: M1 In Progress
 
@@ -201,19 +201,20 @@ CP-M2-1 → CP-M2-2 → CP-M2-3
 ```
 
 #### CP-M2-1: API Foundation
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: SEQUENTIAL
 - **Dependencies**: [M1]
 - **Owner**: Backend
 - **Tasks**:
-  - [ ] DRF Serializer pattern establishment
-  - [ ] ViewSet base class with pagination
-  - [ ] Global exception handler
-  - [ ] Response format standardization (success/error)
+  - [x] DRF Serializer pattern establishment (Commit: 859583f)
+  - [x] ViewSet base class with pagination (Commit: 859583f)
+  - [x] Global exception handler (Commit: 859583f)
+  - [x] Response format standardization (success/error) (Commit: 859583f)
 - **Exit Criteria**:
-  - Consistent API response structure across all endpoints
-  - Cursor-based pagination works with ?cursor=<timestamp>&limit=N
-  - All errors return proper HTTP status codes
+  - ✅ Consistent API response structure across all endpoints
+  - ✅ Cursor-based pagination works with ?cursor=<timestamp>&limit=N
+  - ✅ All errors return proper HTTP status codes
+- **Reference**: [apps/backend/PLAN.md#m2-api-foundation](apps/backend/PLAN.md#m2-api-foundation)
 
 #### CP-M2-2: RabbitMQ Integration
 - **Status**: PLANNED
