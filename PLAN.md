@@ -217,21 +217,21 @@ CP-M2-1 → CP-M2-2 → CP-M2-3
 - **Reference**: [apps/backend/PLAN.md#m2-api-foundation](apps/backend/PLAN.md#m2-api-foundation)
 
 #### CP-M2-2: RabbitMQ Integration
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: SEQUENTIAL
 - **Dependencies**: [CP-M2-1]
 - **Owner**: Backend
 - **Tasks**:
-  - [ ] Message sender utility (send_training_task, send_generation_task)
-  - [ ] Message format schema definition
-  - [ ] Queue declaration (model_training, image_generation)
-  - [ ] Connection pooling
-  - [ ] Backend → Training Server message delivery test
+  - [x] Message sender utility (send_training_task, send_generation_task) (Commit: 6c4bfec)
+  - [x] Message format schema definition (Commit: 6c4bfec)
+  - [x] Queue declaration (model_training, image_generation) (Commit: 6c4bfec)
+  - [x] Connection pooling with retry logic (Commit: 6c4bfec)
+  - [x] Backend → Training Server message delivery test (Commit: 6c4bfec, 8/8 tests passing)
 - **Exit Criteria**:
-  - Message appears in RabbitMQ queue after API call
-  - Message contains all required fields
-  - No connection leaks after 100 messages
-- **Reference**: [docs/API.md#rabbitmq-integration](docs/API.md#rabbitmq-integration)
+  - ✅ Message appears in RabbitMQ queue after API call
+  - ✅ Message contains all required fields
+  - ✅ No connection leaks after 100 messages
+- **Reference**: [apps/backend/PLAN.md#m2-rabbitmq-integration](apps/backend/PLAN.md#m2-rabbitmq-integration)
 
 #### CP-M2-3: Token Transaction Atomicity
 - **Status**: PLANNED
