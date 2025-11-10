@@ -91,27 +91,28 @@ CP-M1-1 → CP-M1-2 → CP-M1-3
 - **Commit**: 91ecbfc
 
 #### CP-M1-3: Authentication Flow
-- **Status**: PLANNED
+- **Status**: IN_PROGRESS
 - **Type**: SEQUENTIAL
 - **Dependencies**: [CP-M1-2]
 - **Owners**: [Backend, Frontend]
 - **Tasks**:
-  - [ ] Django-allauth configuration
-  - [ ] Google OAuth provider setup
-  - [ ] Session middleware configuration
-  - [ ] GET /api/auth/google/login (OAuth redirect)
-  - [ ] GET /api/auth/google/callback (OAuth callback handler)
-  - [ ] POST /api/auth/logout endpoint
-  - [ ] GET /api/auth/me endpoint
+  - [x] Django-allauth configuration (Backend - Commit: 0d1927a)
+  - [x] Google OAuth provider setup (Backend - Commit: 0d1927a)
+  - [x] Session middleware configuration (Backend - Commit: 0d1927a)
+  - [x] GET /api/auth/google/login (OAuth redirect) (Backend - Commit: 0d1927a)
+  - [x] GET /api/auth/google/callback (OAuth callback handler) (Backend - Commit: 0d1927a)
+  - [x] POST /api/auth/logout endpoint (Backend - Commit: 0d1927a)
+  - [x] GET /api/auth/me endpoint (Backend - Commit: 0d1927a)
   - [ ] Frontend OAuth redirect handler
   - [ ] useAuthStore implementation
   - [ ] Router guards (requiresAuth, requiresArtist)
 - **Exit Criteria**:
-  - User can login via Google in browser
-  - Session persists after page refresh
-  - Unauthenticated users redirected to /login
-  - Artist-only routes protected
+  - ⏳ User can login via Google in browser (Backend ready, Frontend pending)
+  - ⏳ Session persists after page refresh (Backend ready, Frontend pending)
+  - [ ] Unauthenticated users redirected to /login (Frontend pending)
+  - [ ] Artist-only routes protected (Frontend pending)
 - **Reference**:
+  - Backend: [apps/backend/PLAN.md#m1-auth-backend](apps/backend/PLAN.md#m1-auth-backend)
   - [docs/API.md#authentication](docs/API.md#authentication)
   - [TECHSPEC.md#10-보안-설계](TECHSPEC.md#10-보안-설계)
 
