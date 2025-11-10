@@ -23,7 +23,7 @@ This document contains detailed subtasks for backend development. For high-level
 ### M1-Initialization
 
 **Referenced by**: Root PLAN.md → PT-M1-Backend
-**Status**: IN_PROGRESS
+**Status**: DONE
 
 #### Subtasks
 
@@ -38,24 +38,24 @@ This document contains detailed subtasks for backend development. For high-level
   - [x] Install pika (RabbitMQ client)
   - [x] Install pillow for image handling
 
-- [x] PostgreSQL connection configuration (Commit: 91ecbfc)
+- [x] PostgreSQL connection configuration (Commit: 91ecbfc, 0bb8e02)
   - [x] Configure DATABASES in settings.py with DATABASE_URL
   - [x] Install dj-database-url for connection parsing
-  - [ ] Test connection with python manage.py dbshell (requires PostgreSQL running)
+  - [x] Test connection with python manage.py dbshell (Commit: 0bb8e02)
 
 - [x] Django REST Framework setup (Commit: 91ecbfc)
   - [x] Add rest_framework to INSTALLED_APPS
   - [x] Configure REST_FRAMEWORK settings (pagination, authentication)
   - [x] Set default renderer and parser classes
 
-- [ ] Health check endpoint
-  - [ ] Create app/views/health.py with HealthCheckView
-  - [ ] Add route: GET /api/health returns {"status": "ok", "database": "connected"}
-  - [ ] Test database connectivity in health check
+- [x] Health check endpoint (Commit: 0bb8e02)
+  - [x] Create app/views/health.py with HealthCheckView
+  - [x] Add route: GET /api/health returns {"status": "ok", "database": "connected"}
+  - [x] Test database connectivity in health check
 
-- [x] Docker configuration
-  - [ ] Verify Dockerfile builds successfully
-  - [ ] Test container starts with docker-compose up backend
+- [x] Docker configuration (Commit: 0bb8e02)
+  - [x] Verify Dockerfile builds successfully
+  - [x] Test container starts with docker-compose up backend
 
 - [x] Database models creation (Commit: 91ecbfc)
   - [x] User and Artist models
@@ -69,9 +69,9 @@ This document contains detailed subtasks for backend development. For high-level
   - [x] Initial migration created (0001_initial.py)
 
 **Exit Criteria**:
-- ⏳ python manage.py runserver starts without errors (requires PostgreSQL)
-- [ ] GET /api/health returns 200 OK
-- ⏳ Database connection test passes (requires PostgreSQL running)
+- ✅ python manage.py runserver starts without errors
+- ✅ GET /api/health returns 200 OK
+- ✅ Database connection test passes (verified through Docker)
 
 ---
 
