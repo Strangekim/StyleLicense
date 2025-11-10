@@ -60,7 +60,7 @@ This document contains detailed subtasks for inference server development. For h
 - [ ] Stable Diffusion inference
   - [ ] Load base model (Stable Diffusion v1.5)
   - [ ] Configure inference (50 steps, guidance_scale=7.5)
-  - [ ] Support aspect ratios (1:1, 16:9, 9:16, 4:3, 3:4)
+  - [ ] Support aspect ratios (1:1 [512×512px], 2:2 [1024×1024px], 1:2 [512×1024px])
   - [ ] Handle seed for reproducibility
 
 - [ ] LoRA weight loading

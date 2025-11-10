@@ -188,7 +188,7 @@ This document contains detailed subtasks for backend development. For high-level
 
 - [ ] Define message format schema
   - [ ] Training message: {"style_id": int, "image_paths": [str], "webhook_url": str, "num_epochs": int}
-  - [ ] Generation message: {"generation_id": int, "style_id": int, "lora_path": str, "prompt": str, "aspect_ratio": str, "seed": int, "webhook_url": str}
+  - [ ] Generation message: {"generation_id": int, "style_id": int, "lora_path": str, "prompt": str, "aspect_ratio": str (1:1, 2:2, or 1:2), "seed": int, "webhook_url": str}
   - [ ] Document in docs/API.md
 
 - [ ] Queue declaration
