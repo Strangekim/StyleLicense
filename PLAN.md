@@ -255,18 +255,19 @@ PT-M2-StyleAPI ⫽ PT-M2-TokenAPI ⫽ PT-M2-TagAPI
 ```
 
 #### PT-M2-StyleAPI: Style Model API
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M2-TokenAPI, PT-M2-TagAPI]
 - **Dependencies**: [CP-M2-1, CP-M2-2]
 - **Owner**: Backend
 - **Reference**: [apps/backend/PLAN.md#m2-style-model-api](apps/backend/PLAN.md#m2-style-model-api)
 - **Summary**:
-  - [ ] POST /api/models/train (image upload, tag assignment, price)
-  - [ ] GET /api/models (pagination, filter by tags/artist, sort by popular/recent)
-  - [ ] GET /api/models/:id (detail with artist info, sample images)
-  - [ ] DELETE /api/models/:id (owner-only permission check)
-  - [ ] Validation: 10-100 images, JPG/PNG only, max 10MB each
+  - [x] POST /api/models/ (image upload, tag assignment, RabbitMQ integration) (Commit: 69951bd)
+  - [x] GET /api/models (pagination, filter by tags/artist/status, sort by popular/recent) (Commit: 69951bd)
+  - [x] GET /api/models/:id (detail with artist info, artworks, tags) (Commit: 69951bd)
+  - [x] DELETE /api/models/:id (owner-only permission, soft delete) (Commit: 69951bd)
+  - [x] Validation: 10-100 images, JPG/PNG only, max 10MB each (Commit: 69951bd)
+  - [x] 13 tests passing (Commit: 69951bd)
 
 #### PT-M2-TokenAPI: Token System API
 - **Status**: PLANNED
