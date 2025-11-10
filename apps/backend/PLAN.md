@@ -23,30 +23,30 @@ This document contains detailed subtasks for backend development. For high-level
 ### M1-Initialization
 
 **Referenced by**: Root PLAN.md → PT-M1-Backend
-**Status**: PLANNED
+**Status**: IN_PROGRESS
 
 #### Subtasks
 
-- [ ] Create Django project structure
-  - [ ] django-admin startproject config .
-  - [ ] Create app/ directory for main application
-  - [ ] Configure config/settings.py with app registration
+- [x] Create Django project structure (Commit: 91ecbfc)
+  - [x] django-admin startproject config .
+  - [x] Create app/ directory for main application
+  - [x] Configure config/settings.py with app registration
 
-- [ ] Install and configure dependencies
-  - [ ] Create requirements.txt with Django, DRF, psycopg2, gunicorn
-  - [ ] Install django-cors-headers
-  - [ ] Install pika (RabbitMQ client)
-  - [ ] Install pillow for image handling
+- [x] Install and configure dependencies (Commit: 91ecbfc)
+  - [x] Create requirements.txt with Django, DRF, psycopg2, gunicorn
+  - [x] Install django-cors-headers
+  - [x] Install pika (RabbitMQ client)
+  - [x] Install pillow for image handling
 
-- [ ] PostgreSQL connection configuration
-  - [ ] Configure DATABASES in settings.py with DATABASE_URL
-  - [ ] Install dj-database-url for connection parsing
-  - [ ] Test connection with python manage.py dbshell
+- [x] PostgreSQL connection configuration (Commit: 91ecbfc)
+  - [x] Configure DATABASES in settings.py with DATABASE_URL
+  - [x] Install dj-database-url for connection parsing
+  - [ ] Test connection with python manage.py dbshell (requires PostgreSQL running)
 
-- [ ] Django REST Framework setup
-  - [ ] Add rest_framework to INSTALLED_APPS
-  - [ ] Configure REST_FRAMEWORK settings (pagination, authentication)
-  - [ ] Set default renderer and parser classes
+- [x] Django REST Framework setup (Commit: 91ecbfc)
+  - [x] Add rest_framework to INSTALLED_APPS
+  - [x] Configure REST_FRAMEWORK settings (pagination, authentication)
+  - [x] Set default renderer and parser classes
 
 - [ ] Health check endpoint
   - [ ] Create app/views/health.py with HealthCheckView
@@ -57,10 +57,21 @@ This document contains detailed subtasks for backend development. For high-level
   - [ ] Verify Dockerfile builds successfully
   - [ ] Test container starts with docker-compose up backend
 
+- [x] Database models creation (Commit: 91ecbfc)
+  - [x] User and Artist models
+  - [x] Style and Artwork models
+  - [x] Generation model
+  - [x] Transaction and Purchase models
+  - [x] Tag models (Tag, StyleTag, ArtworkTag, GenerationTag)
+  - [x] Community models (Follow, Like, Comment)
+  - [x] Notification model
+  - [x] All models registered in Django admin
+  - [x] Initial migration created (0001_initial.py)
+
 **Exit Criteria**:
-- [ ] python manage.py runserver starts without errors
+- ⏳ python manage.py runserver starts without errors (requires PostgreSQL)
 - [ ] GET /api/health returns 200 OK
-- [ ] Database connection test passes
+- ⏳ Database connection test passes (requires PostgreSQL running)
 
 ---
 
