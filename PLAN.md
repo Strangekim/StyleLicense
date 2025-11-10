@@ -102,11 +102,13 @@ CP-M1-1 → CP-M1-2 → CP-M1-3
   - [x] GET /api/auth/google/login (OAuth redirect) (Backend - Commit: 0d1927a)
   - [x] GET /api/auth/google/callback (OAuth callback handler) (Backend - Commit: 0d1927a)
   - [x] POST /api/auth/logout endpoint (Backend - Commit: 0d1927a)
-  - [x] GET /api/auth/me endpoint (Backend - Commit: 0d1927a)
+  - [x] GET /api/auth/me endpoint (Backend - Commit: 0d1927a, eb925d5)
+  - [x] Authentication tests (Backend - Commit: eb925d5, 9/9 passing)
   - [ ] Frontend OAuth redirect handler
   - [ ] useAuthStore implementation
   - [ ] Router guards (requiresAuth, requiresArtist)
 - **Exit Criteria**:
+  - ✅ Backend authentication API complete with tests passing
   - ⏳ User can login via Google in browser (Backend ready, Frontend pending)
   - ⏳ Session persists after page refresh (Backend ready, Frontend pending)
   - [ ] Unauthenticated users redirected to /login (Frontend pending)

@@ -126,18 +126,22 @@ This document contains detailed subtasks for backend development. For high-level
   - [x] Add auth routes to app/urls.py
   - [x] Include allauth URLs
 
-- [ ] Testing
-  - [ ] Write test: successful Google login creates user and session
-  - [ ] Write test: logout clears session
-  - [ ] Write test: /api/auth/me returns user data when authenticated
-  - [ ] Write test: /api/auth/me returns 401 when unauthenticated
+- [x] Testing (Commit: eb925d5)
+  - [x] Write test: successful Google login creates user and session
+  - [x] Write test: logout clears session
+  - [x] Write test: /api/auth/me returns user data when authenticated
+  - [x] Write test: /api/auth/me returns 401 when unauthenticated
+  - [x] Write test: TokenService.add_tokens increases balance
+  - [x] Write test: TokenService.consume_tokens decreases balance
+  - [x] Write test: TokenService.consume_tokens with insufficient balance raises error
+  - [x] Write test: Welcome bonus only granted once
 
 **Implementation Reference**: [CODE_GUIDE.md#authentication](CODE_GUIDE.md#authentication)
 
 **Exit Criteria**:
 - [x] User can authenticate via Google OAuth (implementation complete)
 - [x] Session persists across requests (implementation complete)
-- [ ] All auth tests pass (tests not yet written)
+- [x] All auth tests pass (9/9 tests passing)
 
 
 ## M2: Core Backend
