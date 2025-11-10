@@ -709,8 +709,8 @@ CP-M6-1 → CP-M6-2 → CP-M6-3 → CP-M6-4
   - [ ] Environment variables configuration (secrets management)
   - [ ] HTTPS setup with Let's Encrypt or ACM
   - [ ] Domain DNS configuration
-  - [ ] Backend deployment (Gunicorn + Nginx or AWS ECS)
-  - [ ] Frontend deployment (Vercel, Netlify, or S3 + CloudFront)
+  - [ ] Backend deployment (Google Cloud Run)
+  - [ ] Frontend deployment (Google Cloud Storage + CDN)
   - [ ] Database migration on production
   - [ ] Smoke test on production URL
 - **Exit Criteria**:

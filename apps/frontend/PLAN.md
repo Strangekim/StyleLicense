@@ -76,6 +76,80 @@ This document contains detailed subtasks for frontend development. For high-leve
 
 ---
 
+### M1-Design-System
+
+**Referenced by**: Root PLAN.md → PT-M1-Frontend
+**Status**: PLANNED
+**Description**: Create the foundational UI components and define design tokens. This is the first step in building the UI, ensuring a consistent look and feel across the application.
+
+#### Subtasks
+
+- [ ] Define Design Tokens
+  - [ ] Extract colors, fonts, and spacing from `docs/design/pages` mockups.
+  - [ ] Add custom values to `tailwind.config.js`.
+
+- [ ] Create Button component
+  - [ ] Create src/components/shared/Button.vue
+  - [ ] Props: variant (primary, secondary, outline, ghost), size (sm, md, lg), loading
+  - [ ] Emit click event
+  - [ ] Tailwind classes for each variant
+  - [ ] Loading spinner when loading=true
+
+- [ ] Create Input component
+  - [ ] Create src/components/shared/Input.vue
+  - [ ] Props: type (text, email, number, textarea), placeholder, modelValue
+  - [ ] Emit update:modelValue for v-model
+  - [ ] Error state styling
+  - [ ] Label and helper text slots
+
+- [ ] Create Modal component
+  - [ ] Create src/components/shared/Modal.vue
+  - [ ] Props: isOpen, title
+  - [ ] Slots: default (content), actions (footer buttons)
+  - [ ] Emit close on backdrop click or X button
+  - [ ] Teleport to body for proper z-index
+
+- [ ] Create Card component
+  - [ ] Create src/components/shared/Card.vue
+  - [ ] Props: clickable (boolean)
+  - [ ] Hover effects if clickable
+  - [ ] Slots: default (content)
+
+- [ ] Create Header component
+  - [ ] Create src/components/layout/Header.vue
+  - [ ] Logo and navigation links
+  - [ ] Display token balance if authenticated
+  - [ ] User dropdown menu (profile, logout)
+  - [ ] Mobile responsive hamburger menu
+
+- [ ] Create Footer component
+  - [ ] Create src/components/layout/Footer.vue
+  - [ ] Links to docs, about, terms
+  - [ ] Copyright notice
+
+- [ ] Create AppLayout component
+  - [ ] Create src/components/layout/AppLayout.vue
+  - [ ] Render Header + slot + Footer
+  - [ ] Apply to all pages via router
+
+- [ ] Testing
+  - [ ] Test Button variants render correctly
+  - [ ] Test Input v-model works
+  - [ ] Test Modal opens and closes
+  - [ ] Test Header displays user info when authenticated
+
+**Implementation Reference**:
+- [CODE_GUIDE.md#components](CODE_GUIDE.md#components)
+- **Design mockups**: All page mockups in `docs/design/pages/` show component usage
+
+**Exit Criteria**:
+- [ ] All base components created and functional
+- [ ] Components follow design system (colors, spacing, fonts)
+- [ ] Mobile responsive
+- [ ] Assets (logos, icons) imported from `src/assets/`
+
+---
+
 ### M1-Auth-Frontend
 
 **Referenced by**: Root PLAN.md → CP-M1-3
@@ -218,75 +292,6 @@ This document contains detailed subtasks for frontend development. For high-leve
 - [ ] Unauthenticated users cannot access protected routes
 - [ ] Non-artists cannot access artist-only routes
 - [ ] Redirects work correctly
-
----
-
-### M3-Components
-
-**Referenced by**: Root PLAN.md → PT-M3-Components  
-**Status**: PLANNED
-
-#### Subtasks
-
-- [ ] Create Button component
-  - [ ] Create src/components/shared/Button.vue
-  - [ ] Props: variant (primary, secondary, outline, ghost), size (sm, md, lg), loading
-  - [ ] Emit click event
-  - [ ] Tailwind classes for each variant
-  - [ ] Loading spinner when loading=true
-
-- [ ] Create Input component
-  - [ ] Create src/components/shared/Input.vue
-  - [ ] Props: type (text, email, number, textarea), placeholder, modelValue
-  - [ ] Emit update:modelValue for v-model
-  - [ ] Error state styling
-  - [ ] Label and helper text slots
-
-- [ ] Create Modal component
-  - [ ] Create src/components/shared/Modal.vue
-  - [ ] Props: isOpen, title
-  - [ ] Slots: default (content), actions (footer buttons)
-  - [ ] Emit close on backdrop click or X button
-  - [ ] Teleport to body for proper z-index
-
-- [ ] Create Card component
-  - [ ] Create src/components/shared/Card.vue
-  - [ ] Props: clickable (boolean)
-  - [ ] Hover effects if clickable
-  - [ ] Slots: default (content)
-
-- [ ] Create Header component
-  - [ ] Create src/components/layout/Header.vue
-  - [ ] Logo and navigation links
-  - [ ] Display token balance if authenticated
-  - [ ] User dropdown menu (profile, logout)
-  - [ ] Mobile responsive hamburger menu
-
-- [ ] Create Footer component
-  - [ ] Create src/components/layout/Footer.vue
-  - [ ] Links to docs, about, terms
-  - [ ] Copyright notice
-
-- [ ] Create AppLayout component
-  - [ ] Create src/components/layout/AppLayout.vue
-  - [ ] Render Header + slot + Footer
-  - [ ] Apply to all pages via router
-
-- [ ] Testing
-  - [ ] Test Button variants render correctly
-  - [ ] Test Input v-model works
-  - [ ] Test Modal opens and closes
-  - [ ] Test Header displays user info when authenticated
-
-**Implementation Reference**:
-- [CODE_GUIDE.md#components](CODE_GUIDE.md#components)
-- **Design mockups**: All page mockups in `docs/design/pages/` show component usage
-
-**Exit Criteria**:
-- [ ] All base components created and functional
-- [ ] Components follow design system (colors, spacing, fonts)
-- [ ] Mobile responsive
-- [ ] Assets (logos, icons) imported from `src/assets/`
 
 ---
 

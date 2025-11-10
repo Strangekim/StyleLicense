@@ -394,25 +394,12 @@ This document contains detailed subtasks for backend development. For high-level
   - [ ] Create app/views/tag.py
   - [ ] Read-only ViewSet (list only)
 
-- [ ] GET /api/tags endpoint
-  - [ ] Return popular tags (usage_count > 0)
-  - [ ] Limit to 20 tags
-  - [ ] Sort by usage_count DESC
-
-- [ ] Tag autocomplete endpoint
-  - [ ] GET /api/tags/autocomplete?q=water
-  - [ ] Return tags where name contains query
-  - [ ] Limit to 10 results
-  - [ ] Case-insensitive search
-
 - [ ] Implement AND/OR logic for model filtering
   - [ ] Update StyleModelViewSet.get_queryset()
   - [ ] ?tags=watercolor,portrait uses AND logic (both tags required)
   - [ ] Alternative: ?tags_any=watercolor,portrait for OR logic
 
 - [ ] Testing
-  - [ ] Test popular tags endpoint
-  - [ ] Test autocomplete returns matching tags
   - [ ] Test model filtering with multiple tags (AND logic)
 
 **Implementation Reference**: [CODE_GUIDE.md#filtering](CODE_GUIDE.md#filtering)

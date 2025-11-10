@@ -246,7 +246,6 @@ StyleLicense/
 │   └── PATTERNS.md           # Code Patterns
 │
 ├── docker-compose.yml        # Development Environment
-├── docker-compose.prod.yml   # Production Environment
 ├── TECHSPEC.md               # Technical Specification
 ├── PLAN.md                   # Development Roadmap
 └── README.md                 # This file
