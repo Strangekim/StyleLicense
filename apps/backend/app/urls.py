@@ -7,10 +7,12 @@ from rest_framework.routers import DefaultRouter
 from app.views.auth import LogoutView, MeView, GoogleCallbackView
 from app.views.health import HealthCheckView
 from app.views.style import StyleViewSet
+from app.views.token import TokenViewSet
 
 # DRF Router for ViewSets
 router = DefaultRouter()
 router.register(r"models", StyleViewSet, basename="style")
+router.register(r"tokens", TokenViewSet, basename="token")
 
 urlpatterns = [
     # Health check endpoint
