@@ -363,7 +363,7 @@ This document contains detailed subtasks for frontend development. For high-leve
   - [ ] Create src/pages/generate/ImageGeneration.vue
   - [ ] Style model selector (dropdown or search)
   - [ ] Prompt tag input (multi-select, autocomplete)
-  - [ ] Aspect ratio selector (1:1, 16:9, 9:16, 4:3, 3:4)
+  - [ ] Aspect ratio selector (1:1 [512×512px], 2:2 [1024×1024px], 1:2 [512×1024px])
   - [ ] Advanced settings (seed, optional)
   - [ ] Token cost display (updates based on aspect ratio)
   - [ ] Generate button (check token balance, disable if insufficient)
@@ -374,7 +374,7 @@ This document contains detailed subtasks for frontend development. For high-leve
   - [ ] Display status: queued to processing to completed
   - [ ] Progress bar or spinner
   - [ ] Estimated time remaining (optional)
-  - [ ] Poll GET /api/images/:id/status every 2 seconds
+  - [ ] Poll GET /api/images/:id/status every 5 seconds
 
 - [ ] ImagePreview component
   - [ ] Create src/components/features/generation/ImagePreview.vue
