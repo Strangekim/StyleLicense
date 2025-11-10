@@ -10,34 +10,28 @@ class Follow(models.Model):
 
     # Foreign keys
     follower = models.ForeignKey(
-        'app.User',
-        on_delete=models.CASCADE,
-        related_name='following'
+        "app.User", on_delete=models.CASCADE, related_name="following"
     )
     following = models.ForeignKey(
-        'app.User',
-        on_delete=models.CASCADE,
-        related_name='followers'
+        "app.User", on_delete=models.CASCADE, related_name="followers"
     )
 
     # Timestamp
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        db_table = 'follows'
+        db_table = "follows"
         constraints = [
             models.CheckConstraint(
-                check=~models.Q(follower=models.F('following')),
-                name='no_self_follow'
+                check=~models.Q(follower=models.F("following")), name="no_self_follow"
             ),
             models.UniqueConstraint(
-                fields=['follower', 'following'],
-                name='unique_follow_pair'
+                fields=["follower", "following"], name="unique_follow_pair"
             ),
         ]
         indexes = [
-            models.Index(fields=['follower'], name='idx_follows_follower'),
-            models.Index(fields=['following'], name='idx_follows_following'),
+            models.Index(fields=["follower"], name="idx_follows_follower"),
+            models.Index(fields=["following"], name="idx_follows_following"),
         ]
 
     def __str__(self):
@@ -51,31 +45,22 @@ class Like(models.Model):
     id = models.BigAutoField(primary_key=True)
 
     # Foreign keys
-    user = models.ForeignKey(
-        'app.User',
-        on_delete=models.CASCADE,
-        related_name='likes'
-    )
+    user = models.ForeignKey("app.User", on_delete=models.CASCADE, related_name="likes")
     generation = models.ForeignKey(
-        'app.Generation',
-        on_delete=models.CASCADE,
-        related_name='likes'
+        "app.Generation", on_delete=models.CASCADE, related_name="likes"
     )
 
     # Timestamp
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        db_table = 'likes'
+        db_table = "likes"
         constraints = [
-            models.UniqueConstraint(
-                fields=['user', 'generation'],
-                name='unique_like'
-            ),
+            models.UniqueConstraint(fields=["user", "generation"], name="unique_like"),
         ]
         indexes = [
-            models.Index(fields=['generation'], name='idx_likes_generation'),
-            models.Index(fields=['user', '-created_at'], name='idx_likes_user'),
+            models.Index(fields=["generation"], name="idx_likes_generation"),
+            models.Index(fields=["user", "-created_at"], name="idx_likes_user"),
         ]
 
     def __str__(self):
@@ -90,21 +75,13 @@ class Comment(models.Model):
 
     # Foreign keys
     generation = models.ForeignKey(
-        'app.Generation',
-        on_delete=models.CASCADE,
-        related_name='comments'
+        "app.Generation", on_delete=models.CASCADE, related_name="comments"
     )
     user = models.ForeignKey(
-        'app.User',
-        on_delete=models.CASCADE,
-        related_name='comments'
+        "app.User", on_delete=models.CASCADE, related_name="comments"
     )
     parent = models.ForeignKey(
-        'self',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name='replies'
+        "self", on_delete=models.CASCADE, null=True, blank=True, related_name="replies"
     )
 
     # Content
@@ -118,11 +95,13 @@ class Comment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'comments'
+        db_table = "comments"
         indexes = [
-            models.Index(fields=['generation', '-created_at'], name='idx_comments_generation'),
-            models.Index(fields=['user'], name='idx_comments_user'),
-            models.Index(fields=['parent'], name='idx_comments_parent'),
+            models.Index(
+                fields=["generation", "-created_at"], name="idx_comments_generation"
+            ),
+            models.Index(fields=["user"], name="idx_comments_user"),
+            models.Index(fields=["parent"], name="idx_comments_parent"),
         ]
 
     def __str__(self):

@@ -6,16 +6,16 @@ class Style(models.Model):
     """Style model representing an artist's trained AI style."""
 
     TRAINING_STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('training', 'Training'),
-        ('completed', 'Completed'),
-        ('failed', 'Failed'),
+        ("pending", "Pending"),
+        ("training", "Training"),
+        ("completed", "Completed"),
+        ("failed", "Failed"),
     ]
 
     LICENSE_TYPE_CHOICES = [
-        ('personal', 'Personal'),
-        ('commercial', 'Commercial'),
-        ('exclusive', 'Exclusive'),
+        ("personal", "Personal"),
+        ("commercial", "Commercial"),
+        ("exclusive", "Exclusive"),
     ]
 
     # Primary key
@@ -23,9 +23,7 @@ class Style(models.Model):
 
     # Foreign key
     artist = models.ForeignKey(
-        'app.User',
-        on_delete=models.CASCADE,
-        related_name='styles'
+        "app.User", on_delete=models.CASCADE, related_name="styles"
     )
 
     # Basic fields
@@ -37,13 +35,17 @@ class Style(models.Model):
     model_path = models.TextField(null=True, blank=True)
 
     # Training details
-    training_status = models.CharField(max_length=20, choices=TRAINING_STATUS_CHOICES, default='pending')
+    training_status = models.CharField(
+        max_length=20, choices=TRAINING_STATUS_CHOICES, default="pending"
+    )
     training_log_path = models.TextField(null=True, blank=True)
     training_metric = models.JSONField(null=True, blank=True)
     training_progress = models.JSONField(null=True, blank=True)
 
     # License
-    license_type = models.CharField(max_length=30, choices=LICENSE_TYPE_CHOICES, default='personal')
+    license_type = models.CharField(
+        max_length=30, choices=LICENSE_TYPE_CHOICES, default="personal"
+    )
     valid_from = models.DateField(default=timezone.now)
     valid_to = models.DateField(null=True, blank=True)
 
@@ -62,34 +64,39 @@ class Style(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'styles'
+        db_table = "styles"
         constraints = [
             models.UniqueConstraint(
-                fields=['artist', 'name'],
-                name='unique_artist_style_name'
+                fields=["artist", "name"], name="unique_artist_style_name"
             ),
             models.CheckConstraint(
                 check=models.Q(generation_cost_tokens__gte=0),
-                name='generation_cost_tokens_non_negative'
+                name="generation_cost_tokens_non_negative",
             ),
             models.CheckConstraint(
-                check=models.Q(training_status__in=['pending', 'training', 'completed', 'failed']),
-                name='valid_training_status'
+                check=models.Q(
+                    training_status__in=["pending", "training", "completed", "failed"]
+                ),
+                name="valid_training_status",
             ),
             models.CheckConstraint(
-                check=models.Q(license_type__in=['personal', 'commercial', 'exclusive']),
-                name='valid_license_type'
+                check=models.Q(
+                    license_type__in=["personal", "commercial", "exclusive"]
+                ),
+                name="valid_license_type",
             ),
         ]
         indexes = [
-            models.Index(fields=['artist', 'is_active'], name='idx_styles_artist'),
-            models.Index(fields=['training_status'], name='idx_styles_status'),
+            models.Index(fields=["artist", "is_active"], name="idx_styles_artist"),
+            models.Index(fields=["training_status"], name="idx_styles_status"),
             models.Index(
-                fields=['is_active', '-created_at'],
-                name='idx_styles_active',
-                condition=models.Q(is_active=True)
+                fields=["is_active", "-created_at"],
+                name="idx_styles_active",
+                condition=models.Q(is_active=True),
             ),
-            models.Index(fields=['-usage_count', '-created_at'], name='idx_styles_usage'),
+            models.Index(
+                fields=["-usage_count", "-created_at"], name="idx_styles_usage"
+            ),
         ]
 
     def __str__(self):
@@ -104,7 +111,7 @@ class Style(models.Model):
 
     def is_ready(self):
         """Check if style is ready for generation."""
-        return self.training_status == 'completed' and self.model_path
+        return self.training_status == "completed" and self.model_path
 
 
 class Artwork(models.Model):
@@ -114,11 +121,7 @@ class Artwork(models.Model):
     id = models.BigAutoField(primary_key=True)
 
     # Foreign key
-    style = models.ForeignKey(
-        Style,
-        on_delete=models.CASCADE,
-        related_name='artworks'
-    )
+    style = models.ForeignKey(Style, on_delete=models.CASCADE, related_name="artworks")
 
     # Image URLs
     image_url = models.TextField()
@@ -132,13 +135,13 @@ class Artwork(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        db_table = 'artworks'
+        db_table = "artworks"
         indexes = [
-            models.Index(fields=['style'], name='idx_artworks_style'),
+            models.Index(fields=["style"], name="idx_artworks_style"),
             models.Index(
-                fields=['is_valid'],
-                name='idx_artworks_valid',
-                condition=models.Q(is_valid=True)
+                fields=["is_valid"],
+                name="idx_artworks_valid",
+                condition=models.Q(is_valid=True),
             ),
         ]
 

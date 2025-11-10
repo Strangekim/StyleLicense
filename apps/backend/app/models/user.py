@@ -1,4 +1,8 @@
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import (
+    AbstractBaseUser,
+    BaseUserManager,
+    PermissionsMixin,
+)
 from django.db import models
 from django.utils import timezone
 
@@ -6,16 +10,23 @@ from django.utils import timezone
 class UserManager(BaseUserManager):
     """Custom user manager for User model."""
 
-    def create_user(self, username, provider='google', provider_user_id=None, password=None, **extra_fields):
+    def create_user(
+        self,
+        username,
+        provider="google",
+        provider_user_id=None,
+        password=None,
+        **extra_fields,
+    ):
         """Create and save a regular user."""
         if not username:
-            raise ValueError('The Username field must be set')
+            raise ValueError("The Username field must be set")
 
         user = self.model(
             username=username,
             provider=provider,
             provider_user_id=provider_user_id or username,
-            **extra_fields
+            **extra_fields,
         )
         if password:
             user.set_password(password)
@@ -24,15 +35,15 @@ class UserManager(BaseUserManager):
 
     def create_superuser(self, username, password=None, **extra_fields):
         """Create and save a superuser."""
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('is_active', True)
-        extra_fields.setdefault('role', 'admin')
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("is_active", True)
+        extra_fields.setdefault("role", "admin")
 
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
 
         return self.create_user(username, password=password, **extra_fields)
 
@@ -41,13 +52,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     """Custom user model for authentication via Google OAuth."""
 
     ROLE_CHOICES = [
-        ('user', 'User'),
-        ('artist', 'Artist'),
-        ('admin', 'Admin'),
+        ("user", "User"),
+        ("artist", "Artist"),
+        ("admin", "Admin"),
     ]
 
     PROVIDER_CHOICES = [
-        ('google', 'Google'),
+        ("google", "Google"),
     ]
 
     # Primary key
@@ -55,12 +66,15 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     # Basic fields
     username = models.CharField(max_length=50, unique=True)
-    provider = models.CharField(max_length=30, choices=PROVIDER_CHOICES, default='google')
+    email = models.EmailField(max_length=255, unique=True)
+    provider = models.CharField(
+        max_length=30, choices=PROVIDER_CHOICES, default="google"
+    )
     provider_user_id = models.CharField(max_length=255)
     profile_image = models.TextField(null=True, blank=True)
 
     # Role and permissions
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='user')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="user")
 
     # Token balance
     token_balance = models.BigIntegerField(default=0)
@@ -78,27 +92,28 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     objects = UserManager()
 
-    USERNAME_FIELD = 'username'
+    USERNAME_FIELD = "username"
     REQUIRED_FIELDS = []
 
     class Meta:
-        db_table = 'users'
+        db_table = "users"
         constraints = [
             models.UniqueConstraint(
-                fields=['provider', 'provider_user_id'],
-                name='unique_provider_user'
+                fields=["provider", "provider_user_id"], name="unique_provider_user"
             ),
             models.CheckConstraint(
-                check=models.Q(token_balance__gte=0),
-                name='token_balance_non_negative'
+                check=models.Q(token_balance__gte=0), name="token_balance_non_negative"
             ),
         ]
         indexes = [
-            models.Index(fields=['provider', 'provider_user_id'], name='idx_users_provider_userid'),
             models.Index(
-                fields=['role'],
-                name='idx_users_role',
-                condition=models.Q(role='artist')
+                fields=["provider", "provider_user_id"],
+                name="idx_users_provider_userid",
+            ),
+            models.Index(
+                fields=["role"],
+                name="idx_users_role",
+                condition=models.Q(role="artist"),
             ),
         ]
 
@@ -120,7 +135,9 @@ class Artist(models.Model):
     id = models.BigAutoField(primary_key=True)
 
     # Foreign key (1:1 with User)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='artist_profile')
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="artist_profile"
+    )
 
     # Artist-specific fields
     artist_name = models.CharField(max_length=100, null=True, blank=True)
@@ -138,15 +155,15 @@ class Artist(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'artists'
+        db_table = "artists"
         constraints = [
             models.CheckConstraint(
                 check=models.Q(earned_token_balance__gte=0),
-                name='earned_token_balance_non_negative'
+                name="earned_token_balance_non_negative",
             ),
         ]
         indexes = [
-            models.Index(fields=['user'], name='idx_artists_user_id'),
+            models.Index(fields=["user"], name="idx_artists_user_id"),
         ]
 
     def __str__(self):
