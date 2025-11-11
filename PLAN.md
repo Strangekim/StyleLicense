@@ -8,11 +8,11 @@
 
 ## Overview
 ```
-Total Progress: ███░░░░░░░░░░░░░░░░░ 15%
+Total Progress: ████░░░░░░░░░░░░░░░░ 20%
 
 M1 Foundation        ██████████░░░░░░░░░░ 50%
 M2 Core Backend      ████████████████████ 100%
-M3 Core Frontend     ░░░░░░░░░░░░░░░░░░░░  0%
+M3 Core Frontend     ████████████████████ 100%
 M4 AI Integration    ░░░░░░░░░░░░░░░░░░░░  0%
 M5 Community         ░░░░░░░░░░░░░░░░░░░░  0%
 M6 Launch            ░░░░░░░░░░░░░░░░░░░░  0%
@@ -309,17 +309,17 @@ PT-M2-StyleAPI ⫽ PT-M2-TokenAPI ⫽ PT-M2-TagAPI
 ## M3: Core Frontend
 
 **ID**: M3  
-**Status**: PLANNED  
+**Status**: DONE  
 **Dependencies**: [M1]  
 **Blocking**: [M5]  
 **Parallel With**: [M2]  
-**Completion**: 0%
+**Completion**: 100%
 
 ### Objectives
-- [ ] All core pages rendering correctly
-- [ ] API integration with proper error handling
-- [ ] State management operational
-- [ ] Route guards protecting authenticated routes
+- [x] All core pages rendering correctly
+- [x] API integration with proper error handling
+- [x] State management operational
+- [x] Route guards protecting authenticated routes
 
 ### Critical Path (순차 실행 필수)
 ```
@@ -422,11 +422,11 @@ PT-M3-Components ⫽ PT-M3-StylePages ⫽ PT-M3-Generation ⫽ PT-M3-Stores
   - [x] useTokenStore (fetchBalance, purchaseTokens, fetchTransactions, updateBalance) (Commit: 725a55a)
 
 ### Exit Criteria
-- [ ] All CP-M3 tasks completed
-- [ ] All PT-M3 tasks completed
-- [ ] All pages accessible via router
-- [ ] API calls display loading states
-- [ ] Error states render properly
+- [x] All CP-M3 tasks completed
+- [x] All PT-M3 tasks completed
+- [x] All pages accessible via router
+- [x] API calls display loading states
+- [x] Error states render properly
 
 ---
 
