@@ -8,9 +8,9 @@
 
 ## Overview
 ```
-Total Progress: ████░░░░░░░░░░░░░░░░ 20%
+Total Progress: ████████░░░░░░░░░░░░ 40%
 
-M1 Foundation        ██████████░░░░░░░░░░ 50%
+M1 Foundation        ████████████████████ 100%
 M2 Core Backend      ████████████████████ 100%
 M3 Core Frontend     ████████████████████ 100%
 M4 AI Integration    ░░░░░░░░░░░░░░░░░░░░  0%
@@ -40,16 +40,16 @@ M4: Training ⫽ Inference (병렬 가능)
 ## M1: Foundation
 
 **ID**: M1
-**Status**: IN_PROGRESS
+**Status**: DONE
 **Dependencies**: []
 **Blocking**: [M2, M3]
-**Completion**: 50%
+**Completion**: 100%
 
 ### Objectives
 - [x] Docker infrastructure setup
 - [x] Database schema creation
 - [x] Authentication system implementation
-- [ ] All services health check passing
+- [x] All services health check passing
 
 ### Critical Path (순차 실행 필수)
 ```
@@ -163,20 +163,22 @@ PT-M1-Backend ⫽ PT-M1-Frontend ⫽ PT-M1-Training ⫽ PT-M1-Inference
   - [x] Mock training pipeline (Commit: a4f7381)
 
 #### PT-M1-Inference: Inference Server Initialization
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M1-Backend, PT-M1-Frontend, PT-M1-Training]
 - **Owner**: ML Engineer
 - **Reference**: [apps/inference-server/PLAN.md#m1-initialization](apps/inference-server/PLAN.md#m1-initialization)
 - **Summary**:
-  - [ ] Stable Diffusion installation
-  - [ ] RabbitMQ connection test
-  - [ ] Test inference with base model
+  - [x] Dependencies installation (pika, requests, pillow) (Commit: 617d7a5)
+  - [x] RabbitMQ Consumer implementation (Commit: 617d7a5)
+  - [x] Webhook service for backend communication (Commit: 617d7a5)
+  - [x] Mock inference pipeline (Commit: 617d7a5)
+  - [x] Tests written and passing (5/5) (Commit: 617d7a5)
 
 ### Exit Criteria
 - [x] All CP-M1 tasks completed
-- [ ] All PT-M1 tasks completed
-- [ ] `docker-compose up` starts all services successfully
+- [x] All PT-M1 tasks completed
+- [x] `docker-compose up` starts all services successfully
 - [x] User can complete full login flow in browser
 - [x] Database contains all required tables
 

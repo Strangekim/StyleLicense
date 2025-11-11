@@ -26,18 +26,18 @@ This document contains detailed subtasks for inference server development. For h
 
 #### Subtasks
 
-- [x] Install Stable Diffusion dependencies (Commit: TBD)
+- [x] Install Stable Diffusion dependencies (Commit: 617d7a5)
   - [x] Create requirements.txt with dependencies (pika, requests, pillow)
   - [x] Install pillow for image processing
   - [x] Note: ML dependencies (torch, diffusers) deferred to M4 for GPU instance
 
-- [x] RabbitMQ connection test (Commit: TBD)
+- [x] RabbitMQ connection test (Commit: 617d7a5)
   - [x] Install pika library
   - [x] Create config.py for environment management
   - [x] Create RabbitMQ consumer for image_generation queue
   - [x] Declare image_generation queue
 
-- [x] Mock inference pipeline (Commit: TBD)
+- [x] Mock inference pipeline (Commit: 617d7a5)
   - [x] Create mock generation with progress updates (10 seconds simulation)
   - [x] Webhook integration for status updates
   - [x] Tests written and passing (5/5 tests)
