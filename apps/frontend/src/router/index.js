@@ -5,6 +5,8 @@ import { useAuthStore } from '@/stores/auth'
 import Home from '@/pages/Home.vue'
 import Login from '@/pages/auth/Login.vue'
 import GoogleCallback from '@/pages/auth/GoogleCallback.vue'
+import ModelMarketplace from '@/pages/marketplace/ModelMarketplace.vue'
+import ModelDetail from '@/pages/marketplace/ModelDetail.vue'
 
 const routes = [
   {
@@ -23,18 +25,30 @@ const routes = [
     name: 'GoogleCallback',
     component: GoogleCallback,
   },
-  // Protected routes (to be added later)
+  // Marketplace routes (public)
+  {
+    path: '/marketplace',
+    name: 'Marketplace',
+    component: ModelMarketplace,
+  },
+  {
+    path: '/models/:id',
+    name: 'ModelDetail',
+    component: ModelDetail,
+  },
+  // Artist routes (protected)
+  {
+    path: '/styles/create',
+    name: 'StyleCreate',
+    component: () => import('@/pages/artist/StyleCreate.vue'),
+    meta: { requiresAuth: true, requiresArtist: true },
+  },
+  // Generation routes (to be added later)
   // {
   //   path: '/generate',
   //   name: 'Generate',
   //   component: () => import('@/pages/generate/ImageGeneration.vue'),
   //   meta: { requiresAuth: true },
-  // },
-  // {
-  //   path: '/styles/create',
-  //   name: 'StyleCreate',
-  //   component: () => import('@/pages/artist/StyleCreate.vue'),
-  //   meta: { requiresAuth: true, requiresArtist: true },
   // },
 ]
 
