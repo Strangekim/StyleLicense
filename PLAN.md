@@ -368,20 +368,20 @@ PT-M3-Components ⫽ PT-M3-StylePages ⫽ PT-M3-Generation ⫽ PT-M3-Stores
 ```
 
 #### PT-M3-Components: Common Components
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M3-StylePages, PT-M3-Generation, PT-M3-Stores]
 - **Dependencies**: [M1]
 - **Owner**: Frontend
 - **Reference**: [apps/frontend/PLAN.md#m3-components](apps/frontend/PLAN.md#m3-components)
 - **Summary**:
-  - [ ] Button (variants: primary, secondary, outline, ghost)
-  - [ ] Input (text, email, number, textarea)
-  - [ ] Modal with backdrop click close
-  - [ ] Card with hover effects
-  - [ ] Header with auth status, token balance display
-  - [ ] Footer
-  - [ ] AppLayout (header + slot + footer)
+  - [x] Button (variants: primary, secondary, outline, ghost) (Commit: a1a70f0)
+  - [x] Input (text, email, number, textarea) (Commit: a1a70f0)
+  - [x] Modal with backdrop click close (Commit: a1a70f0)
+  - [x] Card with hover effects (Commit: a1a70f0)
+  - [x] Header with auth status, token balance display (Commit: a1a70f0)
+  - [x] Footer (Commit: a1a70f0)
+  - [x] AppLayout (header + slot + footer) (Commit: a1a70f0)
 
 #### PT-M3-StylePages: Style Related Pages
 - **Status**: DONE

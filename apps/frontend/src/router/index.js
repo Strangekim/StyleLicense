@@ -7,6 +7,8 @@ import Login from '@/pages/auth/Login.vue'
 import GoogleCallback from '@/pages/auth/GoogleCallback.vue'
 import ModelMarketplace from '@/pages/marketplace/ModelMarketplace.vue'
 import ModelDetail from '@/pages/marketplace/ModelDetail.vue'
+import ImageGeneration from '@/pages/generate/ImageGeneration.vue'
+import GenerationHistory from '@/pages/generate/GenerationHistory.vue'
 
 const routes = [
   {
@@ -36,6 +38,19 @@ const routes = [
     name: 'ModelDetail',
     component: ModelDetail,
   },
+  // Generation routes (authenticated users)
+  {
+    path: '/generate',
+    name: 'Generate',
+    component: ImageGeneration,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/generate/history',
+    name: 'GenerationHistory',
+    component: GenerationHistory,
+    meta: { requiresAuth: true },
+  },
   // Artist routes (protected)
   {
     path: '/styles/create',
@@ -43,13 +58,6 @@ const routes = [
     component: () => import('@/pages/artist/StyleCreate.vue'),
     meta: { requiresAuth: true, requiresArtist: true },
   },
-  // Generation routes (to be added later)
-  // {
-  //   path: '/generate',
-  //   name: 'Generate',
-  //   component: () => import('@/pages/generate/ImageGeneration.vue'),
-  //   meta: { requiresAuth: true },
-  // },
 ]
 
 const router = createRouter({
