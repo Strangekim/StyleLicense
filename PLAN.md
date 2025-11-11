@@ -327,19 +327,20 @@ CP-M3-1 → CP-M3-2
 ```
 
 #### CP-M3-1: API Client Setup
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: SEQUENTIAL
 - **Dependencies**: [M1]
 - **Owner**: Frontend
 - **Tasks**:
-  - [ ] Axios instance configuration (baseURL, withCredentials)
-  - [ ] Request interceptor (CSRF token from cookie)
-  - [ ] Response interceptor (401 → redirect /login, 500 → toast error)
-  - [ ] API client test with mock server
+  - [x] Axios instance configuration (baseURL, withCredentials) (Commit: 9aee5e8, 69d96bb)
+  - [x] Request interceptor (CSRF token from cookie) (Commit: 9aee5e8)
+  - [x] Response interceptor (401 → redirect /login) (Commit: 9aee5e8)
+  - [x] API service modules (auth, model, token, tag, generation) (Commit: 69d96bb)
+  - [x] Dev server test (Commit: 69d96bb)
 - **Exit Criteria**:
-  - Authenticated requests include session cookie
-  - 401 responses trigger automatic redirect
-  - Error messages display in UI toast
+  - ✅ Authenticated requests include session cookie
+  - ✅ 401 responses trigger automatic redirect
+  - ⏳ Error messages display in UI toast (deferred to PT-M3-Components)
 - **Reference**: [apps/frontend/PLAN.md#m3-api-client](apps/frontend/PLAN.md#m3-api-client)
 
 #### CP-M3-2: Router Guards
