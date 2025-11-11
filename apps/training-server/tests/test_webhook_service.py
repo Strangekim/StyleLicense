@@ -87,8 +87,10 @@ def test_send_training_failed(mock_patch):
 @patch("services.webhook_service.requests.patch")
 def test_send_training_status_failure(mock_patch):
     """Test webhook failure handling"""
-    # Setup mock to raise exception
-    mock_patch.side_effect = Exception("Connection error")
+    import requests
+
+    # Setup mock to raise RequestException
+    mock_patch.side_effect = requests.exceptions.RequestException("Connection error")
 
     # Test
     result = WebhookService.send_training_status(
