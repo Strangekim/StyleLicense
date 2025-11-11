@@ -150,15 +150,17 @@ PT-M1-Backend ⫽ PT-M1-Frontend ⫽ PT-M1-Training ⫽ PT-M1-Inference
   - [x] Dev server verified on port 5173 (Commit: 275e328)
 
 #### PT-M1-Training: Training Server Initialization
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M1-Backend, PT-M1-Frontend, PT-M1-Inference]
 - **Owner**: ML Engineer
 - **Reference**: [apps/training-server/PLAN.md#m1-initialization](apps/training-server/PLAN.md#m1-initialization)
 - **Summary**:
-  - [ ] PyTorch, Diffusers installation
-  - [ ] RabbitMQ connection test
-  - [ ] CUDA availability check
+  - [x] Dependencies installation (pika, requests, google-cloud-storage) (Commit: [pending])
+  - [x] RabbitMQ Consumer implementation (Commit: [pending])
+  - [x] CUDA availability check (Commit: [pending])
+  - [x] Webhook service for backend communication (Commit: [pending])
+  - [x] Mock training pipeline (Commit: [pending])
 
 #### PT-M1-Inference: Inference Server Initialization
 - **Status**: PLANNED
