@@ -397,17 +397,17 @@ PT-M3-Components ⫽ PT-M3-StylePages ⫽ PT-M3-Generation ⫽ PT-M3-Stores
   - [x] ModelCard.vue component (Commit: 34207f2)
 
 #### PT-M3-Generation: Image Generation UI
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M3-Components, PT-M3-StylePages, PT-M3-Stores]
 - **Dependencies**: [CP-M3-1]
 - **Owner**: Frontend
 - **Reference**: [apps/frontend/PLAN.md#m3-generation-ui](apps/frontend/PLAN.md#m3-generation-ui)
 - **Summary**:
-  - [ ] ImageGeneration.vue (style selector, prompt input, settings)
-  - [ ] Progress indicator (queued → processing → completed)
-  - [ ] ImagePreview with download button
-  - [ ] Generation history list
+  - [x] ImageGeneration.vue (style selector, prompt input, settings) (Commit: 1f02f93)
+  - [x] Progress indicator (queued → processing → completed) (Commit: 1f02f93)
+  - [x] ImagePreview with download button (Commit: 1f02f93)
+  - [x] Generation history list (Commit: 1f02f93)
 
 #### PT-M3-Stores: Pinia State Management
 - **Status**: DONE

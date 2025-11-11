@@ -385,37 +385,37 @@ This document contains detailed subtasks for frontend development. For high-leve
 ### M3-Generation-UI
 
 **Referenced by**: Root PLAN.md → PT-M3-Generation  
-**Status**: PLANNED
+**Status**: DONE
 
 #### Subtasks
 
-- [ ] Create ImageGeneration page
-  - [ ] Create src/pages/generate/ImageGeneration.vue
-  - [ ] Style model selector (dropdown or search)
-  - [ ] Prompt tag input (multi-select, autocomplete)
-  - [ ] Aspect ratio selector (1:1 [512×512px], 2:2 [1024×1024px], 1:2 [512×1024px])
-  - [ ] Advanced settings (seed, optional)
-  - [ ] Token cost display (updates based on aspect ratio)
-  - [ ] Generate button (check token balance, disable if insufficient)
-  - [ ] Submit to POST /api/images/generate
+- [x] Create ImageGeneration page (Commit: 1f02f93)
+  - [x] Create src/pages/generate/ImageGeneration.vue
+  - [x] Style model selector (dropdown or search)
+  - [x] Prompt input (multi-select, autocomplete)
+  - [x] Aspect ratio selector (1:1 [512×512px], 2:2 [1024×1024px], 1:2 [512×1024px])
+  - [x] Advanced settings (seed, optional)
+  - [x] Token cost display (updates based on aspect ratio)
+  - [x] Generate button (check token balance, disable if insufficient)
+  - [x] Submit to POST /api/images/generate
 
-- [ ] Progress indicator component
-  - [ ] Create src/components/features/generation/ProgressIndicator.vue
-  - [ ] Display status: queued to processing to completed
-  - [ ] Progress bar or spinner
+- [x] Progress indicator component (Commit: 1f02f93)
+  - [x] Create src/components/features/generation/ProgressIndicator.vue
+  - [x] Display status: queued to processing to completed
+  - [x] Progress bar or spinner
   - [ ] Estimated time remaining (optional)
   - [ ] Poll GET /api/images/:id/status every 5 seconds
 
-- [ ] ImagePreview component
-  - [ ] Create src/components/features/generation/ImagePreview.vue
-  - [ ] Display generated image
-  - [ ] Download button (save to device)
+- [x] ImagePreview component (Commit: 1f02f93)
+  - [x] Create src/components/features/generation/ImagePreview.vue
+  - [x] Display generated image
+  - [x] Download button (save to device)
   - [ ] Share button (copy link, optional)
-  - [ ] Regenerate button (use same params)
+  - [x] Regenerate button (use same params)
 
-- [ ] Generation history list
-  - [ ] Create src/pages/generate/GenerationHistory.vue
-  - [ ] List past generations
+- [x] Generation history list (Commit: 1f02f93)
+  - [x] Create src/pages/generate/GenerationHistory.vue
+  - [x] List past generations
   - [ ] Display thumbnail, status, created_at
   - [ ] Click to view full image
   - [ ] Pagination or infinite scroll
