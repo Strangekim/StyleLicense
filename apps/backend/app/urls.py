@@ -2,8 +2,19 @@
 URL configuration for app.
 """
 from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+
 from app.views.auth import LogoutView, MeView, GoogleCallbackView
 from app.views.health import HealthCheckView
+from app.views.style import StyleViewSet
+from app.views.token import TokenViewSet
+from app.views.tag import TagViewSet
+
+# DRF Router for ViewSets
+router = DefaultRouter()
+router.register(r"models", StyleViewSet, basename="style")
+router.register(r"tokens", TokenViewSet, basename="token")
+router.register(r"tags", TagViewSet, basename="tag")
 
 urlpatterns = [
     # Health check endpoint
@@ -14,4 +25,6 @@ urlpatterns = [
     path("auth/google/callback", GoogleCallbackView.as_view(), name="google_callback"),
     # Include allauth URLs for OAuth flow
     path("auth/", include("allauth.urls")),
+    # Include router URLs for ViewSets
+    path("", include(router.urls)),
 ]
