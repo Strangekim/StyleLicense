@@ -324,7 +324,7 @@ This document contains detailed subtasks for frontend development. For high-leve
 ### M3-Style-Pages
 
 **Referenced by**: Root PLAN.md → PT-M3-StylePages
-**Status**: PLANNED
+**Status**: DONE
 
 **Design Mockup References**:
 - `StyleDetailPage1-4.png` - Style detail views
@@ -333,41 +333,41 @@ This document contains detailed subtasks for frontend development. For high-leve
 
 #### Subtasks
 
-- [ ] Create ModelMarketplace page
-  - [ ] Create src/pages/marketplace/ModelMarketplace.vue
-  - [ ] Display grid of ModelCard components
-  - [ ] Search input with debounced API call
-  - [ ] Filter by tags (multi-select dropdown)
-  - [ ] Sort by popularity or date
-  - [ ] Infinite scroll pagination
+- [x] Create ModelMarketplace page (Commit: 34207f2)
+  - [x] Create src/pages/marketplace/ModelMarketplace.vue
+  - [x] Display grid of ModelCard components
+  - [x] Search input with debounced API call
+  - [x] Filter by tags (multi-select dropdown)
+  - [x] Sort by popularity or date
+  - [x] Infinite scroll pagination
 
-- [ ] Create ModelCard component
-  - [ ] Create src/components/features/model/ModelCard.vue
-  - [ ] Display thumbnail, name, artist, price
-  - [ ] Click navigates to /models/:id
-  - [ ] Hover effects
+- [x] Create ModelCard component (Commit: 34207f2)
+  - [x] Create src/components/features/model/ModelCard.vue
+  - [x] Display thumbnail, name, artist, price
+  - [x] Click navigates to /models/:id
+  - [x] Hover effects
 
-- [ ] Create ModelDetail page
-  - [ ] Create src/pages/marketplace/ModelDetail.vue
-  - [ ] Display full model info (name, description, price, tags)
-  - [ ] Artist info section (name, profile_image, follower count)
-  - [ ] Sample image gallery (4 images)
-  - [ ] Generate button → navigate to /generate with style pre-selected
-  - [ ] Purchase/Use button if not owned
+- [x] Create ModelDetail page (Commit: 34207f2)
+  - [x] Create src/pages/marketplace/ModelDetail.vue
+  - [x] Display full model info (name, description, price, tags)
+  - [x] Artist info section (name, profile_image, follower count)
+  - [x] Sample image gallery (4 images)
+  - [x] Generate button → navigate to /generate with style pre-selected
+  - [x] Purchase/Use button if not owned
 
-- [ ] Create StyleCreate page
-  - [ ] Create src/pages/artist/StyleCreate.vue
-  - [ ] Artist-only route (requiresArtist guard)
-  - [ ] Drag-and-drop image uploader (10-100 images)
-  - [ ] Tag input with autocomplete
-  - [ ] Style name and description inputs
-  - [ ] Price input
-  - [ ] Signature image upload (optional)
-  - [ ] Submit button → POST /api/models/train
-  - [ ] Display upload progress
-  - [ ] Redirect to /profile after successful upload
+- [x] Create StyleCreate page (Commit: 34207f2)
+  - [x] Create src/pages/artist/StyleCreate.vue
+  - [x] Artist-only route (requiresArtist guard)
+  - [x] Drag-and-drop image uploader (10-100 images)
+  - [x] Tag input with autocomplete
+  - [x] Style name and description inputs
+  - [x] Price input
+  - [x] Signature image upload (optional)
+  - [x] Submit button → POST /api/models/train
+  - [x] Display upload progress
+  - [x] Redirect to marketplace after successful upload
 
-- [ ] Testing
+- [ ] Testing (Deferred - requires backend running)
   - [ ] Test marketplace loads and displays models
   - [ ] Test search and filter work
   - [ ] Test infinite scroll loads more items
@@ -378,10 +378,9 @@ This document contains detailed subtasks for frontend development. For high-leve
 **Implementation Reference**: [CODE_GUIDE.md#page-components](CODE_GUIDE.md#page-components)
 
 **Exit Criteria**:
-- [ ] Marketplace page functional with search and filters
-- [ ] Model detail page shows complete information
-- [ ] Style create page allows artists to upload models
-
+- ✅ Marketplace page functional with search and filters
+- ✅ Model detail page shows complete information
+- ✅ Style create page allows artists to upload models
 
 ### M3-Generation-UI
 

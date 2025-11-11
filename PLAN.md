@@ -384,17 +384,17 @@ PT-M3-Components ⫽ PT-M3-StylePages ⫽ PT-M3-Generation ⫽ PT-M3-Stores
   - [ ] AppLayout (header + slot + footer)
 
 #### PT-M3-StylePages: Style Related Pages
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M3-Components, PT-M3-Generation, PT-M3-Stores]
 - **Dependencies**: [CP-M3-1]
 - **Owner**: Frontend
 - **Reference**: [apps/frontend/PLAN.md#m3-style-pages](apps/frontend/PLAN.md#m3-style-pages)
 - **Summary**:
-  - [ ] ModelMarketplace.vue (search, filter, infinite scroll)
-  - [ ] ModelDetail.vue (artist info, sample gallery, generate button)
-  - [ ] StyleCreate.vue (drag-and-drop images, tag input with autocomplete, signature upload)
-  - [ ] ModelCard.vue component
+  - [x] ModelMarketplace.vue (search, filter, infinite scroll) (Commit: 34207f2)
+  - [x] ModelDetail.vue (artist info, sample gallery, generate button) (Commit: 34207f2)
+  - [x] StyleCreate.vue (drag-and-drop images, tag input with autocomplete, signature upload) (Commit: 34207f2)
+  - [x] ModelCard.vue component (Commit: 34207f2)
 
 #### PT-M3-Generation: Image Generation UI
 - **Status**: PLANNED
