@@ -1,0 +1,22 @@
+# Core Dependencies
+pika>=1.3.0                    # RabbitMQ client
+requests>=2.31.0               # HTTP requests for webhooks
+python-dotenv>=1.0.0           # Environment variable loading
+
+# Cloud Storage
+google-cloud-storage>=2.14.0   # GCS integration
+
+# Image Processing
+pillow>=10.0.0                 # Image validation and watermark insertion
+
+# Development & Testing
+pytest>=8.0.0                  # Testing framework
+pytest-mock>=3.12.0            # Mocking for tests
+
+# ML Dependencies (for M4 phase - install on GPU instance only)
+# torch>=2.1.0+cu118
+# diffusers>=0.25.0
+# transformers>=4.36.0
+# peft>=0.7.0
+# accelerate>=0.25.0
+# xformers>=0.0.23  # Memory optimization
