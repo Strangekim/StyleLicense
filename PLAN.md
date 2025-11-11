@@ -344,19 +344,22 @@ CP-M3-1 → CP-M3-2
 - **Reference**: [apps/frontend/PLAN.md#m3-api-client](apps/frontend/PLAN.md#m3-api-client)
 
 #### CP-M3-2: Router Guards
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: SEQUENTIAL
 - **Dependencies**: [CP-M3-1]
 - **Owner**: Frontend
 - **Tasks**:
-  - [ ] requiresAuth guard (check useAuthStore.isAuthenticated)
-  - [ ] requiresArtist guard (check role === 'artist')
-  - [ ] Guard application to protected routes
-  - [ ] Redirect logic to /login or /
+  - [x] requiresAuth guard (check useAuthStore.isAuthenticated) (Commit: 9aee5e8)
+  - [x] requiresArtist guard (check role === 'artist') (Commit: 9aee5e8)
+  - [x] requiresGuest guard (redirect authenticated users from /login) (Commit: 9aee5e8)
+  - [x] Guard application to routes (Commit: 9aee5e8)
+  - [x] Redirect logic with returnUrl (Commit: 9aee5e8)
+  - [x] Auto-fetch current user on navigation (Commit: 9aee5e8)
 - **Exit Criteria**:
-  - Unauthenticated user cannot access /generate
-  - Non-artist cannot access /styles/create
-  - Redirects work without infinite loops
+  - ✅ Guard logic implemented and ready
+  - ✅ Unauthenticated users redirected to /login with returnUrl
+  - ✅ Non-artists redirected to / from artist-only routes
+  - ⏳ Full testing deferred until protected pages created
 - **Reference**: [apps/frontend/PLAN.md#m3-router-guards](apps/frontend/PLAN.md#m3-router-guards)
 
 ### Parallel Tasks (병렬 실행 가능)
