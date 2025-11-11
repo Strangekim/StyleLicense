@@ -26,18 +26,18 @@ This document contains detailed subtasks for training server development. For hi
 
 #### Subtasks
 
-- [x] Install dependencies (Commit: [pending])
+- [x] Install dependencies (Commit: a4f7381)
   - [x] Create requirements.txt with pika, requests, google-cloud-storage
   - [x] PyTorch deferred to M4 phase (not needed for M1)
   - [x] Create .env.example
 
-- [x] RabbitMQ connection test (Commit: [pending])
+- [x] RabbitMQ connection test (Commit: a4f7381)
   - [x] Install pika library
   - [x] Implement TrainingConsumer class
   - [x] Declare model_training queue
   - [x] Test connection in main.py
 
-- [x] CUDA availability check (Commit: [pending])
+- [x] CUDA availability check (Commit: a4f7381)
   - [x] Check torch.cuda.is_available() in main.py
   - [x] Log GPU name and memory
   - [x] Test simple tensor operation on GPU

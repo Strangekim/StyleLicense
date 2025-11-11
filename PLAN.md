@@ -156,11 +156,11 @@ PT-M1-Backend ⫽ PT-M1-Frontend ⫽ PT-M1-Training ⫽ PT-M1-Inference
 - **Owner**: ML Engineer
 - **Reference**: [apps/training-server/PLAN.md#m1-initialization](apps/training-server/PLAN.md#m1-initialization)
 - **Summary**:
-  - [x] Dependencies installation (pika, requests, google-cloud-storage) (Commit: [pending])
-  - [x] RabbitMQ Consumer implementation (Commit: [pending])
-  - [x] CUDA availability check (Commit: [pending])
-  - [x] Webhook service for backend communication (Commit: [pending])
-  - [x] Mock training pipeline (Commit: [pending])
+  - [x] Dependencies installation (pika, requests, google-cloud-storage) (Commit: a4f7381)
+  - [x] RabbitMQ Consumer implementation (Commit: a4f7381)
+  - [x] CUDA availability check (Commit: a4f7381)
+  - [x] Webhook service for backend communication (Commit: a4f7381)
+  - [x] Mock training pipeline (Commit: a4f7381)
 
 #### PT-M1-Inference: Inference Server Initialization
 - **Status**: PLANNED
