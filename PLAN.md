@@ -410,16 +410,16 @@ PT-M3-Components ⫽ PT-M3-StylePages ⫽ PT-M3-Generation ⫽ PT-M3-Stores
   - [ ] Generation history list
 
 #### PT-M3-Stores: Pinia State Management
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M3-Components, PT-M3-StylePages, PT-M3-Generation]
 - **Dependencies**: [CP-M3-1]
 - **Owner**: Frontend
 - **Reference**: [apps/frontend/PLAN.md#m3-stores](apps/frontend/PLAN.md#m3-stores)
 - **Summary**:
-  - [ ] useModelsStore (fetchModels, fetchDetail, createModel)
-  - [ ] useGenerationStore (generateImage, checkStatus, queue management)
-  - [ ] useTokenStore (fetchBalance, purchaseTokens)
+  - [x] useModelsStore (fetchModels, fetchDetail, createModel, deleteModel, loadMore) (Commit: 725a55a)
+  - [x] useGenerationStore (generateImage, checkStatus, polling, queue management) (Commit: 725a55a)
+  - [x] useTokenStore (fetchBalance, purchaseTokens, fetchTransactions, updateBalance) (Commit: 725a55a)
 
 ### Exit Criteria
 - [ ] All CP-M3 tasks completed

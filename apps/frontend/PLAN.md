@@ -439,9 +439,37 @@ This document contains detailed subtasks for frontend development. For high-leve
 ### M3-Stores
 
 **Referenced by**: Root PLAN.md -> PT-M3-Stores
-Status: PLANNED
+Status: DONE
 
-- [ ] Create useModelsStore, useGenerationStore, useTokenStore
+#### Subtasks
+
+- [x] Create useModelsStore (Commit: 725a55a)
+  - [x] fetchModels with pagination, filters, sorting
+  - [x] fetchModelDetail by ID
+  - [x] createModel for artists
+  - [x] deleteModel for owners
+  - [x] loadMore for infinite scroll
+
+- [x] Create useTokenStore (Commit: 725a55a)
+  - [x] fetchBalance and sync with auth store
+  - [x] purchaseTokens with payment method
+  - [x] fetchTransactions with filter by type
+  - [x] loadMore for infinite scroll
+  - [x] updateBalance for optimistic updates
+
+- [x] Create useGenerationStore (Commit: 725a55a)
+  - [x] generateImage request
+  - [x] checkStatus polling
+  - [x] startPolling/stopPolling (5s interval)
+  - [x] fetchGenerations history
+  - [x] fetchGenerationDetail by ID
+  - [x] Queue management for active generations
+
+**Exit Criteria**:
+- ✅ All stores created with Setup Store pattern
+- ✅ Integration with API service modules
+- ✅ Error handling and loading states
+- ✅ Dev server builds without errors
 
 ---
 
