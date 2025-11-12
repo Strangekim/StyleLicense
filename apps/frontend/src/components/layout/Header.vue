@@ -48,6 +48,9 @@
             </span>
           </div>
 
+          <!-- Notification Dropdown (authenticated users only) -->
+          <NotificationDropdown v-if="authStore.isAuthenticated" />
+
           <!-- User Dropdown (authenticated) -->
           <div v-if="authStore.isAuthenticated" class="relative" ref="dropdownRef">
             <button
@@ -179,9 +182,14 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useNotificationPolling } from '@/composables/useNotificationPolling'
+import NotificationDropdown from '@/components/features/NotificationDropdown.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
+
+// Start notification polling
+const { startPolling, stopPolling } = useNotificationPolling()
 
 const isDropdownOpen = ref(false)
 const isMobileMenuOpen = ref(false)
