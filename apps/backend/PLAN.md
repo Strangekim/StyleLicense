@@ -542,46 +542,58 @@ This document contains detailed subtasks for backend development. For high-level
 
 ### M5-Notification
 
-**Referenced by**: Root PLAN.md → CP-M5-1  
-**Status**: PLANNED
+**Referenced by**: Root PLAN.md → CP-M5-1
+**Status**: DONE
 
 #### Subtasks
 
-- [ ] Create Notification model triggers
-  - [ ] Django signal on ImageLike creation → create notification
-  - [ ] Django signal on ImageComment creation → create notification
-  - [ ] Django signal on Follow creation → create notification
-  - [ ] Create app/signals.py for signal handlers
+- [x] Create Notification model triggers (Commit: fd52a4c)
+  - [x] Django signal on Like creation → create notification
+  - [x] Django signal on Comment creation → create notification
+  - [x] Django signal on Follow creation → create notification
+  - [x] Create app/signals.py for signal handlers
+  - [x] Prevent self-notification (user liking/commenting own content)
 
-- [ ] GET /api/notifications endpoint
-  - [ ] Create app/views/notification.py
-  - [ ] List user notifications
-  - [ ] Paginate (20 per page)
-  - [ ] Sort by created_at DESC
-  - [ ] Include unread count
+- [x] GET /api/notifications endpoint (Commit: fd52a4c)
+  - [x] Create app/views/notification.py
+  - [x] List user notifications
+  - [x] Paginate (20 per page with PageNumberPagination)
+  - [x] Sort by created_at DESC
+  - [x] Include unread count
+  - [x] Support unread_only filter query param
 
-- [ ] PATCH /api/notifications/:id/read endpoint
-  - [ ] Mark notification as read
-  - [ ] Update is_read=True
-  - [ ] Return updated notification
+- [x] PATCH /api/notifications/:id/read endpoint (Commit: fd52a4c)
+  - [x] Mark notification as read
+  - [x] Update is_read=True
+  - [x] Return updated notification
+  - [x] Verify ownership (users can only mark own notifications)
 
-- [ ] Bulk mark as read endpoint (optional)
-  - [ ] PATCH /api/notifications/mark-all-read
-  - [ ] Update all unread notifications for current user
+- [x] Bulk mark as read endpoint (Commit: fd52a4c)
+  - [x] POST /api/notifications/mark-all-read
+  - [x] Update all unread notifications for current user
+  - [x] Return updated count
 
-- [ ] Testing
-  - [ ] Test like creates notification for image owner
-  - [ ] Test comment creates notification
-  - [ ] Test follow creates notification
-  - [ ] Test notification list pagination
-  - [ ] Test mark as read
+- [x] Testing (Commit: fd52a4c)
+  - [x] Test like creates notification for generation owner
+  - [x] Test comment creates notification
+  - [x] Test follow creates notification
+  - [x] Test self-like does not create notification
+  - [x] Test self-comment does not create notification
+  - [x] Test notification list pagination
+  - [x] Test mark as read
+  - [x] Test mark all as read
+  - [x] Test unread_only filtering
+  - [x] Test notification ordering
+  - [x] Test permissions (cannot mark other user's notifications)
+  - [x] Test unauthenticated access denied
+  - [x] 12 tests passing
 
 **Implementation Reference**: [CODE_GUIDE.md#django-signals](CODE_GUIDE.md#django-signals)
 
 **Exit Criteria**:
-- [ ] Notifications created automatically on events
-- [ ] Notification list displays correctly
-- [ ] Mark as read works
+- ✅ Notifications created automatically on events
+- ✅ Notification list displays correctly
+- ✅ Mark as read works
 
 ---
 

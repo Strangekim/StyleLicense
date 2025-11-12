@@ -583,24 +583,25 @@ CP-M5-1 → CP-M5-2
 ```
 
 #### CP-M5-1: Notification System
-- **Status**: PLANNED
+- **Status**: IN_PROGRESS
 - **Type**: SEQUENTIAL
 - **Dependencies**: [M2, M3]
 - **Owners**: [Backend, Frontend]
 - **Tasks**:
-  - [ ] Notification trigger on like creation
-  - [ ] Notification trigger on comment creation
-  - [ ] Notification trigger on follow
-  - [ ] Notification trigger on training complete/failed
-  - [ ] GET /api/notifications endpoint with pagination
-  - [ ] PATCH /api/notifications/:id/read
+  - [x] Notification trigger on like creation (Commit: fd52a4c)
+  - [x] Notification trigger on comment creation (Commit: fd52a4c)
+  - [x] Notification trigger on follow (Commit: fd52a4c)
+  - [ ] Notification trigger on training complete/failed (deferred to M4)
+  - [x] GET /api/notifications endpoint with pagination (Commit: fd52a4c)
+  - [x] PATCH /api/notifications/:id/read (Commit: fd52a4c)
+  - [x] POST /api/notifications/mark-all-read (Commit: fd52a4c)
   - [ ] Frontend polling every 5 seconds when user active
   - [ ] Badge count on header notification icon
 - **Exit Criteria**:
-  - Like action creates notification for image owner
-  - Notification list updates within 5 seconds
-  - Badge count shows unread notifications
-- **Reference**: 
+  - ✅ Like action creates notification for image owner (Backend complete)
+  - [ ] Notification list updates within 5 seconds (requires Frontend)
+  - [ ] Badge count shows unread notifications (requires Frontend)
+- **Reference**:
   - [apps/backend/PLAN.md#m5-notification](apps/backend/PLAN.md#m5-notification)
   - [apps/frontend/PLAN.md#m5-notification](apps/frontend/PLAN.md#m5-notification)
 
