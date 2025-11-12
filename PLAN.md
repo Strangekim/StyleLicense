@@ -627,21 +627,21 @@ PT-M5-CommunityBackend ⫽ PT-M5-CommunityFrontend
 ```
 
 #### PT-M5-CommunityBackend: Community API
-- **Status**: PLANNED
+- **Status**: DONE
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M5-CommunityFrontend]
 - **Dependencies**: [M2]
 - **Owner**: Backend
 - **Reference**: [apps/backend/PLAN.md#m5-community-api](apps/backend/PLAN.md#m5-community-api)
 - **Summary**:
-  - [ ] GET /api/community/feed (pagination, filter public images)
-  - [ ] GET /api/images/:id (detail with like_count, comment_count)
-  - [ ] POST /api/images/:id/like (toggle, prevent duplicate via unique constraint)
-  - [ ] GET /api/images/:id/comments (pagination)
-  - [ ] POST /api/images/:id/comments (content validation)
-  - [ ] DELETE /api/comments/:id (owner or admin only)
-  - [ ] POST /api/artists/:id/follow (toggle)
-  - [ ] GET /api/users/following
+  - [x] GET /api/community/feed (pagination, filter public images) (Commit: b3767fe)
+  - [x] GET /api/images/:id (detail with like_count, comment_count) (Commit: b3767fe)
+  - [x] POST /api/images/:id/like (toggle, prevent duplicate via unique constraint) (Commit: b3767fe)
+  - [x] GET /api/images/:id/comments (pagination) (Commit: b3767fe)
+  - [x] POST /api/images/:id/comments (content validation) (Commit: b3767fe)
+  - [x] DELETE /api/comments/:id (owner or admin only) (Commit: b3767fe)
+  - [x] POST /api/users/:id/follow (toggle) (Commit: b3767fe)
+  - [x] GET /api/users/following (Commit: b3767fe)
 
 #### PT-M5-CommunityFrontend: Community UI
 - **Status**: PLANNED
