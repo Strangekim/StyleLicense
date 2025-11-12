@@ -12,6 +12,10 @@ from .token import (
     TokenPurchaseSerializer,
     TokenTransactionSerializer,
 )
+from .notification import (
+    NotificationSerializer,
+    MarkAsReadSerializer,
+)
 
 __all__ = [
     "BaseSerializer",
@@ -23,4 +27,6 @@ __all__ = [
     "TokenBalanceSerializer",
     "TokenPurchaseSerializer",
     "TokenTransactionSerializer",
+    "NotificationSerializer",
+    "MarkAsReadSerializer",
 ]
