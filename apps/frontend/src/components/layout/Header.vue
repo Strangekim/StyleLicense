@@ -18,6 +18,13 @@
             Marketplace
           </router-link>
           <router-link
+            to="/community"
+            class="text-neutral-700 hover:text-primary-600 transition-colors font-medium"
+            active-class="text-primary-600"
+          >
+            Community
+          </router-link>
+          <router-link
             v-if="authStore.isAuthenticated"
             to="/generate"
             class="text-neutral-700 hover:text-primary-600 transition-colors font-medium"
