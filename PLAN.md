@@ -511,19 +511,23 @@ PT-M4-Training ⫽ PT-M4-Inference ⫽ PT-M4-Backend
 ```
 
 #### PT-M4-Training: Training Pipeline
-- **Status**: PLANNED
+- **Status**: IN_PROGRESS (Phase 1 DONE, Phase 2 PLANNED)
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M4-Inference, PT-M4-Backend]
 - **Dependencies**: [M2]
 - **Owner**: ML Engineer
-- **Reference**: [apps/training-server/PLAN.md#m4-training-pipeline](apps/training-server/PLAN.md#m4-training-pipeline)
+- **Reference**: [apps/training-server/PLAN.md#m4-training-pipeline-phase1](apps/training-server/PLAN.md#m4-training-pipeline-phase1)
 - **Summary**:
-  - [ ] Image preprocessing (resize 512x512, format conversion)
-  - [ ] LoRA fine-tuning (SD v1.5, lr=1e-4, epochs=100-500)
-  - [ ] Checkpoint saving every 10 epochs
-  - [ ] RabbitMQ Consumer for `model_training` queue
-  - [ ] Status update via PATCH /api/models/:id/status
-  - [ ] Retry logic (max 3 attempts) on failure
+  - **Phase 1 (Mock Implementation)**: DONE (Commit: d712e2d)
+    - [x] RabbitMQ Consumer for `model_training` queue
+    - [x] Webhook service matching API.md (POST /complete, /failed, PATCH /progress)
+    - [x] Mock training pipeline with progress updates
+    - [x] Comprehensive tests (16 tests passing)
+  - **Phase 2 (GPU Implementation)**: PLANNED
+    - [ ] Image preprocessing (resize 512x512, format conversion)
+    - [ ] LoRA fine-tuning (SD v1.5, rank=8, lr=1e-4, epochs=100-500)
+    - [ ] Checkpoint saving every 10 epochs
+    - [ ] Retry logic (max 3 attempts) on failure
 
 #### PT-M4-Inference: Inference Pipeline
 - **Status**: PLANNED
