@@ -583,7 +583,7 @@ CP-M5-1 → CP-M5-2
 ```
 
 #### CP-M5-1: Notification System
-- **Status**: IN_PROGRESS
+- **Status**: DONE
 - **Type**: SEQUENTIAL
 - **Dependencies**: [M2, M3]
 - **Owners**: [Backend, Frontend]
@@ -595,12 +595,12 @@ CP-M5-1 → CP-M5-2
   - [x] GET /api/notifications endpoint with pagination (Commit: fd52a4c)
   - [x] PATCH /api/notifications/:id/read (Commit: fd52a4c)
   - [x] POST /api/notifications/mark-all-read (Commit: fd52a4c)
-  - [ ] Frontend polling every 5 seconds when user active
-  - [ ] Badge count on header notification icon
+  - [x] Frontend polling every 5 seconds when user active (Commit: 81a8e5d)
+  - [x] Badge count on header notification icon (Commit: 81a8e5d)
 - **Exit Criteria**:
   - ✅ Like action creates notification for image owner (Backend complete)
-  - [ ] Notification list updates within 5 seconds (requires Frontend)
-  - [ ] Badge count shows unread notifications (requires Frontend)
+  - ✅ Notification list updates within 5 seconds (Frontend complete)
+  - ✅ Badge count shows unread notifications (Frontend complete)
 - **Reference**:
   - [apps/backend/PLAN.md#m5-notification](apps/backend/PLAN.md#m5-notification)
   - [apps/frontend/PLAN.md#m5-notification](apps/frontend/PLAN.md#m5-notification)
