@@ -29,7 +29,9 @@ class GCSService:
 
                 self.client = storage.Client(project=Config.GCS_PROJECT_ID)
                 self.bucket = self.client.bucket(Config.GCS_BUCKET_NAME)
-                logger.info(f"GCS client initialized for bucket: {Config.GCS_BUCKET_NAME}")
+                logger.info(
+                    f"GCS client initialized for bucket: {Config.GCS_BUCKET_NAME}"
+                )
             except Exception as e:
                 logger.warning(f"Failed to initialize GCS client: {e}")
         else:
@@ -79,9 +81,7 @@ class GCSService:
             logger.error(f"Failed to download image from GCS: {e}")
             return False
 
-    def download_images(
-        self, gcs_paths: List[str], local_dir: str
-    ) -> List[str]:
+    def download_images(self, gcs_paths: List[str], local_dir: str) -> List[str]:
         """
         Download multiple images from GCS
 
