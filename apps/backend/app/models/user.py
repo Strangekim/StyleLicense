@@ -8,33 +8,43 @@ from django.utils import timezone
 
 
 class UserManager(BaseUserManager):
-    """Custom user manager for User model."""
+    """Custom user manager for User model.
+
+    Note: Password authentication is disabled (OAuth only).
+    """
 
     def create_user(
         self,
         username,
+        email,
         provider="google",
         provider_user_id=None,
-        password=None,
         **extra_fields,
     ):
-        """Create and save a regular user."""
+        """Create and save a regular user (OAuth only)."""
         if not username:
             raise ValueError("The Username field must be set")
+        if not email:
+            raise ValueError("The Email field must be set")
 
+        email = self.normalize_email(email)
         user = self.model(
             username=username,
+            email=email,
             provider=provider,
             provider_user_id=provider_user_id or username,
             **extra_fields,
         )
-        if password:
-            user.set_password(password)
+        # No password - OAuth only
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, username, password=None, **extra_fields):
-        """Create and save a superuser."""
+    def create_superuser(self, username, email, **extra_fields):
+        """Create and save a superuser.
+
+        Note: Superuser also uses OAuth. For Django admin access,
+        use django-allauth Google OAuth with superuser account.
+        """
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
@@ -45,11 +55,15 @@ class UserManager(BaseUserManager):
         if extra_fields.get("is_superuser") is not True:
             raise ValueError("Superuser must have is_superuser=True.")
 
-        return self.create_user(username, password=password, **extra_fields)
+        return self.create_user(username, email, **extra_fields)
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    """Custom user model for authentication via Google OAuth."""
+    """Custom user model for authentication via Google OAuth.
+
+    Note: This model uses AbstractBaseUser for django-allauth compatibility,
+    but password authentication is disabled (OAuth only).
+    """
 
     ROLE_CHOICES = [
         ("user", "User"),
@@ -63,6 +77,9 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     # Primary key
     id = models.BigAutoField(primary_key=True)
+
+    # Disable password field (OAuth only)
+    password = None
 
     # Basic fields
     username = models.CharField(max_length=50, unique=True)
@@ -93,7 +110,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = "username"
-    REQUIRED_FIELDS = []
+    REQUIRED_FIELDS = ["email"]  # Required for createsuperuser command
 
     class Meta:
         db_table = "users"
@@ -119,6 +136,14 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.username} ({self.role})"
+
+    def set_password(self, raw_password):
+        """Disabled - OAuth only authentication."""
+        raise NotImplementedError("Password authentication is disabled. Use Google OAuth.")
+
+    def check_password(self, raw_password):
+        """Disabled - OAuth only authentication."""
+        raise NotImplementedError("Password authentication is disabled. Use Google OAuth.")
 
     def save(self, *args, **kwargs):
         """Override save to ensure updated_at is set."""
