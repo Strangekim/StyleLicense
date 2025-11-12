@@ -466,75 +466,70 @@ This document contains detailed subtasks for backend development. For high-level
 
 ### M4-AI-Integration
 
-**Referenced by**: Root PLAN.md → PT-M4-Backend  
-**Status**: PLANNED
+**Referenced by**: Root PLAN.md → PT-M4-Backend
+**Status**: DONE
 
 #### Subtasks
 
-- [ ] Create webhook endpoints
-  - [ ] Create app/views/webhooks.py
-  - [ ] PATCH /api/models/:id/status
-    - [ ] Validate internal API token in header
-    - [ ] Update StyleModel.training_status
-    - [ ] Update StyleModel.model_path if completed
-    - [ ] Update StyleModel.failure_reason if failed
-  - [ ] PATCH /api/images/:id/status
-    - [ ] Validate internal API token
-    - [ ] Update GeneratedImage.status
-    - [ ] Update GeneratedImage.image_url if completed
-    - [ ] Update GeneratedImage.failure_reason if failed
+- [x] Create webhook endpoints (Commit: d693513)
+  - [x] Create app/views/webhook.py
+  - [x] PATCH /api/webhooks/training/progress
+  - [x] POST /api/webhooks/training/complete
+  - [x] POST /api/webhooks/training/failed
+  - [x] PATCH /api/webhooks/inference/progress
+  - [x] POST /api/webhooks/inference/complete
+  - [x] POST /api/webhooks/inference/failed
 
-- [ ] Notification creation on training events
-  - [ ] POST /api/notifications endpoint
-  - [ ] Create notification on training completion
-    - [ ] Type: training_complete
-    - [ ] Message: Your style model {name} is ready!
-    - [ ] Link to model detail page
-  - [ ] Create notification on training failure
-    - [ ] Type: training_failed
-    - [ ] Message: Training failed for {name}. {reason}
+- [x] Notification creation on training events (Commit: d693513)
+  - [x] Create notification on training completion (type: style_training_complete)
+  - [x] Create notification on training failure (type: style_training_failed)
+  - [x] Include style_name and metadata in notification
 
-- [ ] Token refund on generation failure
-  - [ ] In GeneratedImage status webhook
-  - [ ] If status=failed, call TokenService.refund_tokens()
-  - [ ] Refund amount = generation cost
-  - [ ] Reason: generation_failed
+- [x] Token refund on generation failure (Commit: d693513)
+  - [x] Refund tokens in inference_failed webhook
+  - [x] Call TokenService.refund_tokens(user_id, amount, reason, related_generation_id)
+  - [x] Atomic transaction with generation status update
 
-- [ ] POST /api/images/generate endpoint
-  - [ ] Accept: style_id, prompt_tags, aspect_ratio, seed (optional)
-  - [ ] Validate user has sufficient tokens
-  - [ ] Calculate cost based on aspect_ratio
-  - [ ] Call TokenService.consume_tokens()
-  - [ ] Create GeneratedImage record (status=queued)
-  - [ ] Send generation task to RabbitMQ
-  - [ ] Return generation_id and status
+- [x] POST /api/generations endpoint (Commit: d693513)
+  - [x] Accept: style_id, prompt_tags, description, aspect_ratio, seed (optional)
+  - [x] Validate user has sufficient tokens
+  - [x] Calculate cost based on aspect_ratio (1:1=50, 2:2=75, 1:2=60)
+  - [x] Call TokenService.consume_tokens() atomically
+  - [x] Create Generation record (status=queued)
+  - [x] Send generation task to RabbitMQ via RabbitMQService.send_generation_task()
+  - [x] Return generation_id and status
 
-- [ ] GET /api/images/:id/status endpoint
-  - [ ] Return GeneratedImage status
-  - [ ] Return image_url if completed
-  - [ ] Return failure_reason if failed
-  - [ ] Support polling by frontend
+- [x] GET /api/generations/:id endpoint (Commit: d693513)
+  - [x] Return Generation status with progress
+  - [x] Return result_url if completed
+  - [x] Return error_message if failed
+  - [x] Support ownership check (user can only see own generations or public ones)
 
-- [ ] Internal API token authentication
-  - [ ] Create middleware or decorator: @require_internal_token
-  - [ ] Validate INTERNAL_API_TOKEN from settings
-  - [ ] Return 403 if invalid
+- [x] Internal API token authentication (Commit: d693513)
+  - [x] Create app/middleware/webhook_auth.py (WebhookAuthMiddleware)
+  - [x] Validate Authorization: Bearer <INTERNAL_API_TOKEN>
+  - [x] Validate X-Request-Source header (training-server or inference-server)
+  - [x] Return 401 if token invalid, 403 if source invalid
+  - [x] Add middleware to settings.py
 
-- [ ] Testing
-  - [ ] Test webhook updates model status
-  - [ ] Test notification created on training complete
-  - [ ] Test token refund on generation failure
-  - [ ] Test generate endpoint consumes tokens
-  - [ ] Test status polling endpoint
-  - [ ] Test webhook authentication
+- [x] Testing (Commit: d693513)
+  - [x] test_webhooks.py: 11 tests for webhook authentication and endpoints
+  - [x] test_generation_api.py: 8 tests for generation create/retrieve
+  - [x] Test webhook updates model status
+  - [x] Test notification created on training complete
+  - [x] Test token refund on generation failure
+  - [x] Test generate endpoint consumes tokens
+  - [x] Test status polling endpoint
+  - [x] Test webhook authentication middleware
 
 **Implementation Reference**: [CODE_GUIDE.md#webhooks](CODE_GUIDE.md#webhooks)
 
 **Exit Criteria**:
-- [ ] Webhooks update model and image status
-- [ ] Notifications created on training events
-- [ ] Token refunds work correctly
-- [ ] Generate endpoint functional
+- [x] Webhooks update model and image status
+- [x] Notifications created on training events
+- [x] Token refunds work correctly
+- [x] Generate endpoint functional
+- [x] All tests passing (19 tests total)
 
 ---
 

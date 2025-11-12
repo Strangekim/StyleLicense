@@ -545,18 +545,20 @@ PT-M4-Training ⫽ PT-M4-Inference ⫽ PT-M4-Backend
   - [ ] Status update via PATCH /api/images/:id/status
 
 #### PT-M4-Backend: Backend AI Integration
-- **Status**: PLANNED
+- **Status**: DONE (Commit: d693513)
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M4-Training, PT-M4-Inference]
 - **Dependencies**: [M2]
 - **Owner**: Backend
 - **Reference**: [apps/backend/PLAN.md#m4-ai-integration](apps/backend/PLAN.md#m4-ai-integration)
 - **Summary**:
-  - [ ] PATCH /api/models/:id/status webhook endpoint
-  - [ ] POST /api/notifications for training complete/failed
-  - [ ] Token refund trigger on generation failure
-  - [ ] POST /api/images/generate endpoint
-  - [ ] GET /api/images/:id/status polling endpoint
+  - [x] Webhook endpoints (6 total: training progress/complete/failed, inference progress/complete/failed)
+  - [x] WebhookAuthMiddleware for internal API token validation
+  - [x] Notification creation on training complete/failed
+  - [x] Token refund on generation failure (atomic transaction)
+  - [x] POST /api/generations endpoint with cost calculation and RabbitMQ publish
+  - [x] GET /api/generations/:id status polling endpoint
+  - [x] 19 tests (webhook auth, training webhooks, inference webhooks, generation API)
 
 ### Exit Criteria
 - [ ] All CP-M4 tasks completed
