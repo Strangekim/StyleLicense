@@ -804,9 +804,12 @@ PT-M6-BackendDeploy ⫽ PT-M6-FrontendBuild ⫽ PT-M6-CICD
     - Main bundle reduced 96.30 KB → 77.06 KB gzipped (~20% reduction)
     - All routes split into separate chunks loaded on-demand
   - [x] Bundle size analysis (<500KB initial) (Commit: f85f05e)
-    - Total initial load: ~82.46 KB ✅ Well under target
+    - Total initial load: ~117.30 KB ✅ Well under target
     - Detailed analysis in BUNDLE_ANALYSIS.md
-  - [ ] Image optimization (WebP format, responsive sizes)
+  - [x] Image optimization (WebP format) (Commit: 066cf73)
+    - Converted all PNG images to WebP
+    - Total image size: 2.55MB → 93KB (96.4% reduction)
+    - main_logo: 818KB → 34KB (95.8% reduction)
   - [x] Tree shaking verification (enabled by Vite by default)
   - [ ] Lighthouse score 90+ (Performance, Accessibility, Best Practices, SEO)
 
