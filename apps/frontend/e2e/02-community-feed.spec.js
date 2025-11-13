@@ -24,11 +24,14 @@ test.describe('Community Feed', () => {
   test('should display feed items', async ({ page }) => {
     await page.goto('/community')
 
-    // Wait for feed to load
-    await page.waitForTimeout(1500)
+    // Wait for network to be idle
+    await page.waitForLoadState('networkidle')
+
+    // Wait a bit more for data to load
+    await page.waitForTimeout(2000)
 
     // Should have feed items or empty state
-    const hasFeedItems = await page.locator('[class*="feed"]').count() > 0
+    const hasFeedItems = await page.locator('img[src*="picsum"]').count() > 0
     const hasEmptyState = await page.locator('text=/No generations|Be the first/i').isVisible()
 
     expect(hasFeedItems || hasEmptyState).toBeTruthy()
