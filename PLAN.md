@@ -704,6 +704,9 @@ CP-M6-1 → CP-M6-2 → CP-M6-3 → CP-M6-4
 - **Owners**: [All]
 - **Tasks**:
   - [x] Install Playwright and setup test infrastructure (Commit: 90351ab)
+  - [x] Create dummy data for testing (Commit: b2fa448)
+  - [x] Enable public access to community/marketplace (Commit: b2fa448)
+  - [x] Update CORS configuration for multiple frontend ports (Commit: b2fa448)
   - [x] Basic navigation tests (Commit: 90351ab)
   - [x] Browse models scenario (Commit: 90351ab)
   - [x] Community feed interaction tests (Commit: 90351ab)

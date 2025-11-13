@@ -673,6 +673,32 @@ This document contains detailed subtasks for backend development. For high-level
 
 ## M6: Launch
 
+### M6-Testing-Setup
+
+**Referenced by**: Root PLAN.md → CP-M6-1
+**Status**: DONE
+
+#### Subtasks
+
+- [x] Create dummy data management command (Commit: b2fa448)
+  - [x] 10 users (5 artists, 5 regular)
+  - [x] 15 tags
+  - [x] 10 styles with tags
+  - [x] 40 artworks
+  - [x] 40 generations
+  - [x] 83 likes, 39 comments
+  - [x] 12 follows
+  - [x] 25 transactions
+  - [x] 151 notifications
+- [x] Update CORS configuration for multiple frontend ports (Commit: b2fa448)
+  - [x] Added ports 4173, 4174, 4175, 4176 to CORS_ALLOWED_ORIGINS
+  - [x] Updated docker-compose.yml environment variables
+
+**Exit Criteria**:
+- ✅ Dummy data can be created with `python manage.py create_dummy_data`
+- ✅ Frontend can access backend API from multiple ports
+- ✅ E2E tests can run with realistic test data
+
 ### M6-Performance
 
 **Referenced by**: Root PLAN.md → CP-M6-2  

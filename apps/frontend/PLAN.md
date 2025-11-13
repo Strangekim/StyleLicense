@@ -499,6 +499,10 @@ Status: IN_PROGRESS
 
 - [x] Install Playwright (Commit: 90351ab)
 - [x] Configure playwright.config.js (Commit: 90351ab)
+- [x] Enable public access to community/marketplace (Commit: b2fa448)
+  - [x] Update API error handler to not redirect on public pages
+  - [x] Optimize router guard to skip auth check on public routes
+  - [x] Allow unauthenticated users to browse community and marketplace
 - [x] Write basic E2E scenarios (Commit: 90351ab)
   - [x] Navigation tests
   - [x] Browse models tests
