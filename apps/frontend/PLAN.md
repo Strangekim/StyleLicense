@@ -516,11 +516,18 @@ Status: IN_PROGRESS
 ### M6-Build-Optimization
 
 **Referenced by**: Root PLAN.md -> PT-M6-FrontendBuild
-Status: PLANNED
+Status: IN_PROGRESS
 
-- [ ] Code splitting
-- [ ] Image optimization
-- [ ] Bundle size < 500KB
+- [x] Code splitting (Commit: f85f05e)
+  - Converted all routes to lazy loading with dynamic imports
+  - Main bundle: 96.30 KB → 77.06 KB gzipped (~20% reduction)
+  - Each route loads as separate chunk on-demand
+- [x] Bundle size < 500KB (Commit: f85f05e)
+  - Total initial load: ~82.46 KB ✅ Well under 500KB target
+  - Created BUNDLE_ANALYSIS.md with detailed breakdown
+- [ ] Image optimization (main_logo.png 837KB → WebP)
+- [x] Tree shaking (enabled by Vite by default)
+- [ ] Lighthouse audit (Performance, Accessibility, Best Practices, SEO)
 
 ---
 

@@ -793,17 +793,21 @@ PT-M6-BackendDeploy ⫽ PT-M6-FrontendBuild ⫽ PT-M6-CICD
   - [ ] Database connection pooling
 
 #### PT-M6-FrontendBuild: Frontend Optimization
-- **Status**: PLANNED
+- **Status**: IN_PROGRESS
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M6-BackendDeploy, PT-M6-CICD]
 - **Dependencies**: [M5]
 - **Owner**: Frontend
 - **Reference**: [apps/frontend/PLAN.md#m6-build-optimization](apps/frontend/PLAN.md#m6-build-optimization)
 - **Summary**:
-  - [ ] Code splitting (route-based lazy loading)
+  - [x] Code splitting (route-based lazy loading) (Commit: f85f05e)
+    - Main bundle reduced 96.30 KB → 77.06 KB gzipped (~20% reduction)
+    - All routes split into separate chunks loaded on-demand
+  - [x] Bundle size analysis (<500KB initial) (Commit: f85f05e)
+    - Total initial load: ~82.46 KB ✅ Well under target
+    - Detailed analysis in BUNDLE_ANALYSIS.md
   - [ ] Image optimization (WebP format, responsive sizes)
-  - [ ] Tree shaking verification
-  - [ ] Bundle size analysis (<500KB initial)
+  - [x] Tree shaking verification (enabled by Vite by default)
   - [ ] Lighthouse score 90+ (Performance, Accessibility, Best Practices, SEO)
 
 #### PT-M6-CICD: CI/CD Pipeline
