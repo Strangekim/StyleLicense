@@ -2,7 +2,7 @@
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import logo from '@/assets/images/main_logo.png'
+import logo from '@/assets/images/main_logo.webp'
 
 const authStore = useAuthStore()
 const router = useRouter()
