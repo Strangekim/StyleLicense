@@ -1,62 +1,62 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-// Pages
-import Home from '@/pages/Home.vue'
-import Login from '@/pages/auth/Login.vue'
-import GoogleCallback from '@/pages/auth/GoogleCallback.vue'
-import ModelMarketplace from '@/pages/marketplace/ModelMarketplace.vue'
-import ModelDetail from '@/pages/marketplace/ModelDetail.vue'
-import ImageGeneration from '@/pages/generate/ImageGeneration.vue'
-import GenerationHistory from '@/pages/generate/GenerationHistory.vue'
-import Community from '@/pages/community/Community.vue'
+/**
+ * Router Configuration with Code Splitting
+ *
+ * All routes use lazy loading (dynamic imports) to split the bundle
+ * into smaller chunks that are loaded on-demand. This improves initial
+ * page load performance by reducing the main bundle size.
+ *
+ * Vite will automatically create separate chunks for each route component.
+ */
 
 const routes = [
   {
     path: '/',
     name: 'Home',
-    component: Home,
+    component: () => import('@/pages/Home.vue'),
   },
   {
     path: '/login',
     name: 'Login',
-    component: Login,
+    component: () => import('@/pages/auth/Login.vue'),
     meta: { requiresGuest: true }, // Only accessible when not authenticated
   },
   {
     path: '/auth/google/callback',
     name: 'GoogleCallback',
-    component: GoogleCallback,
+    component: () => import('@/pages/auth/GoogleCallback.vue'),
   },
   // Marketplace routes (public)
   {
     path: '/marketplace',
     name: 'Marketplace',
-    component: ModelMarketplace,
+    component: () => import('@/pages/marketplace/ModelMarketplace.vue'),
   },
   {
     path: '/models/:id',
     name: 'ModelDetail',
-    component: ModelDetail,
+    component: () => import('@/pages/marketplace/ModelDetail.vue'),
   },
   // Generation routes (authenticated users)
   {
     path: '/generate',
     name: 'Generate',
-    component: ImageGeneration,
+    component: () => import('@/pages/generate/ImageGeneration.vue'),
     meta: { requiresAuth: true },
   },
   {
     path: '/generate/history',
     name: 'GenerationHistory',
-    component: GenerationHistory,
+    component: () => import('@/pages/generate/GenerationHistory.vue'),
     meta: { requiresAuth: true },
   },
   // Community routes (public)
   {
     path: '/community',
     name: 'Community',
-    component: Community,
+    component: () => import('@/pages/community/Community.vue'),
   },
   // Artist routes (protected)
   {
