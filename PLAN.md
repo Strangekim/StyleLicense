@@ -707,17 +707,21 @@ CP-M6-1 → CP-M6-2 → CP-M6-3 → CP-M6-4
   - [x] Create dummy data for testing (Commit: b2fa448)
   - [x] Enable public access to community/marketplace (Commit: b2fa448)
   - [x] Update CORS configuration for multiple frontend ports (Commit: b2fa448)
+  - [x] Install Chromium browser
+  - [x] Run initial E2E tests with Chromium (2/15 passed - see E2E_TEST_RESULTS.md)
   - [x] Basic navigation tests (Commit: 90351ab)
   - [x] Browse models scenario (Commit: 90351ab)
   - [x] Community feed interaction tests (Commit: 90351ab)
+  - [ ] Fix navigation element visibility issues (nav hidden on desktop)
+  - [ ] Fix backend-frontend data connection (empty model/feed lists)
   - [ ] Authentication flow tests (signup → login)
   - [ ] Token purchase scenario
   - [ ] Image generation flow (create model → train → generate)
   - [ ] Notification flow (like → receive notification)
   - [ ] Run all scenarios in CI pipeline
 - **Exit Criteria**:
-  - All scenarios pass without manual intervention (partial - basic tests ready)
-  - Test suite completes in < 10 minutes (TBD - run full suite)
+  - All scenarios pass without manual intervention (IN PROGRESS - 2/15 tests passing)
+  - Test suite completes in < 10 minutes (✅ 55.5s for 15 tests)
   - No flaky tests (99% pass rate over 10 runs) (TBD - run multiple times)
 - **Reference**: [apps/frontend/PLAN.md#m6-e2e-tests](apps/frontend/PLAN.md#m6-e2e-tests)
 
