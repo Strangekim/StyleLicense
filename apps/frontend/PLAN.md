@@ -507,6 +507,14 @@ Status: IN_PROGRESS
   - [x] Navigation tests
   - [x] Browse models tests
   - [x] Community feed tests
+- [x] Fix E2E test selectors and improve pass rate (Commit: f0d5bea)
+  - [x] Fixed navigation element selector (nav → header)
+  - [x] Fixed route paths (/models → /marketplace)
+  - [x] Improved data detection (CSS class → img[src*="picsum"])
+  - [x] Added proper wait states (networkidle, 2000ms timeout)
+  - [x] Pass rate improved from 13% (2/15) to 47% (7/15)
+  - [x] Verified backend API and CORS configuration
+  - [x] Updated E2E_TEST_RESULTS.md with detailed results
 - [ ] Write authenticated scenarios
   - [ ] Login flow tests
   - [ ] Token purchase tests

@@ -1,20 +1,72 @@
 # E2E Test Results
 
+## Latest Run (After Fixes)
+
+**Date**: 2025-11-14
+**Test Run**: Chromium only (15 tests)
+**Result**: 7 passed, 3 failed, 5 skipped
+**Commit**: f0d5bea
+
+### Summary
+
+Total Duration: 41.0s
+Pass Rate: 47% (7/15 tests)
+**Improvement**: +260% from initial run (13% → 47%)
+
+---
+
+## Initial Run (Before Fixes)
+
 **Date**: 2025-11-14
 **Test Run**: Chromium only (15 tests)
 **Result**: 2 passed, 8 failed, 5 skipped
 
-## Summary
+### Summary
 
 Total Duration: 55.5s
 Pass Rate: 13% (2/15 tests)
 
-## Passed Tests ✅
+## Currently Passing Tests ✅ (7 tests)
 
-1. Community Feed › should display community feed page
-2. (One more test - details in HTML report)
+1. Browse Models › should display homepage
+2. Browse Models › should display model list
+3. Browse Models › should filter models by tag
+4. Community Feed › should display community feed page
+5. Community Feed › should display feed items
+6. Basic Navigation › should navigate to homepage
+7. Basic Navigation › should have responsive navigation
 
-## Failed Tests ❌
+## Currently Failing Tests ❌ (3 tests)
+
+1. Browse Models › should navigate to models page - Timeout waiting for Marketplace link
+2. Basic Navigation › should have working navigation links - Marketplace link not found
+3. Basic Navigation › should show 404 page for invalid route - Header not found on 404 route
+
+## Fixes Applied (Commit f0d5bea)
+
+### 1. Fixed Navigation Element Selector
+**Problem**: Tests used `locator('nav')` which failed because `<nav class="hidden md:flex">` is hidden on mobile
+**Fix**: Changed to `locator('header')` which is always visible
+**Tests Fixed**: 5 tests
+
+### 2. Fixed Route Paths
+**Problem**: Tests used `/models` route but actual route is `/marketplace`
+**Fix**: Updated all routes from `/models` to `/marketplace` and link text from "Models" to "Marketplace"
+**Tests Fixed**: 2 tests
+
+### 3. Improved Data Detection
+**Problem**: Tests used unreliable CSS class selectors like `[class*="model"]`
+**Fix**: Changed to `img[src*="picsum"]` to detect actual loaded images from Picsum API
+**Tests Fixed**: 2 tests
+
+### 4. Added Proper Wait States
+**Problem**: Tests didn't wait for network requests and rendering
+**Fix**: Added `page.waitForLoadState('networkidle')` and increased timeout to 2000ms
+**Result**: More stable test execution
+
+---
+
+## Initial Failed Tests ❌ (8 tests - before fixes)
 
 ### 1. Navigation Element Not Found (5 failures)
 **Files**:
@@ -89,7 +141,23 @@ Header component has `<nav class="hidden md:flex">` which should be visible on d
 
 ## Next Steps
 
-1. Fix navigation visibility issue
-2. Verify data flow from backend to frontend
-3. Re-run tests after fixes
-4. Install Firefox and WebKit browsers for cross-browser testing
+### Completed ✅
+1. ~~Fix navigation visibility issue~~ - Fixed by using `header` selector
+2. ~~Verify data flow from backend to frontend~~ - Verified via API calls
+3. ~~Re-run tests after fixes~~ - Completed, pass rate improved to 47%
+
+### Remaining Work
+1. **Fix remaining 3 failing tests**:
+   - Investigate Marketplace link visibility timing issue
+   - May need to add explicit wait for navigation to render
+   - Implement proper 404 page component
+
+2. **Cross-browser testing**:
+   - Install Firefox and WebKit browsers
+   - Run tests on all browsers
+
+3. **Add authenticated E2E scenarios** (from PLAN.md):
+   - Login flow
+   - Token purchase
+   - Image generation
+   - Notification system
