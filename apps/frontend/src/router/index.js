@@ -76,8 +76,10 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
-  // Try to fetch user if not already loaded
-  if (!authStore.user && !authStore.loading) {
+  // Only fetch user if the route requires authentication or if we need to check auth status
+  const needsAuthCheck = to.meta.requiresAuth || to.meta.requiresArtist || to.meta.requiresGuest
+
+  if (needsAuthCheck && !authStore.user && !authStore.loading) {
     try {
       await authStore.fetchCurrentUser()
     } catch (error) {
