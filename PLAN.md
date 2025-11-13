@@ -530,19 +530,23 @@ PT-M4-Training ⫽ PT-M4-Inference ⫽ PT-M4-Backend
     - [ ] Retry logic (max 3 attempts) on failure
 
 #### PT-M4-Inference: Inference Pipeline
-- **Status**: PLANNED
+- **Status**: IN_PROGRESS (Phase 1 DONE, Phase 2 PLANNED)
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M4-Training, PT-M4-Backend]
 - **Dependencies**: [M2]
 - **Owner**: ML Engineer
 - **Reference**: [apps/inference-server/PLAN.md#m4-inference-pipeline](apps/inference-server/PLAN.md#m4-inference-pipeline)
 - **Summary**:
-  - [ ] Stable Diffusion inference (50 steps, guidance_scale=7.5)
-  - [ ] LoRA weight loading from file path
-  - [ ] Signature insertion with PIL (position, opacity, size)
-  - [ ] Batch processing (10 concurrent generations)
-  - [ ] RabbitMQ Consumer for `image_generation` queue
-  - [ ] Status update via PATCH /api/images/:id/status
+  - **Phase 1 (Mock Implementation)**: DONE (Commit: eb2d393)
+    - [x] RabbitMQ Consumer for `image_generation` queue
+    - [x] Webhook service matching API.md (PATCH /progress, POST /complete, POST /failed)
+    - [x] Mock generation pipeline with progress updates
+    - [x] Comprehensive tests (8 tests passing)
+  - **Phase 2 (GPU Implementation)**: PLANNED
+    - [ ] Stable Diffusion inference (50 steps, guidance_scale=7.5)
+    - [ ] LoRA weight loading from file path
+    - [ ] Signature insertion with PIL (position, opacity, size)
+    - [ ] Batch processing (10 concurrent generations)
 
 #### PT-M4-Backend: Backend AI Integration
 - **Status**: DONE (Commit: d693513)

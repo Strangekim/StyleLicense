@@ -54,10 +54,62 @@ This document contains detailed subtasks for inference server development. For h
 
 ### M4-Inference-Pipeline
 
-**Referenced by**: Root PLAN.md → PT-M4-Inference  
-**Status**: PLANNED
+**Referenced by**: Root PLAN.md → PT-M4-Inference
+**Status**: IN_PROGRESS (Phase 1 DONE, Phase 2 PLANNED)
 
-#### Subtasks
+**Development Approach**: Following Option 3 (Hybrid) like training-server
+- Phase 1: Mock implementation locally (DONE)
+- Phase 2: GPU implementation on GCP (PLANNED)
+
+---
+
+#### Phase 1: Mock Implementation (DONE)
+
+**Status**: DONE
+**Commit**: eb2d393
+
+##### Subtasks
+
+- [x] RabbitMQ Consumer for `image_generation` queue (Commit: 617d7a5)
+  - [x] Connect to RabbitMQ with proper credentials
+  - [x] Declare `image_generation` queue
+  - [x] Parse message format (generation_id, style_id, prompt, etc.)
+  - [x] Process generation task with mock pipeline
+
+- [x] Webhook service matching API.md spec (Commit: eb2d393)
+  - [x] PATCH /api/webhooks/inference/progress with progress object
+  - [x] POST /api/webhooks/inference/complete with result_url and metadata
+  - [x] POST /api/webhooks/inference/failed with error_message and error_code
+  - [x] Authentication with INTERNAL_API_TOKEN header
+  - [x] X-Request-Source: inference-server header
+
+- [x] Mock generation pipeline (Commit: 617d7a5, updated eb2d393)
+  - [x] Simulate 10-second generation with progress milestones (0%, 25%, 50%, 75%, 90%, 100%)
+  - [x] Progress updates include current_step, total_steps, progress_percent, estimated_seconds
+  - [x] Generate mock GCS URL: gs://bucket/generations/gen-{id}.png
+  - [x] Send completion with seed, steps, guidance_scale metadata
+
+- [x] Comprehensive tests (Commit: eb2d393)
+  - [x] Test inference progress webhook (payload structure, PATCH method)
+  - [x] Test inference completed webhook (with/without metadata)
+  - [x] Test inference failed webhook (error_code handling)
+  - [x] Test error handling (connection failures)
+  - [x] All 8 tests passing
+
+**Exit Criteria**:
+- [x] RabbitMQ consumer receives and processes messages
+- [x] Webhook service sends callbacks matching API.md spec exactly
+- [x] Mock generation completes with progress updates
+- [x] All tests passing (8/8)
+
+---
+
+#### Phase 2: GPU Implementation (PLANNED)
+
+**Status**: PLANNED
+**Target Environment**: GCP Compute Engine with GPU
+
+##### Subtasks
 
 - [ ] Stable Diffusion inference
   - [ ] Load base model (Stable Diffusion v1.5)
@@ -82,23 +134,12 @@ This document contains detailed subtasks for inference server development. For h
   - [ ] Queue management for requests
   - [ ] Resource allocation per generation
 
-- [ ] RabbitMQ Consumer
-  - [ ] Create consumer for image_generation queue
-  - [ ] Parse message (generation_id, style_id, lora_path, prompt, aspect_ratio, seed, webhook_url)
-  - [ ] Call generation function
-  - [ ] Send status updates to webhook
-
-- [ ] Status update via PATCH /api/images/:id/status
-  - [ ] Send status=processing when started
-  - [ ] Send status=completed with image_url when done
-  - [ ] Send status=failed with failure_reason on error
-
 **Implementation Reference**: [CODE_GUIDE.md#inference-pipeline](CODE_GUIDE.md#inference-pipeline)
 
 **Exit Criteria**:
 - [ ] Can generate image with LoRA in < 10 seconds
 - [ ] Signature inserted correctly
-- [ ] Status updates sent to backend
+- [ ] Generated images show style characteristics
 
 ---
 
