@@ -495,10 +495,21 @@ Status: DONE
 ### M6-E2E-Tests
 
 **Referenced by**: Root PLAN.md -> CP-M6-1
-Status: PLANNED
+Status: IN_PROGRESS
 
-- [ ] Install Playwright
-- [ ] Write E2E scenarios
+- [x] Install Playwright (Commit: 90351ab)
+- [x] Configure playwright.config.js (Commit: 90351ab)
+- [x] Write basic E2E scenarios (Commit: 90351ab)
+  - [x] Navigation tests
+  - [x] Browse models tests
+  - [x] Community feed tests
+- [ ] Write authenticated scenarios
+  - [ ] Login flow tests
+  - [ ] Token purchase tests
+  - [ ] Model creation and training tests
+  - [ ] Generation flow tests
+  - [ ] Notification tests
+- [ ] Run tests in CI/CD pipeline
 
 ---
 

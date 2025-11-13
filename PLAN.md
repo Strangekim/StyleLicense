@@ -698,20 +698,24 @@ CP-M6-1 → CP-M6-2 → CP-M6-3 → CP-M6-4
 ```
 
 #### CP-M6-1: E2E Testing
-- **Status**: PLANNED
+- **Status**: IN_PROGRESS
 - **Type**: SEQUENTIAL
 - **Dependencies**: [M5]
 - **Owners**: [All]
 - **Tasks**:
-  - [ ] Playwright scenario: signup → login → browse models
-  - [ ] Scenario: create model → wait for training → generate image
-  - [ ] Scenario: purchase tokens → generate image → verify deduction
-  - [ ] Scenario: like image → comment → receive notification
+  - [x] Install Playwright and setup test infrastructure (Commit: 90351ab)
+  - [x] Basic navigation tests (Commit: 90351ab)
+  - [x] Browse models scenario (Commit: 90351ab)
+  - [x] Community feed interaction tests (Commit: 90351ab)
+  - [ ] Authentication flow tests (signup → login)
+  - [ ] Token purchase scenario
+  - [ ] Image generation flow (create model → train → generate)
+  - [ ] Notification flow (like → receive notification)
   - [ ] Run all scenarios in CI pipeline
 - **Exit Criteria**:
-  - All scenarios pass without manual intervention
-  - Test suite completes in < 10 minutes
-  - No flaky tests (99% pass rate over 10 runs)
+  - All scenarios pass without manual intervention (partial - basic tests ready)
+  - Test suite completes in < 10 minutes (TBD - run full suite)
+  - No flaky tests (99% pass rate over 10 runs) (TBD - run multiple times)
 - **Reference**: [apps/frontend/PLAN.md#m6-e2e-tests](apps/frontend/PLAN.md#m6-e2e-tests)
 
 #### CP-M6-2: Performance Testing
