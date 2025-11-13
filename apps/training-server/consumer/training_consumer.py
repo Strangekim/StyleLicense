@@ -26,7 +26,9 @@ class TrainingConsumer:
     def connect(self):
         """Establish connection to RabbitMQ"""
         try:
-            logger.info(f"Connecting to RabbitMQ at {Config.RABBITMQ_HOST}:{Config.RABBITMQ_PORT}")
+            logger.info(
+                f"Connecting to RabbitMQ at {Config.RABBITMQ_HOST}:{Config.RABBITMQ_PORT}"
+            )
 
             credentials = pika.PlainCredentials(
                 Config.RABBITMQ_USER, Config.RABBITMQ_PASSWORD
@@ -126,7 +128,9 @@ class TrainingConsumer:
 
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse message: {e}")
-            ch.basic_ack(delivery_tag=method.delivery_tag)  # Don't requeue invalid messages
+            ch.basic_ack(
+                delivery_tag=method.delivery_tag
+            )  # Don't requeue invalid messages
 
         except Exception as e:
             logger.error(f"Error processing message: {e}", exc_info=True)
@@ -136,65 +140,85 @@ class TrainingConsumer:
         """
         Process a training task
 
+        Message format (from PATTERNS.md):
+        {
+          "data": {
+            "style_id": 123,
+            "images": ["gs://...", ...],
+            "tags": ["watercolor", "portrait"],
+            "parameters": {
+              "epochs": 200,
+              "learning_rate": 0.0001,
+              "batch_size": 4
+            }
+          }
+        }
+
         Args:
-            data: Task data containing style_id, image_paths, num_epochs
+            data: Task data containing style_id, images, parameters
 
         Returns:
             True if successful, False otherwise
         """
+        # Extract data from message format
         style_id = data.get("style_id")
-        image_paths = data.get("image_paths", [])
-        num_epochs = data.get("num_epochs", 200)
+        images = data.get("images", [])
+        parameters = data.get("parameters", {})
+        num_epochs = parameters.get("epochs", 200)
+        learning_rate = parameters.get("learning_rate", 0.0001)
 
         if not style_id:
             logger.error("Missing style_id in task data")
             return False
 
-        if not image_paths:
-            logger.error("Missing image_paths in task data")
+        if not images:
+            logger.error("Missing images in task data")
             return False
 
         logger.info(
-            f"Processing training task: style_id={style_id}, images={len(image_paths)}, epochs={num_epochs}"
+            f"Processing training task: style_id={style_id}, images={len(images)}, epochs={num_epochs}, lr={learning_rate}"
         )
 
         try:
-            # Send training started webhook
-            WebhookService.send_training_started(style_id)
-
-            # Mock training process (for M1 phase)
-            # In M4, this will be replaced with actual LoRA training
-            success = self.mock_training(style_id, image_paths, num_epochs)
+            # Mock training process (for Phase 1)
+            # In Phase 2, this will be replaced with actual LoRA training
+            success = self.mock_training(style_id, images, num_epochs)
 
             if success:
                 # Generate mock model path
                 model_path = f"gs://{Config.GCS_BUCKET_NAME}/models/style-{style_id}/lora_weights.safetensors"
 
                 # Send training completed webhook
-                WebhookService.send_training_completed(style_id, model_path)
+                WebhookService.send_training_completed(
+                    style_id, model_path, loss=0.05, epochs=num_epochs
+                )
                 return True
             else:
                 # Send training failed webhook
                 WebhookService.send_training_failed(
-                    style_id, "Mock training failed (simulated error)"
+                    style_id,
+                    error_message="Mock training failed (simulated error)",
+                    error_code="MOCK_TRAINING_ERROR",
                 )
                 return False
 
         except Exception as e:
             logger.error(f"Training task failed: {e}", exc_info=True)
-            WebhookService.send_training_failed(style_id, str(e))
+            WebhookService.send_training_failed(
+                style_id, error_message=str(e), error_code="INTERNAL_ERROR"
+            )
             return False
 
-    def mock_training(self, style_id: int, image_paths: list, num_epochs: int) -> bool:
+    def mock_training(self, style_id: int, images: list, num_epochs: int) -> bool:
         """
-        Mock training process (for M1 phase)
+        Mock training process (Phase 1 - Option 3 Hybrid approach)
 
         Simulates training by sleeping and sending progress updates.
-        In M4, this will be replaced with actual LoRA training.
+        In Phase 2 (GCP GPU), this will be replaced with actual LoRA training.
 
         Args:
             style_id: Style model ID
-            image_paths: List of training image paths
+            images: List of training image GCS paths
             num_epochs: Number of training epochs
 
         Returns:
@@ -202,20 +226,43 @@ class TrainingConsumer:
         """
         logger.info(f"Starting mock training for style_id={style_id}")
 
-        # Simulate downloading images (skip actual download for M1)
-        logger.info(f"Mock downloading {len(image_paths)} images...")
+        # Simulate downloading images (skip actual download for Phase 1)
+        logger.info(f"Mock downloading {len(images)} images...")
         time.sleep(2)
 
         # Simulate training progress
+        # In real training: num_epochs iterations
+        # For mock: 10 steps representing the full training
         total_steps = 10
         step_duration = 3  # seconds per step
+        last_progress_time = time.time()
 
         for step in range(1, total_steps + 1):
-            progress = int((step / total_steps) * 100)
-            logger.info(f"Training progress: {progress}%")
+            # Calculate simulated epoch and progress
+            current_epoch = int((step / total_steps) * num_epochs)
+            progress_percent = int((step / total_steps) * 100)
+            remaining_steps = total_steps - step
+            estimated_seconds = remaining_steps * step_duration
 
-            # Send progress update
-            WebhookService.send_training_progress(style_id, progress)
+            logger.info(
+                f"Training progress: {progress_percent}% (epoch {current_epoch}/{num_epochs})"
+            )
+
+            # Send progress update (every 30 seconds in real training, but every step in mock)
+            current_time = time.time()
+            if (
+                current_time - last_progress_time >= 5
+                or step == 1
+                or step == total_steps
+            ):
+                WebhookService.send_training_progress(
+                    style_id=style_id,
+                    current_epoch=current_epoch,
+                    total_epochs=num_epochs,
+                    progress_percent=progress_percent,
+                    estimated_seconds=estimated_seconds,
+                )
+                last_progress_time = current_time
 
             # Sleep to simulate work
             time.sleep(step_duration)

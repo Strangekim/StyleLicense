@@ -477,9 +477,16 @@ Status: DONE
 ### M5-Notification
 
 **Referenced by**: Root PLAN.md -> CP-M5-1
-Status: PLANNED
+Status: DONE
 
-- [ ] Create notification polling
+- [x] Create notification.service.js (API calls) (Commit: 81a8e5d)
+- [x] Create useNotificationStore (Pinia store) (Commit: 81a8e5d)
+- [x] Create useNotificationPolling composable (5-second polling) (Commit: 81a8e5d)
+- [x] Create NotificationDropdown component (Commit: 81a8e5d)
+- [x] Add date utility functions (Commit: 81a8e5d)
+- [x] Update Header with NotificationDropdown and polling (Commit: 81a8e5d)
+- [x] Display unread count badge on bell icon (Commit: 81a8e5d)
+- [x] Mark as read and mark all as read functionality (Commit: 81a8e5d)
 
 ---
 

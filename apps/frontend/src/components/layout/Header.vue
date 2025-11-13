@@ -18,6 +18,13 @@
             Marketplace
           </router-link>
           <router-link
+            to="/community"
+            class="text-neutral-700 hover:text-primary-600 transition-colors font-medium"
+            active-class="text-primary-600"
+          >
+            Community
+          </router-link>
+          <router-link
             v-if="authStore.isAuthenticated"
             to="/generate"
             class="text-neutral-700 hover:text-primary-600 transition-colors font-medium"
@@ -47,6 +54,9 @@
               {{ authStore.user?.token_balance?.toLocaleString() || 0 }}
             </span>
           </div>
+
+          <!-- Notification Dropdown (authenticated users only) -->
+          <NotificationDropdown v-if="authStore.isAuthenticated" />
 
           <!-- User Dropdown (authenticated) -->
           <div v-if="authStore.isAuthenticated" class="relative" ref="dropdownRef">
@@ -179,9 +189,14 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useNotificationPolling } from '@/composables/useNotificationPolling'
+import NotificationDropdown from '@/components/features/NotificationDropdown.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
+
+// Start notification polling
+const { startPolling, stopPolling } = useNotificationPolling()
 
 const isDropdownOpen = ref(false)
 const isMobileMenuOpen = ref(false)

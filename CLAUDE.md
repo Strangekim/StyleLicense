@@ -59,7 +59,145 @@
 2. **[apps/inference-server/PLAN.md](apps/inference-server/PLAN.md)** - 세부 Subtask 확인
 3. **[apps/inference-server/CODE_GUIDE.md](apps/inference-server/CODE_GUIDE.md)** - 코드 작성 패턴 학습
 
-### Step 3: Implement
+### Step 3: Verify Specification Compliance
+
+⚠️ **구현 전 필수 검증 단계** - 이 단계를 건너뛰면 명세 위반이 발생합니다!
+
+#### 3.1. 명세 우선 원칙
+
+**절대 규칙:**
+- ✅ **프로젝트 명세 > 프레임워크 관습**
+- ✅ **TECHSPEC.md, TABLES.md가 단일 진실 공급원(Single Source of Truth)**
+- ❌ "Django/Vue/FastAPI에서 보통 이렇게 해" ← 명세 확인 없이 적용 금지
+
+#### 3.2. Backend 모델 작성 시 필수 체크리스트
+
+**Database 모델을 작성할 때 (Django Model, SQLAlchemy 등):**
+
+- [ ] **Step 1**: `docs/database/TABLES.md` 열기
+- [ ] **Step 2**: 해당 테이블의 CREATE TABLE 문 확인
+- [ ] **Step 3**: 컬럼 목록 확인
+  ```
+  예: users 테이블
+  - id ✓
+  - username ✓
+  - email ✓
+  - provider ✓
+  - provider_user_id ✓
+  - password ✗ (없음!)
+  ```
+- [ ] **Step 4**: 각 컬럼의 데이터 타입, 제약조건 확인
+  ```sql
+  username VARCHAR(50) UNIQUE NOT NULL
+  → Django: models.CharField(max_length=50, unique=True)
+  ```
+- [ ] **Step 5**: 프레임워크 기본 필드와 명세 비교
+  ```python
+  # ❌ 잘못된 예
+  class User(AbstractBaseUser):  # password 자동 추가
+
+  # ✅ 올바른 예 (명세에 password 없음)
+  class User(models.Model):  # password 없음
+  ```
+
+#### 3.3. Migration 생성 후 필수 검증
+
+**Django: makemigrations 후**
+```bash
+python manage.py makemigrations
+# → migrations/0001_initial.py 생성됨
+```
+
+- [ ] **Step 1**: 생성된 migration 파일 열기
+- [ ] **Step 2**: `operations` 섹션의 `CreateModel` 확인
+- [ ] **Step 3**: `fields` 리스트와 TABLES.md 대조
+  ```python
+  # migrations/0001_initial.py
+  operations = [
+      migrations.CreateModel(
+          name='User',
+          fields=[
+              ('id', models.BigAutoField(primary_key=True)),
+              ('username', models.CharField(max_length=50, unique=True)),
+              ('password', models.CharField(max_length=128)),  # ← 이게 명세에 있는가?
+          ]
+      )
+  ]
+  ```
+- [ ] **Step 4**: 명세에 없는 필드 발견 시
+  1. 모델 수정 (필드 제거 또는 비활성화)
+  2. Migration 재생성
+  3. 재검증
+
+**FastAPI/SQLAlchemy: alembic revision 후**
+- 동일한 방식으로 `upgrade()` 함수의 `op.create_table()` 검증
+
+#### 3.4. API 엔드포인트 작성 시 필수 체크리스트
+
+- [ ] **Step 1**: `docs/API.md` 또는 `TECHSPEC.md` Section 6 확인
+- [ ] **Step 2**: 해당 엔드포인트가 명세에 존재하는가?
+  ```
+  예: POST /api/auth/login (email/password)
+  → TECHSPEC.md 확인 → "Google OAuth only, 자체 로그인 없음"
+  → 이 엔드포인트는 명세 위반!
+  ```
+- [ ] **Step 3**: 명세에 없는 엔드포인트를 추가하려면
+  1. **반드시 사용자에게 먼저 물어보기** (한국어로)
+  2. 사용자 승인 후 TECHSPEC.md / API.md 업데이트
+  3. 그 다음 구현
+
+#### 3.5. 사용자 요구가 명세와 충돌할 때
+
+**시나리오 예시:**
+```
+사용자: "Postman으로 API 테스트하고 싶어요. 로그인 엔드포인트 만들어주세요."
+Claude 사고: "Google OAuth는 브라우저 필요... 간단하게 email/password 로그인 추가?"
+```
+
+**❌ 절대 하지 말 것:**
+- 명세 확인 없이 편의 기능 추가
+- "개발용", "테스트용"이라는 명목으로 명세 위반
+
+**✅ 올바른 접근:**
+1. **명세 확인**
+   ```
+   TECHSPEC.md → "자체 로그인 없음"
+   TABLES.md → users 테이블에 password 컬럼 없음
+   ```
+
+2. **사용자에게 명확히 설명 (한국어)**
+   ```
+   "현재 명세(TECHSPEC.md)에는 'Google OAuth only, 자체 로그인 없음'으로 정의되어 있습니다.
+   email/password 로그인을 추가하려면 명세를 수정해야 합니다.
+
+   대신 다음 방법으로 Postman 테스트가 가능합니다:
+   1. Django Admin에서 수동 세션 생성
+   2. 테스트용 세션 쿠키 직접 발급
+   3. 브라우저에서 Google OAuth 완료 후 쿠키 복사
+
+   어떤 방법을 사용하시겠습니까?"
+   ```
+
+3. **사용자 결정 대기**
+   - 명세 수정 승인 → TECHSPEC.md 업데이트 후 구현
+   - 대안 선택 → 명세 유지하며 대안 제공
+
+#### 3.6. 프레임워크별 주의사항
+
+**Django:**
+- `AbstractBaseUser`: password, last_login 자동 추가
+- `AbstractUser`: 더 많은 기본 필드 (first_name, last_name, email 등)
+- 명세에 없는 필드는 `None`으로 비활성화 또는 `models.Model` 직접 상속
+
+**Vue Router:**
+- 기본 라우팅 패턴이 아닌 TECHSPEC.md의 화면 정의 우선
+
+**FastAPI:**
+- Pydantic 모델의 자동 검증이 명세의 제약조건과 일치하는지 확인
+
+---
+
+### Step 4: Implement
 
 1. **Read Task Details**
    - Task의 **작업 내용**, **완료 조건**, **참조 문서** 확인
@@ -71,6 +209,7 @@
    - Training/Inference: `apps/*/tests/test_*.py`
 
 3. **Implement Code**
+   - **Step 3의 명세 검증 체크리스트를 먼저 완료**
    - **CODE_GUIDE.md**의 패턴을 따라 코드 작성
    - **PATTERNS.md**의 공통 규칙 준수
    - 파일 위치는 **해당 앱의 README.md**의 Directory Structure 참고
@@ -119,11 +258,11 @@
    - Lint 에러 시: 에러 수정 후 다시 실행
    - 모든 체크가 통과할 때까지 반복
 
-### Step 4: Finalize and Commit
+### Step 5: Finalize and Commit
 
 ⚠️ **중요**: 아래 순서를 **반드시 따라야** 합니다. 순서를 지키지 않으면 PLAN.md가 동기화되지 않습니다.
 
-#### 4.1. 코드 변경사항 커밋
+#### 5.1. 코드 변경사항 커밋
 
 1.  **개발 브랜치로 전환 및 동기화**:
     *   `git checkout dev` 명령어로 공용 개발 브랜치인 `dev`로 전환합니다.
@@ -141,7 +280,7 @@
     *   `git rev-parse HEAD` 명령어로 방금 생성한 커밋의 고유 해시값을 가져옵니다.
     *   예: `a1b2c3d` (처음 7자리만 사용)
 
-#### 4.2. PLAN.md 업데이트 (⚠️ 반드시 순서대로!)
+#### 5.2. PLAN.md 업데이트 (⚠️ 반드시 순서대로!)
 
 **체크리스트**를 따라 진행하세요:
 
@@ -171,7 +310,7 @@
   - [x] CP-M2-3: Token Transaction Atomicity (Commit: a1b2c3d)
   ```
 
-#### 4.3. PLAN.md 커밋
+#### 5.3. PLAN.md 커밋
 
 1.  **PLAN.md 파일 스테이징 및 커밋**:
     ```bash
@@ -180,17 +319,26 @@
     git push origin dev
     ```
 
-#### 4.4. 사용자에게 보고
+#### 5.4. 사용자에게 보고
 
 *   "작업이 완료되어 `dev` 브랜치에 커밋(a1b2c3d)하고 푸시했습니다. `apps/{app-name}/PLAN.md`와 `PLAN.md`에 커밋 정보를 기록했습니다." 형식으로 보고합니다.
 
 ---
 
 **⚠️ 자주 하는 실수**:
+
+**PLAN.md 관련:**
 - ❌ Root PLAN.md만 업데이트하고 App PLAN.md를 빠뜨림
 - ❌ 커밋 해시를 기록하지 않음
 - ❌ App PLAN.md와 Root PLAN.md가 불일치
 - ❌ PLAN.md 업데이트를 별도로 커밋하지 않음
+
+**명세 준수 관련 (치명적!):**
+- ❌ TABLES.md 확인 없이 Django AbstractBaseUser 사용 → password 자동 추가
+- ❌ Migration 생성 후 명세와 대조하지 않음
+- ❌ "개발 편의"를 이유로 명세에 없는 API 엔드포인트 추가 (예: email/password 로그인)
+- ❌ 프레임워크 관습을 명세보다 우선시
+- ❌ 사용자 요구를 명세 확인 없이 바로 구현
 
 ---
 
@@ -234,9 +382,18 @@ apps/backend/CODE_GUIDE.md (코드 패턴)
 - [ ] 동시성 테스트 작성
 ```
 
-#### 5. Implement
+#### 5. Verify Specification (Step 3)
 
-**5.1. Write Test:**
+**5.1. Check TABLES.md:**
+```bash
+# TokenTransaction 모델 작성 전 docs/database/TABLES.md 확인
+# transactions 테이블 컬럼 목록 확인
+# ✓ 명세와 일치하는지 검증 완료
+```
+
+#### 6. Implement (Step 4)
+
+**6.1. Write Test:**
 ```python
 # apps/backend/app/tests/test_token_service.py
 def test_concurrent_token_consumption():
@@ -244,7 +401,7 @@ def test_concurrent_token_consumption():
     ...
 ```
 
-**5.2. Implement Code:**
+**6.2. Implement Code:**
 ```python
 # apps/backend/app/services/token_service.py
 @transaction.atomic
@@ -253,7 +410,7 @@ def consume_tokens(user_id, amount, ...):
     ...
 ```
 
-**5.3. Run Checks:**
+**6.3. Run Checks:**
 ```bash
 cd apps/backend
 black app/
@@ -261,11 +418,11 @@ pylint app/services/token_service.py
 python manage.py test app.tests.test_token_service
 ```
 
-**5.4. Iterate until all pass**
+**6.4. Iterate until all pass**
 
-#### 6. Finalize and Commit
+#### 7. Finalize and Commit (Step 5)
 
-**6.1. Checkout and Commit**
+**7.1. Checkout and Commit**
 ```bash
 git checkout dev
 git pull origin dev
@@ -274,7 +431,7 @@ git commit -m "feat(backend): implement consume_tokens with SELECT FOR UPDATE"
 git push origin dev
 ```
 
-**6.2. Record Commit Hash**
+**7.2. Record Commit Hash**
 (git rev-parse HEAD 실행 후 나온 해시가 `a1b2c3d`라고 가정)
 
 **apps/backend/PLAN.md:**
@@ -296,6 +453,13 @@ git push origin dev
 - **Load CODE_GUIDE.md once per app** (여러 Task에 재사용)
 - **Lazy load docs/** (필요할 때만 읽기)
 - **Don't load cross-app context** (Backend 작업 시 Frontend CODE_GUIDE 읽지 않기)
+
+### 🔒 Specification Compliance (최우선 원칙)
+1. **프로젝트 명세 > 프레임워크 관습** - Django/Vue 일반 패턴보다 TECHSPEC.md가 우선
+2. **TABLES.md 필수 검증** - DB 모델 작성 시 컬럼 1:1 매칭 필수
+3. **Migration 검증** - makemigrations 후 명세와 대조
+4. **명세 없는 기능 추가 금지** - 사용자에게 먼저 물어보기
+5. **"개발 편의" 명목 명세 위반 절대 금지** - 테스트용, 임시용도 금지
 
 ### 📏 Code Quality
 1. **Follow CODE_GUIDE.md patterns** - 일관된 코드 스타일

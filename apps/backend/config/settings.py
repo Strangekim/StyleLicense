@@ -62,6 +62,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "app.middleware.WebhookAuthMiddleware",  # Webhook authentication for AI servers
     "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -239,3 +240,6 @@ RABBITMQ_VHOST = os.getenv("RABBITMQ_VHOST", "/")
 
 # API Base URL for webhooks
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+
+# Internal API Token for webhook authentication
+INTERNAL_API_TOKEN = os.getenv("INTERNAL_API_TOKEN", "")

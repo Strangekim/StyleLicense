@@ -1,0 +1,244 @@
+"""
+Generation Views
+
+Handles image generation requests and status polling.
+"""
+
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.db import transaction
+
+from app.models.generation import Generation
+from app.models.style import Style
+from app.services.token_service import TokenService
+from app.services.rabbitmq_service import get_rabbitmq_service
+
+
+class GenerationViewSet(viewsets.ViewSet):
+    """ViewSet for image generation"""
+
+    permission_classes = [IsAuthenticated]
+
+    # Cost calculation based on aspect ratio
+    # TODO: Move to settings or database configuration
+    COST_MAP = {
+        "1:1": 50,  # 512x512
+        "2:2": 75,  # 1024x1024
+        "1:2": 60,  # 512x1024
+    }
+
+    def create(self, request):
+        """
+        Create a new generation request
+
+        API: POST /api/generations
+        Payload: {style_id, prompt_tags, description, aspect_ratio, seed}
+        """
+        user = request.user
+        style_id = request.data.get("style_id")
+        prompt_tags = request.data.get("prompt_tags", [])
+        description = request.data.get("description", "")
+        aspect_ratio = request.data.get("aspect_ratio", "1:1")
+        seed = request.data.get("seed")
+
+        # Validation
+        if not style_id:
+            return Response(
+                {"error": "style_id is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not prompt_tags or not isinstance(prompt_tags, list):
+            return Response(
+                {"error": "prompt_tags must be a non-empty array"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if aspect_ratio not in self.COST_MAP:
+            return Response(
+                {
+                    "error": f"Invalid aspect_ratio. Must be one of: {list(self.COST_MAP.keys())}"
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Check if style exists and is ready
+        try:
+            style = Style.objects.get(id=style_id)
+        except Style.DoesNotExist:
+            return Response(
+                {"error": "Style not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if style.training_status != "completed":
+            return Response(
+                {
+                    "error": "Style training is not completed",
+                    "training_status": style.training_status,
+                },
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
+        if not style.model_path:
+            return Response(
+                {"error": "Style model path is not available"},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
+        # Calculate cost
+        cost = self.COST_MAP[aspect_ratio]
+
+        # Atomic transaction: consume tokens + create generation + send to queue
+        try:
+            with transaction.atomic():
+                # Consume tokens
+                TokenService.consume_tokens(
+                    user_id=user.id,
+                    amount=cost,
+                    reason=f"Image generation using style '{style.name}'",
+                )
+
+                # Create generation record
+                generation = Generation.objects.create(
+                    user=user,
+                    style=style,
+                    description=description,
+                    aspect_ratio=aspect_ratio,
+                    cost=cost,
+                    status="queued",
+                    metadata={
+                        "prompt_tags": prompt_tags,
+                        "seed": seed,
+                    },
+                )
+
+                # Send to RabbitMQ
+                rabbitmq = get_rabbitmq_service()
+                task_id = rabbitmq.send_generation_task(
+                    generation_id=generation.id,
+                    style_id=style.id,
+                    lora_path=style.model_path,
+                    prompt=" ".join(prompt_tags),
+                    aspect_ratio=aspect_ratio,
+                    seed=seed,
+                )
+
+                # Store task_id in metadata
+                generation.metadata["task_id"] = task_id
+                generation.save(update_fields=["metadata"])
+
+        except ValueError as e:
+            # Insufficient tokens or other validation error
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_402_PAYMENT_REQUIRED,
+            )
+
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to create generation: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        # Return response
+        return Response(
+            {
+                "success": True,
+                "data": {
+                    "id": generation.id,
+                    "user_id": user.id,
+                    "style_id": style.id,
+                    "status": generation.status,
+                    "consumed_tokens": cost,
+                    "aspect_ratio": aspect_ratio,
+                    "created_at": generation.created_at.isoformat(),
+                    "progress": None,
+                },
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    def retrieve(self, request, pk=None):
+        """
+        Get generation status
+
+        API: GET /api/generations/:id
+        """
+        user = request.user
+
+        try:
+            generation = Generation.objects.select_related(
+                "user", "style", "style__user"
+            ).get(id=pk)
+        except Generation.DoesNotExist:
+            return Response(
+                {"error": "Generation not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Check ownership (user can only see their own generations or public ones)
+        if generation.user != user and not generation.is_public:
+            return Response(
+                {"error": "You do not have permission to view this generation"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Build response based on status
+        response_data = {
+            "id": generation.id,
+            "user_id": generation.user.id,
+            "status": generation.status,
+            "consumed_tokens": generation.cost,
+            "created_at": generation.created_at.isoformat(),
+            "updated_at": generation.updated_at.isoformat(),
+        }
+
+        # Add progress if processing
+        if generation.status == "processing" and generation.generation_progress:
+            response_data["progress"] = {
+                **generation.generation_progress,
+                "last_updated": generation.updated_at.isoformat(),
+            }
+        else:
+            response_data["progress"] = None
+
+        # Add result if completed
+        if generation.status == "completed":
+            response_data.update(
+                {
+                    "style": {
+                        "id": generation.style.id,
+                        "name": generation.style.name,
+                        "artist": {
+                            "id": generation.style.user.id,
+                            "artist_name": getattr(
+                                generation.style.user,
+                                "artist_name",
+                                generation.style.user.username,
+                            ),
+                        },
+                    },
+                    "result_url": generation.result_url,
+                    "description": generation.description,
+                    "aspect_ratio": generation.aspect_ratio,
+                    "is_public": generation.is_public,
+                    "like_count": generation.like_count,
+                    "comment_count": generation.comment_count,
+                    "tags": generation.metadata.get("prompt_tags", [])
+                    if generation.metadata
+                    else [],
+                }
+            )
+
+        # Add error info if failed
+        if generation.status == "failed":
+            error_message = None
+            if generation.metadata:
+                error_message = generation.metadata.get("error_message")
+            response_data["error_message"] = error_message
+            response_data["refunded"] = True  # Tokens are refunded in webhook
+
+        return Response({"success": True, "data": response_data})

@@ -9,6 +9,7 @@ import ModelMarketplace from '@/pages/marketplace/ModelMarketplace.vue'
 import ModelDetail from '@/pages/marketplace/ModelDetail.vue'
 import ImageGeneration from '@/pages/generate/ImageGeneration.vue'
 import GenerationHistory from '@/pages/generate/GenerationHistory.vue'
+import Community from '@/pages/community/Community.vue'
 
 const routes = [
   {
@@ -50,6 +51,12 @@ const routes = [
     name: 'GenerationHistory',
     component: GenerationHistory,
     meta: { requiresAuth: true },
+  },
+  // Community routes (public)
+  {
+    path: '/community',
+    name: 'Community',
+    component: Community,
   },
   // Artist routes (protected)
   {

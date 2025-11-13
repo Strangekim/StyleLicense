@@ -14,49 +14,43 @@ class WebhookService:
     """Service for sending webhook callbacks to backend"""
 
     @staticmethod
-    def send_training_status(
+    def send_training_progress(
         style_id: int,
-        status: str,
-        progress: Optional[int] = None,
-        model_path: Optional[str] = None,
-        failure_reason: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        current_epoch: int,
+        total_epochs: int,
+        progress_percent: int,
+        estimated_seconds: int,
     ) -> bool:
         """
-        Send training status update to backend
+        Send training progress update
+
+        API Spec: PATCH /api/webhooks/training/progress
 
         Args:
             style_id: Style model ID
-            status: Training status (processing, completed, failed)
-            progress: Training progress percentage (0-100)
-            model_path: Path to trained model (for completed status)
-            failure_reason: Error message (for failed status)
-            metadata: Additional metadata
+            current_epoch: Current training epoch
+            total_epochs: Total number of epochs
+            progress_percent: Progress percentage (0-100)
+            estimated_seconds: Estimated seconds remaining
 
         Returns:
             True if webhook was sent successfully, False otherwise
         """
-        webhook_url = f"{Config.BACKEND_URL}/api/webhooks/training/{style_id}/status"
+        webhook_url = f"{Config.BACKEND_URL}/api/webhooks/training/progress"
 
         payload = {
-            "training_status": status,
+            "style_id": style_id,
+            "progress": {
+                "current_epoch": current_epoch,
+                "total_epochs": total_epochs,
+                "progress_percent": progress_percent,
+                "estimated_seconds": estimated_seconds,
+            },
         }
-
-        if progress is not None:
-            payload["progress"] = progress
-
-        if model_path:
-            payload["model_path"] = model_path
-
-        if failure_reason:
-            payload["failure_reason"] = failure_reason
-
-        if metadata:
-            payload["metadata"] = metadata
 
         try:
             logger.info(
-                f"Sending training status update: style_id={style_id}, status={status}, progress={progress}"
+                f"Sending training progress: style_id={style_id}, epoch={current_epoch}/{total_epochs}, progress={progress_percent}%"
             )
 
             response = requests.patch(
@@ -69,73 +63,116 @@ class WebhookService:
             response.raise_for_status()
 
             logger.info(
-                f"Webhook sent successfully: style_id={style_id}, status_code={response.status_code}"
+                f"Progress webhook sent successfully: style_id={style_id}, status_code={response.status_code}"
             )
             return True
 
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to send webhook: {e}")
+            logger.error(f"Failed to send progress webhook: {e}")
             return False
 
     @staticmethod
-    def send_training_started(style_id: int) -> bool:
-        """
-        Send training started notification
-
-        Args:
-            style_id: Style model ID
-
-        Returns:
-            True if successful
-        """
-        return WebhookService.send_training_status(
-            style_id=style_id, status="processing", progress=0
-        )
-
-    @staticmethod
-    def send_training_progress(style_id: int, progress: int) -> bool:
-        """
-        Send training progress update
-
-        Args:
-            style_id: Style model ID
-            progress: Progress percentage (0-100)
-
-        Returns:
-            True if successful
-        """
-        return WebhookService.send_training_status(
-            style_id=style_id, status="processing", progress=progress
-        )
-
-    @staticmethod
-    def send_training_completed(style_id: int, model_path: str) -> bool:
+    def send_training_completed(
+        style_id: int,
+        model_path: str,
+        loss: Optional[float] = None,
+        epochs: Optional[int] = None,
+    ) -> bool:
         """
         Send training completed notification
 
+        API Spec: POST /api/webhooks/training/complete
+
         Args:
             style_id: Style model ID
-            model_path: Path to trained model
+            model_path: Path to trained model (e.g., gs://bucket/style_10.safetensors)
+            loss: Final training loss
+            epochs: Number of epochs trained
 
         Returns:
             True if successful
         """
-        return WebhookService.send_training_status(
-            style_id=style_id, status="completed", progress=100, model_path=model_path
-        )
+        webhook_url = f"{Config.BACKEND_URL}/api/webhooks/training/complete"
+
+        payload = {
+            "style_id": style_id,
+            "model_path": model_path,
+        }
+
+        if loss is not None or epochs is not None:
+            payload["training_metric"] = {}
+            if loss is not None:
+                payload["training_metric"]["loss"] = loss
+            if epochs is not None:
+                payload["training_metric"]["epochs"] = epochs
+
+        try:
+            logger.info(
+                f"Sending training completed webhook: style_id={style_id}, model_path={model_path}"
+            )
+
+            response = requests.post(
+                webhook_url,
+                json=payload,
+                headers=Config.get_webhook_headers(),
+                timeout=10,
+            )
+
+            response.raise_for_status()
+
+            logger.info(
+                f"Training completed webhook sent successfully: style_id={style_id}, status_code={response.status_code}"
+            )
+            return True
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to send training completed webhook: {e}")
+            return False
 
     @staticmethod
-    def send_training_failed(style_id: int, failure_reason: str) -> bool:
+    def send_training_failed(
+        style_id: int, error_message: str, error_code: str = "TRAINING_FAILED"
+    ) -> bool:
         """
         Send training failed notification
 
+        API Spec: POST /api/webhooks/training/failed
+
         Args:
             style_id: Style model ID
-            failure_reason: Error message
+            error_message: Error message
+            error_code: Error code (e.g., LOW_QUALITY_DATA, OOM_ERROR)
 
         Returns:
             True if successful
         """
-        return WebhookService.send_training_status(
-            style_id=style_id, status="failed", failure_reason=failure_reason
-        )
+        webhook_url = f"{Config.BACKEND_URL}/api/webhooks/training/failed"
+
+        payload = {
+            "style_id": style_id,
+            "error_message": error_message,
+            "error_code": error_code,
+        }
+
+        try:
+            logger.info(
+                f"Sending training failed webhook: style_id={style_id}, error={error_message}"
+            )
+
+            response = requests.post(
+                webhook_url,
+                json=payload,
+                headers=Config.get_webhook_headers(),
+                timeout=10,
+            )
+
+            response.raise_for_status()
+
+            logger.info(
+                f"Training failed webhook sent successfully: style_id={style_id}, status_code={response.status_code}"
+            )
+            return True
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to send training failed webhook: {e}")
+            return False

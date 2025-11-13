@@ -51,53 +51,91 @@ This document contains detailed subtasks for training server development. For hi
 
 ## M4: AI Integration
 
-### M4-Training-Pipeline
+### M4-Training-Pipeline-Phase1 (Mock Implementation)
 
-**Referenced by**: Root PLAN.md → PT-M4-Training  
+**Referenced by**: Root PLAN.md → PT-M4-Training
+**Status**: DONE
+**Approach**: Option 3 (Hybrid) - Local mock implementation without GPU
+
+#### Subtasks
+
+- [x] RabbitMQ Consumer (Commit: d712e2d)
+  - [x] Create consumer for model_training queue
+  - [x] Parse message matching PATTERNS.md format (style_id, images, parameters)
+  - [x] Handle task_id, type, data structure
+  - [x] ACK/NACK message handling
+
+- [x] Webhook Service matching API.md spec (Commit: d712e2d)
+  - [x] POST /api/webhooks/training/complete
+  - [x] POST /api/webhooks/training/failed
+  - [x] PATCH /api/webhooks/training/progress
+  - [x] Include training_metric (loss, epochs) in completion
+  - [x] Include error_code in failure webhook
+
+- [x] Mock Training Pipeline (Commit: d712e2d)
+  - [x] Simulate training with progress updates
+  - [x] Send progress every 5 seconds (30 seconds in real training)
+  - [x] Calculate simulated epochs and progress percentage
+  - [x] Generate mock model path (gs://bucket/models/style-{id}/lora_weights.safetensors)
+
+- [x] Comprehensive Tests (Commit: d712e2d)
+  - [x] test_webhook_service.py (9 tests)
+  - [x] test_consumer.py (7 tests)
+  - [x] test_config.py (3 tests)
+  - [x] All 16 tests passing
+
+**Phase 1 Exit Criteria**:
+- [x] RabbitMQ consumer processes messages correctly
+- [x] Webhook payloads match API.md specification
+- [x] All tests pass (16/16)
+- [x] Code formatted with black
+
+---
+
+### M4-Training-Pipeline-Phase2 (GPU Implementation)
+
 **Status**: PLANNED
+**Environment**: GCP Compute Engine with GPU (L4 or T4)
 
 #### Subtasks
 
 - [ ] Image preprocessing
-  - [ ] Download images from S3 or URL
+  - [ ] Download images from GCS
   - [ ] Resize to 512x512
   - [ ] Convert to RGB format
   - [ ] Validate image quality
 
 - [ ] LoRA fine-tuning implementation
   - [ ] Load Stable Diffusion v1.5 base model
-  - [ ] Configure LoRA parameters (rank=4, alpha=32)
+  - [ ] Configure LoRA parameters (rank=8, alpha=32)
   - [ ] Set learning rate=1e-4, num_epochs=100-500
   - [ ] Use AdamW optimizer
   - [ ] Mixed precision training (fp16)
+  - [ ] Enable gradient checkpointing
 
 - [ ] Checkpoint saving
   - [ ] Save checkpoint every 10 epochs
-  - [ ] Save final LoRA weights to /models/{model_id}/lora_weights.safetensors
-  - [ ] Upload to S3 if configured
+  - [ ] Save final LoRA weights to GCS
+  - [ ] Include training metrics
 
-- [ ] RabbitMQ Consumer
-  - [ ] Create consumer for model_training queue
-  - [ ] Parse message (style_id, image_paths, webhook_url, num_epochs)
-  - [ ] Call training function
-  - [ ] Send status updates to webhook
-
-- [ ] Status update via PATCH /api/models/:id/status
-  - [ ] Send training_status=processing when started
-  - [ ] Send training_status=completed with model_path when done
-  - [ ] Send training_status=failed with failure_reason on error
+- [ ] Progress reporting
+  - [ ] Send progress update every 30 seconds
+  - [ ] Include current_epoch, total_epochs, estimated_seconds
+  - [ ] Calculate actual training time
 
 - [ ] Retry logic
   - [ ] Max 3 attempts on failure
   - [ ] Exponential backoff between retries
-  - [ ] Log errors to file
+  - [ ] Log errors to Cloud Logging
 
 **Implementation Reference**: [CODE_GUIDE.md#training-pipeline](CODE_GUIDE.md#training-pipeline)
 
-**Exit Criteria**:
+**Phase 2 Exit Criteria**:
 - [ ] Can train LoRA model with 10 images in < 30 minutes
-- [ ] LoRA weights saved correctly
-- [ ] Status updates sent to backend
+- [ ] LoRA weights saved correctly to GCS
+- [ ] Status updates sent to backend every 30 seconds
+- [ ] GPU memory usage < 8GB
+- [ ] Model quality verified with test prompts
 
 ---
 
