@@ -23,10 +23,10 @@ test.describe('Basic Navigation', () => {
   test('should have working navigation links', async ({ page }) => {
     await page.goto('/')
 
-    // Wait for page to load
-    await page.waitForLoadState('networkidle')
+    // Wait for page to fully load (title ensures Vue app is mounted)
+    await expect(page).toHaveTitle(/Style License/i)
 
-    // Check that header is visible
+    // Wait for header to render
     await expect(page.locator('header')).toBeVisible()
 
     // Common navigation items that should exist (marketplace and community are public)
@@ -56,8 +56,10 @@ test.describe('Basic Navigation', () => {
     // Wait for page to load
     await page.waitForLoadState('networkidle')
 
-    // Should show 404 or redirect to home - for now just check it doesn't crash
-    await expect(page.locator('header')).toBeVisible()
+    // Should show 404 page with heading
+    await expect(page.locator('text=404')).toBeVisible()
+    await expect(page.locator('text=Page Not Found')).toBeVisible()
+    await expect(page.locator('text=Back to Home')).toBeVisible()
   })
 
   test('should have responsive navigation', async ({ page }) => {

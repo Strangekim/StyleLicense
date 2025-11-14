@@ -28,6 +28,12 @@ test.describe('Browse Models', () => {
   test('should navigate to models page', async ({ page }) => {
     await page.goto('/')
 
+    // Wait for page to fully load (title ensures Vue app is mounted)
+    await expect(page).toHaveTitle(/Style License/i)
+
+    // Wait for header to render
+    await expect(page.locator('header')).toBeVisible()
+
     // Click on Marketplace link in navigation
     await page.click('text=Marketplace')
 

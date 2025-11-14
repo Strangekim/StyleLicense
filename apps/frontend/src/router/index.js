@@ -65,6 +65,12 @@ const routes = [
     component: () => import('@/pages/artist/StyleCreate.vue'),
     meta: { requiresAuth: true, requiresArtist: true },
   },
+  // 404 Not Found - must be last
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/pages/NotFound.vue'),
+  },
 ]
 
 const router = createRouter({
