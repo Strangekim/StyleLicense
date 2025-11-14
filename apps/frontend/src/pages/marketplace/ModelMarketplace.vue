@@ -1,11 +1,12 @@
 /**
  * ModelMarketplace Page
  *
- * Search & Following Artist Page - 2-column grid with artist cards
- * Public access - no authentication required.
+ * Search & Following Artist Page - Horizontal scroll sections
+ * Top section: Recent/Popular styles
+ * Bottom section: Following artists' styles
  */
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useModelsStore } from '@/stores/models'
 import { useAuthStore } from '@/stores/auth'
@@ -13,8 +14,6 @@ import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
 const modelsStore = useModelsStore()
 const authStore = useAuthStore()
-const observer = ref(null)
-const loadMoreTrigger = ref(null)
 const searchQuery = ref('')
 const sortBy = ref('recent')
 const followingArtists = ref(new Set()) // Track following status
@@ -22,31 +21,7 @@ const followingArtists = ref(new Set()) // Track following status
 onMounted(async () => {
   // Load initial models (only completed styles)
   await modelsStore.fetchModels({ training_status: 'completed', sort: '-created_at' })
-
-  // Setup infinite scroll
-  setupInfiniteScroll()
 })
-
-onUnmounted(() => {
-  if (observer.value) {
-    observer.value.disconnect()
-  }
-})
-
-function setupInfiniteScroll() {
-  observer.value = new IntersectionObserver(
-    (entries) => {
-      if (entries[0].isIntersecting && modelsStore.hasMore && !modelsStore.loading) {
-        modelsStore.loadMore()
-      }
-    },
-    { threshold: 0.1 }
-  )
-
-  if (loadMoreTrigger.value) {
-    observer.value.observe(loadMoreTrigger.value)
-  }
-}
 
 const handleCardClick = (modelId) => {
   router.push(`/models/${modelId}`)
@@ -86,7 +61,8 @@ const toggleBookmark = async (modelId, event) => {
   console.log('Toggle bookmark for model:', modelId)
 }
 
-const filteredModels = computed(() => {
+// Filter and sort models for top section (recent/popular)
+const recentOrPopularModels = computed(() => {
   let filtered = modelsStore.models
 
   // Filter by search query
@@ -107,6 +83,28 @@ const filteredModels = computed(() => {
   }
 
   return filtered
+})
+
+// Filter models from following artists only
+const followingModels = computed(() => {
+  if (!authStore.isAuthenticated) return []
+
+  let filtered = modelsStore.models.filter(model =>
+    followingArtists.value.has(model.artist?.id)
+  )
+
+  // Apply search filter
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(model =>
+      model.name?.toLowerCase().includes(query) ||
+      model.description?.toLowerCase().includes(query) ||
+      model.artist?.username?.toLowerCase().includes(query)
+    )
+  }
+
+  // Sort by recent
+  return [...filtered].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 })
 </script>
 
@@ -142,103 +140,106 @@ const filteredModels = computed(() => {
       </div>
     </div>
 
-    <!-- 2-Column Grid -->
-    <div class="max-w-mobile mx-auto px-4">
-      <div v-if="filteredModels.length > 0" class="grid grid-cols-2 gap-4">
-        <div
-          v-for="model in filteredModels"
-          :key="model.id"
-          class="bg-white rounded-lg overflow-hidden cursor-pointer"
-          @click="handleCardClick(model.id)"
-        >
-          <!-- Style Image with Carousel Dots -->
-          <div class="relative aspect-square bg-neutral-100">
-            <img
-              :src="model.thumbnail_url || model.sample_images?.[0]"
-              :alt="model.name"
-              class="w-full h-full object-cover"
-            />
-            <!-- Carousel Dots (placeholder for multiple images) -->
-            <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-              <div
-                v-for="i in (model.sample_images?.length || 1)"
-                :key="i"
-                class="w-1.5 h-1.5 rounded-full"
-                :class="i === 1 ? 'bg-white' : 'bg-white/50'"
-              ></div>
+    <!-- Recent/Popular Section (Horizontal Scroll) -->
+    <div class="mb-8">
+      <div v-if="recentOrPopularModels.length > 0" class="overflow-x-auto -mx-4 px-4">
+        <div class="flex gap-4 pb-4" style="width: max-content;">
+          <div
+            v-for="model in recentOrPopularModels"
+            :key="model.id"
+            class="bg-white rounded-lg overflow-hidden cursor-pointer"
+            style="width: 220px; flex-shrink: 0;"
+            @click="handleCardClick(model.id)"
+          >
+            <!-- Style Image with Carousel Dots -->
+            <div class="relative aspect-square bg-neutral-100">
+              <img
+                :src="model.thumbnail_url || model.sample_images?.[0]"
+                :alt="model.name"
+                class="w-full h-full object-cover"
+              />
+              <!-- Carousel Dots -->
+              <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                <div
+                  v-for="i in (model.sample_images?.length || 1)"
+                  :key="i"
+                  class="w-1.5 h-1.5 rounded-full"
+                  :class="i === 1 ? 'bg-white' : 'bg-white/50'"
+                ></div>
+              </div>
+              <!-- Bookmark Icon -->
+              <button
+                class="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full"
+                @click="toggleBookmark(model.id, $event)"
+              >
+                <svg class="w-4 h-4 text-neutral-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+                </svg>
+              </button>
             </div>
-            <!-- Bookmark Icon -->
-            <button
-              class="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full"
-              @click="toggleBookmark(model.id, $event)"
-            >
-              <svg class="w-4 h-4 text-neutral-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
-              </svg>
-            </button>
-          </div>
 
-          <!-- Card Content -->
-          <div class="p-3">
-            <!-- Artist Name -->
-            <h3
-              class="font-semibold text-sm text-neutral-900 mb-1 cursor-pointer hover:underline"
-              @click="handleArtistClick(model.artist?.id, $event)"
-            >
-              {{ model.artist?.username || 'Unknown Artist' }}
-            </h3>
+            <!-- Card Content -->
+            <div class="p-3">
+              <!-- Artist Name -->
+              <h3
+                class="font-semibold text-sm text-neutral-900 mb-1 cursor-pointer hover:underline truncate"
+                @click="handleArtistClick(model.artist?.id, $event)"
+              >
+                {{ model.artist?.username || 'Unknown Artist' }}
+              </h3>
 
-            <!-- Description -->
-            <p class="text-xs text-neutral-600 mb-0.5">
-              {{ model.description || 'No description' }}
-              <span v-if="model.artist?.username" class="text-primary-500">
-                @{{ model.artist.username }}
-              </span>
-            </p>
-
-            <!-- Additional Text -->
-            <p class="text-xs text-neutral-500 mb-3">
-              {{ model.name }}
-            </p>
-
-            <!-- Styled by Section -->
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span class="text-xs italic text-neutral-900" style="font-family: 'Brush Script MT', cursive;">
-                  Styled by
+              <!-- Description -->
+              <p class="text-xs text-neutral-600 mb-0.5 line-clamp-2">
+                {{ model.description || 'No description' }}
+                <span v-if="model.artist?.username" class="text-primary-500">
+                  @{{ model.artist.username }}
                 </span>
-                <div class="flex items-center gap-1.5">
-                  <!-- Artist Avatar -->
-                  <div class="w-5 h-5 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden">
-                    <span class="text-xs font-semibold text-neutral-700">
-                      {{ model.artist?.username?.charAt(0).toUpperCase() || 'A' }}
+              </p>
+
+              <!-- Model Name -->
+              <p class="text-xs text-neutral-500 mb-3 truncate">
+                {{ model.name }}
+              </p>
+
+              <!-- Styled by Section -->
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                  <span class="text-xs italic text-neutral-900 flex-shrink-0" style="font-family: 'Brush Script MT', cursive;">
+                    Styled by
+                  </span>
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <!-- Artist Avatar -->
+                    <div class="w-5 h-5 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      <span class="text-xs font-semibold text-neutral-700">
+                        {{ model.artist?.username?.charAt(0).toUpperCase() || 'A' }}
+                      </span>
+                    </div>
+                    <!-- Artist Name -->
+                    <span class="text-xs font-semibold text-neutral-900 truncate">
+                      {{ model.artist?.username || 'Artist' }}
                     </span>
                   </div>
-                  <!-- Artist Name -->
-                  <span class="text-xs font-semibold text-neutral-900">
-                    {{ model.artist?.username || 'Artist' }}
-                  </span>
                 </div>
-              </div>
 
-              <!-- Following Button -->
-              <button
-                v-if="model.artist?.id !== authStore.user?.id"
-                class="px-3 py-1 rounded-md text-xs font-medium transition-colors"
-                :class="followingArtists.has(model.artist?.id)
-                  ? 'bg-neutral-200 text-neutral-900'
-                  : 'bg-primary-500 text-white'"
-                @click="toggleFollow(model.artist?.id, $event)"
-              >
-                {{ followingArtists.has(model.artist?.id) ? 'following' : 'follow' }}
-              </button>
+                <!-- Following Button -->
+                <button
+                  v-if="model.artist?.id !== authStore.user?.id"
+                  class="px-3 py-1 rounded-md text-xs font-medium transition-colors flex-shrink-0"
+                  :class="followingArtists.has(model.artist?.id)
+                    ? 'bg-neutral-200 text-neutral-900'
+                    : 'bg-primary-500 text-white'"
+                  @click="toggleFollow(model.artist?.id, $event)"
+                >
+                  {{ followingArtists.has(model.artist?.id) ? 'following' : 'follow' }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="!modelsStore.loading" class="py-20 text-center">
+      <div v-else-if="!modelsStore.loading" class="py-10 text-center px-4">
         <svg class="mx-auto h-12 w-12 text-neutral-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
         </svg>
@@ -247,13 +248,104 @@ const filteredModels = computed(() => {
       </div>
 
       <!-- Loading spinner -->
-      <div v-if="modelsStore.loading && filteredModels.length === 0" class="flex justify-center items-center py-20">
+      <div v-if="modelsStore.loading && recentOrPopularModels.length === 0" class="flex justify-center items-center py-10">
         <div class="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent"></div>
       </div>
+    </div>
 
-      <!-- Load More Trigger for infinite scroll -->
-      <div ref="loadMoreTrigger" class="py-8 flex justify-center">
-        <div v-if="modelsStore.loading && filteredModels.length > 0" class="animate-spin rounded-full h-6 w-6 border-2 border-primary-500 border-t-transparent"></div>
+    <!-- Following Artists Section (Horizontal Scroll) -->
+    <div v-if="authStore.isAuthenticated && followingModels.length > 0" class="mb-8">
+      <h2 class="text-sm font-semibold text-neutral-900 px-4 mb-3">Following Artists</h2>
+      <div class="overflow-x-auto -mx-4 px-4">
+        <div class="flex gap-4 pb-4" style="width: max-content;">
+          <div
+            v-for="model in followingModels"
+            :key="`following-${model.id}`"
+            class="bg-white rounded-lg overflow-hidden cursor-pointer"
+            style="width: 220px; flex-shrink: 0;"
+            @click="handleCardClick(model.id)"
+          >
+            <!-- Style Image with Carousel Dots -->
+            <div class="relative aspect-square bg-neutral-100">
+              <img
+                :src="model.thumbnail_url || model.sample_images?.[0]"
+                :alt="model.name"
+                class="w-full h-full object-cover"
+              />
+              <!-- Carousel Dots -->
+              <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                <div
+                  v-for="i in (model.sample_images?.length || 1)"
+                  :key="i"
+                  class="w-1.5 h-1.5 rounded-full"
+                  :class="i === 1 ? 'bg-white' : 'bg-white/50'"
+                ></div>
+              </div>
+              <!-- Bookmark Icon -->
+              <button
+                class="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full"
+                @click="toggleBookmark(model.id, $event)"
+              >
+                <svg class="w-4 h-4 text-neutral-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Card Content -->
+            <div class="p-3">
+              <!-- Artist Name -->
+              <h3
+                class="font-semibold text-sm text-neutral-900 mb-1 cursor-pointer hover:underline truncate"
+                @click="handleArtistClick(model.artist?.id, $event)"
+              >
+                {{ model.artist?.username || 'Unknown Artist' }}
+              </h3>
+
+              <!-- Description -->
+              <p class="text-xs text-neutral-600 mb-0.5 line-clamp-2">
+                {{ model.description || 'No description' }}
+                <span v-if="model.artist?.username" class="text-primary-500">
+                  @{{ model.artist.username }}
+                </span>
+              </p>
+
+              <!-- Model Name -->
+              <p class="text-xs text-neutral-500 mb-3 truncate">
+                {{ model.name }}
+              </p>
+
+              <!-- Styled by Section -->
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                  <span class="text-xs italic text-neutral-900 flex-shrink-0" style="font-family: 'Brush Script MT', cursive;">
+                    Styled by
+                  </span>
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <!-- Artist Avatar -->
+                    <div class="w-5 h-5 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      <span class="text-xs font-semibold text-neutral-700">
+                        {{ model.artist?.username?.charAt(0).toUpperCase() || 'A' }}
+                      </span>
+                    </div>
+                    <!-- Artist Name -->
+                    <span class="text-xs font-semibold text-neutral-900 truncate">
+                      {{ model.artist?.username || 'Artist' }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Following Button -->
+                <button
+                  class="px-3 py-1 rounded-md text-xs font-medium transition-colors flex-shrink-0 bg-neutral-200 text-neutral-900"
+                  @click="toggleFollow(model.artist?.id, $event)"
+                >
+                  following
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
