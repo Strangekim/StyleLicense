@@ -29,9 +29,19 @@ const isBookmarked = ref(false)
 
 // Generation form state
 const prompt = ref('')
-const selectedTags = ref(new Set())
+const newTagInput = ref('')
+const userTags = ref([]) // User-created tags
 const isGenerating = ref(false)
 const showWarning = ref(false)
+const showAspectRatioSelector = ref(false)
+const selectedAspectRatio = ref('1:1') // Default aspect ratio
+
+// Aspect ratio options
+const aspectRatioOptions = [
+  { value: '1:1', icon: 'square' },
+  { value: '2:2', icon: 'square-large' },
+  { value: '1:2', icon: 'portrait' },
+]
 
 // Computed
 const sampleImages = computed(() => {
@@ -42,17 +52,16 @@ const currentImage = computed(() => {
   return sampleImages.value[currentImageIndex.value] || null
 })
 
-const modelTags = computed(() => {
-  if (!model.value?.tags) return []
-  return Array.isArray(model.value.tags)
-    ? model.value.tags
-    : []
+// All tags to display: default tag (style name) + user tags
+const allTags = computed(() => {
+  const defaultTag = model.value?.name || 'STYLE'
+  return [defaultTag, ...userTags.value]
 })
 
 const canGenerate = computed(() => {
   return (
     model.value?.training_status === 'completed' &&
-    prompt.value.trim() &&
+    allTags.value.length > 0 &&
     !isGenerating.value &&
     authStore.isAuthenticated
   )
@@ -81,21 +90,46 @@ const toggleBookmark = () => {
   // TODO: Call API to bookmark/unbookmark
 }
 
-const toggleTag = (tag) => {
-  const tagName = tag.name || tag
-  if (selectedTags.value.has(tagName)) {
-    selectedTags.value.delete(tagName)
-  } else {
-    selectedTags.value.add(tagName)
+const addNewTag = () => {
+  const tagText = newTagInput.value.trim()
+  if (!tagText) return
+
+  // Check for inappropriate words
+  const inappropriateWords = ['irrelevant', 'inappropriate', 'misleading']
+  const hasInappropriate = inappropriateWords.some(word =>
+    tagText.toLowerCase().includes(word)
+  )
+
+  if (hasInappropriate) {
+    showWarning.value = true
+    setTimeout(() => {
+      showWarning.value = false
+    }, 5000)
+    return
   }
+
+  // Add tag if not already exists
+  if (!userTags.value.includes(tagText)) {
+    userTags.value.push(tagText)
+  }
+
+  // Clear input
+  newTagInput.value = ''
 }
 
-const addPromptTag = () => {
-  // Add selected tags to prompt
-  const tags = Array.from(selectedTags.value).join(', ')
-  if (tags && !prompt.value.includes(tags)) {
-    prompt.value = prompt.value ? `${prompt.value}, ${tags}` : tags
-  }
+const removeTag = (index) => {
+  // Can't remove the first tag (style name)
+  if (index === 0) return
+  userTags.value.splice(index - 1, 1) // -1 because first tag is default
+}
+
+const toggleAspectRatioSelector = () => {
+  showAspectRatioSelector.value = !showAspectRatioSelector.value
+}
+
+const selectAspectRatio = (ratio) => {
+  selectedAspectRatio.value = ratio
+  showAspectRatioSelector.value = false
 }
 
 const handleGenerate = async () => {
@@ -123,10 +157,13 @@ const handleGenerate = async () => {
   isGenerating.value = true
 
   try {
+    // Combine all tags as the prompt
+    const combinedPrompt = allTags.value.join(', ')
+
     const data = {
       style_id: modelId.value,
-      prompt: prompt.value.trim(),
-      aspect_ratio: '1:1', // Default aspect ratio
+      prompt: combinedPrompt,
+      aspect_ratio: selectedAspectRatio.value,
     }
 
     await generationStore.generateImage(data)
@@ -137,9 +174,8 @@ const handleGenerate = async () => {
     // Show success
     alert('Image generation started! Check your generation history.')
 
-    // Clear form
-    prompt.value = ''
-    selectedTags.value.clear()
+    // Clear user tags (keep default tag)
+    userTags.value = []
   } catch (error) {
     console.error('Generation failed:', error)
     alert(error.response?.data?.error?.message || 'Failed to start generation')
@@ -208,13 +244,13 @@ onMounted(async () => {
 
     <!-- Content Section -->
     <div class="px-4">
-      <!-- Tags (horizontal scroll) -->
-      <div v-if="modelTags.length > 0" class="overflow-x-auto py-3 -mx-4 px-4">
+      <!-- Tags (horizontal scroll) - Read-only display -->
+      <div v-if="allTags.length > 0" class="overflow-x-auto py-3 -mx-4 px-4">
         <div class="flex gap-2 min-w-max">
           <TagButton
-            v-for="tag in modelTags"
-            :key="tag.id || tag.name || tag"
-            :label="(tag.name || tag).toUpperCase()"
+            v-for="tag in allTags"
+            :key="tag"
+            :label="tag.toUpperCase()"
             icon="🎨"
           />
         </div>
@@ -311,43 +347,63 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Tag Selection -->
-        <div v-if="modelTags.length > 0" class="mb-4">
+        <!-- User Tags (editable) -->
+        <div class="mb-4">
           <div class="flex flex-wrap gap-2">
             <button
-              v-for="tag in modelTags"
-              :key="`select-${tag.id || tag.name || tag}`"
-              @click="toggleTag(tag)"
+              v-for="(tag, index) in allTags"
+              :key="`tag-${index}`"
+              @click="removeTag(index)"
               class="px-3 py-1.5 rounded-full border-2 text-xs font-medium transition-colors"
-              :class="selectedTags.has(tag.name || tag)
-                ? 'bg-primary-500 border-primary-500 text-white'
-                : 'bg-white border-neutral-300 text-neutral-700 hover:border-primary-300'"
+              :class="index === 0
+                ? 'bg-white border-neutral-300 text-neutral-700 cursor-default'
+                : 'bg-white border-neutral-300 text-neutral-700 hover:border-red-300 hover:bg-red-50'"
             >
               <span class="mr-1">🎨</span>
-              {{ (tag.name || tag).toUpperCase() }}
+              {{ tag.toUpperCase() }}
             </button>
           </div>
         </div>
 
-        <!-- Prompt Input -->
+        <!-- Tag Input -->
         <div class="mb-3">
           <div class="relative">
             <input
-              v-model="prompt"
+              v-model="newTagInput"
               type="text"
               placeholder="write create img prompt"
               class="w-full pl-3 pr-10 py-3 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              @keyup.enter="handleGenerate"
+              @keyup.enter="addNewTag"
             />
             <button
-              v-if="selectedTags.size > 0"
-              @click="addPromptTag"
+              @click="addNewTag"
               class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 hover:bg-neutral-100 rounded-md transition-colors"
-              title="Add selected tags to prompt"
+              title="Add new tag"
             >
               <svg class="w-5 h-5 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
               </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Aspect Ratio Selector (conditional) -->
+        <div v-if="showAspectRatioSelector" class="mb-3 p-3 bg-neutral-50 border border-neutral-200 rounded-lg">
+          <div class="grid grid-cols-3 gap-2">
+            <button
+              v-for="option in aspectRatioOptions"
+              :key="option.value"
+              @click="selectAspectRatio(option.value)"
+              class="p-3 border-2 rounded-lg text-xs font-medium transition-colors flex flex-col items-center gap-2"
+              :class="selectedAspectRatio === option.value
+                ? 'border-primary-500 bg-primary-50 text-primary-700'
+                : 'border-neutral-300 bg-white text-neutral-700 hover:border-neutral-400'"
+            >
+              <!-- Aspect ratio icon -->
+              <div v-if="option.value === '1:1'" class="w-8 h-8 border-2 border-current rounded"></div>
+              <div v-else-if="option.value === '2:2'" class="w-10 h-10 border-2 border-current rounded"></div>
+              <div v-else-if="option.value === '1:2'" class="w-6 h-10 border-2 border-current rounded"></div>
+              <span>{{ option.value }}</span>
             </button>
           </div>
         </div>
@@ -362,22 +418,25 @@ onMounted(async () => {
             : 'bg-neutral-300 cursor-not-allowed'"
         >
           <span>Image Generate</span>
-          <div class="flex items-center gap-1">
+          <button
+            @click.stop="toggleAspectRatioSelector"
+            class="flex items-center gap-1 px-2 py-1 bg-white/20 rounded hover:bg-white/30 transition-colors"
+          >
             <!-- Aspect ratio icons -->
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 20 20">
+              <rect x="3" y="3" width="14" height="14" rx="2" stroke-width="1.5"/>
             </svg>
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <rect x="3" y="5" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 20 20">
+              <rect x="3" y="5" width="14" height="10" rx="2" stroke-width="1.5"/>
             </svg>
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <rect x="5" y="3" width="10" height="14" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 20 20">
+              <rect x="5" y="3" width="10" height="14" rx="2" stroke-width="1.5"/>
             </svg>
             <!-- Settings icon -->
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
             </svg>
-          </div>
+          </button>
         </button>
 
         <!-- Helper text -->
