@@ -15,7 +15,7 @@ const routes = [
   {
     path: '/',
     name: 'Home',
-    component: () => import('@/pages/Home.vue'),
+    component: () => import('@/pages/community/Community.vue'), // Main feed as home
   },
   {
     path: '/login',
@@ -37,14 +37,12 @@ const routes = [
   {
     path: '/models/:id',
     name: 'ModelDetail',
-    component: () => import('@/pages/marketplace/ModelDetail.vue'),
+    component: () => import('@/pages/marketplace/StyleDetail.vue'),
   },
-  // Generation routes (authenticated users)
+  // Legacy generate route - redirect to marketplace
   {
     path: '/generate',
-    name: 'Generate',
-    component: () => import('@/pages/generate/ImageGeneration.vue'),
-    meta: { requiresAuth: true },
+    redirect: '/marketplace',
   },
   {
     path: '/generate/history',
@@ -57,6 +55,18 @@ const routes = [
     path: '/community',
     name: 'Community',
     component: () => import('@/pages/community/Community.vue'),
+  },
+  {
+    path: '/community/:id',
+    name: 'CommunityDetail',
+    component: () => import('@/pages/community/CommunityDetail.vue'),
+  },
+  // Profile route (protected)
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('@/pages/profile/Profile.vue'),
+    meta: { requiresAuth: true },
   },
   // Artist routes (protected)
   {
@@ -82,7 +92,10 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
-  // Only fetch user if the route requires authentication or if we need to check auth status
+  // Ensure localStorage is synced before any auth checks
+  authStore.syncFromLocalStorage()
+
+  // Only fetch user from API if the route requires authentication and user is still not loaded
   const needsAuthCheck = to.meta.requiresAuth || to.meta.requiresArtist || to.meta.requiresGuest
 
   if (needsAuthCheck && !authStore.user && !authStore.loading) {
