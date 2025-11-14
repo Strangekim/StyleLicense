@@ -40,13 +40,16 @@ const toggleFollow = async (artistId, event) => {
     return
   }
 
-  if (followingArtists.value.has(artistId)) {
-    followingArtists.value.delete(artistId)
+  // Create a new Set to trigger reactivity
+  const newSet = new Set(followingArtists.value)
+  if (newSet.has(artistId)) {
+    newSet.delete(artistId)
     // TODO: Call API to unfollow
   } else {
-    followingArtists.value.add(artistId)
+    newSet.add(artistId)
     // TODO: Call API to follow
   }
+  followingArtists.value = newSet
 }
 
 const toggleBookmark = async (modelId, event) => {
@@ -143,12 +146,12 @@ const followingModels = computed(() => {
     <!-- Recent/Popular Section (Horizontal Scroll) -->
     <div class="mb-8">
       <div v-if="recentOrPopularModels.length > 0" class="overflow-x-auto -mx-4 px-4">
-        <div class="flex gap-4 pb-4" style="width: max-content;">
+        <div class="flex gap-3 pb-4" style="width: max-content;">
           <div
             v-for="model in recentOrPopularModels"
             :key="model.id"
             class="bg-white rounded-lg overflow-hidden cursor-pointer"
-            style="width: 220px; flex-shrink: 0;"
+            style="width: 45vw; max-width: 280px; min-width: 180px; flex-shrink: 0;"
             @click="handleCardClick(model.id)"
           >
             <!-- Style Image with Carousel Dots -->
@@ -257,12 +260,12 @@ const followingModels = computed(() => {
     <div v-if="authStore.isAuthenticated && followingModels.length > 0" class="mb-8">
       <h2 class="text-sm font-semibold text-neutral-900 px-4 mb-3">Following Artists</h2>
       <div class="overflow-x-auto -mx-4 px-4">
-        <div class="flex gap-4 pb-4" style="width: max-content;">
+        <div class="flex gap-3 pb-4" style="width: max-content;">
           <div
             v-for="model in followingModels"
             :key="`following-${model.id}`"
             class="bg-white rounded-lg overflow-hidden cursor-pointer"
-            style="width: 220px; flex-shrink: 0;"
+            style="width: 45vw; max-width: 280px; min-width: 180px; flex-shrink: 0;"
             @click="handleCardClick(model.id)"
           >
             <!-- Style Image with Carousel Dots -->
