@@ -121,9 +121,6 @@ class GenerationConsumer:
                 f"style_id={style_id}, steps={num_steps}"
             )
 
-            # Send generation started webhook
-            WebhookService.send_generation_started(generation_id)
-
             # Mock generation (for M1 phase - replace with actual inference in M4)
             success = self.mock_generation(generation_id, prompt, num_steps)
 
@@ -131,7 +128,9 @@ class GenerationConsumer:
 
         except Exception as e:
             logger.error(f"Generation failed: {e}")
-            WebhookService.send_generation_failed(generation_id, str(e))
+            WebhookService.send_inference_failed(
+                generation_id, str(e), error_code="GENERATION_ERROR"
+            )
             return False
 
     def mock_generation(
@@ -159,26 +158,36 @@ class GenerationConsumer:
         total_duration = 10  # 10 seconds total
 
         for i, progress in enumerate(progress_milestones):
+            current_step = int(num_steps * progress / 100)
+            remaining_time = int(
+                total_duration * (100 - progress) / 100
+            )  # Estimate remaining time
+
             logger.info(f"Generation progress: {progress}%")
-            WebhookService.send_generation_progress(generation_id, progress)
+            WebhookService.send_inference_progress(
+                generation_id=generation_id,
+                current_step=current_step,
+                total_steps=num_steps,
+                progress_percent=progress,
+                estimated_seconds=remaining_time,
+            )
 
             if i < len(progress_milestones) - 1:
                 # Sleep between progress updates
                 time.sleep(total_duration / (len(progress_milestones) - 1))
 
         # Mock generated image URL
-        mock_image_url = f"gs://{Config.GCS_BUCKET_NAME}/generations/gen-{generation_id}.png"
+        mock_image_url = (
+            f"gs://{Config.GCS_BUCKET_NAME}/generations/gen-{generation_id}.png"
+        )
 
         # Send completion webhook
-        metadata = {
-            "prompt": prompt,
-            "steps": num_steps,
-            "guidance_scale": Config.GUIDANCE_SCALE,
-            "seed": 42,
-        }
-
-        WebhookService.send_generation_completed(
-            generation_id, mock_image_url, metadata
+        WebhookService.send_inference_completed(
+            generation_id=generation_id,
+            result_url=mock_image_url,
+            seed=42,
+            steps=num_steps,
+            guidance_scale=Config.GUIDANCE_SCALE,
         )
 
         logger.info(f"Mock generation completed for generation_id={generation_id}")

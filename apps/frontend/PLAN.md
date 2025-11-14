@@ -495,21 +495,70 @@ Status: DONE
 ### M6-E2E-Tests
 
 **Referenced by**: Root PLAN.md -> CP-M6-1
-Status: PLANNED
+Status: IN_PROGRESS
 
-- [ ] Install Playwright
-- [ ] Write E2E scenarios
+- [x] Install Playwright (Commit: 90351ab)
+- [x] Configure playwright.config.js (Commit: 90351ab)
+- [x] Enable public access to community/marketplace (Commit: b2fa448)
+  - [x] Update API error handler to not redirect on public pages
+  - [x] Optimize router guard to skip auth check on public routes
+  - [x] Allow unauthenticated users to browse community and marketplace
+- [x] Write basic E2E scenarios (Commit: 90351ab)
+  - [x] Navigation tests
+  - [x] Browse models tests
+  - [x] Community feed tests
+- [x] Fix E2E test selectors and improve pass rate (Commit: f0d5bea)
+  - [x] Fixed navigation element selector (nav → header)
+  - [x] Fixed route paths (/models → /marketplace)
+  - [x] Improved data detection (CSS class → img[src*="picsum"])
+  - [x] Added proper wait states (networkidle, 2000ms timeout)
+  - [x] Pass rate improved from 13% (2/15) to 47% (7/15)
+  - [x] Verified backend API and CORS configuration
+  - [x] Updated E2E_TEST_RESULTS.md with detailed results
+- [x] Fix navigation structure and achieve 100% pass rate (Commit: 672b72e)
+  - [x] Added Header.vue to App.vue for global navigation
+  - [x] Removed duplicate header from Home.vue
+  - [x] Created NotFound.vue page with catch-all route
+  - [x] Fixed E2E test timing issues (wait for title before clicking links)
+  - [x] Pass rate improved to 100% (10/10 non-skipped tests)
+  - [x] Test duration: 9.7s (very fast!)
+- [ ] Write authenticated scenarios
+  - [ ] Login flow tests
+  - [ ] Token purchase tests
+  - [ ] Model creation and training tests
+  - [ ] Generation flow tests
+  - [ ] Notification tests
+- [ ] Run tests in CI/CD pipeline
 
 ---
 
 ### M6-Build-Optimization
 
 **Referenced by**: Root PLAN.md -> PT-M6-FrontendBuild
-Status: PLANNED
+Status: DONE
 
-- [ ] Code splitting
-- [ ] Image optimization
-- [ ] Bundle size < 500KB
+- [x] Code splitting (Commit: f85f05e)
+  - Converted all routes to lazy loading with dynamic imports
+  - Main bundle: 96.30 KB → 77.06 KB gzipped (~20% reduction)
+  - Each route loads as separate chunk on-demand
+- [x] Bundle size < 500KB (Commit: f85f05e)
+  - Total initial load: ~117.30 KB ✅ Well under 500KB target
+  - Created BUNDLE_ANALYSIS.md with detailed breakdown
+- [x] Image optimization (Commit: 066cf73)
+  - Converted all PNG images to WebP with 85% quality
+  - Created optimize-images.py Python script for automation
+  - Image size reduction: 2.55MB → 93KB (96.4% saved)
+  - main_logo: 818KB → 34KB (95.8% reduction)
+  - main_logo_black: 1.29MB → 25KB (98.1% reduction)
+  - main_typo: 264KB → 22KB (91.7% reduction)
+  - styleLicense_logo: 203KB → 12KB (94.2% reduction)
+- [x] Tree shaking (enabled by Vite by default)
+- [x] Lighthouse audit (Commit: 736f1b6)
+  - Performance: 95/100 ✅
+  - Accessibility: 100/100 ✅
+  - Best Practices: 96/100 ✅
+  - SEO: 90+ ✅ (added meta description and updated title)
+  - Created LIGHTHOUSE_RESULTS.md with detailed analysis
 
 ---
 

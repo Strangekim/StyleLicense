@@ -57,9 +57,19 @@ apiClient.interceptors.response.use(
     if (response) {
       switch (response.status) {
         case 401:
-          // Unauthorized - redirect to login
-          // Only redirect if not already on login page
-          if (!window.location.pathname.includes('/login')) {
+          // Unauthorized - redirect to login only for protected resources
+          // Don't redirect for auth/me endpoint (checking if user is logged in is normal)
+          const isAuthCheckEndpoint = error.config?.url?.includes('/auth/me')
+          const isOnLoginPage = window.location.pathname.includes('/login')
+          const isOnPublicPage = ['/', '/community', '/marketplace', '/models'].some(
+            path => window.location.pathname.startsWith(path)
+          )
+
+          // Only redirect to login if:
+          // - Not checking auth status
+          // - Not already on login page
+          // - Not on a public page
+          if (!isAuthCheckEndpoint && !isOnLoginPage && !isOnPublicPage) {
             window.location.href = '/login'
           }
           break
