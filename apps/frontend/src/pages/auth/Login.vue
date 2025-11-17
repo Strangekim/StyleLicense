@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getGoogleOAuthUrl } from '@/services/auth'
-import logo from '@/assets/images/main_logo.png'
+import logo from '@/assets/images/main_logo.webp'
 
 const { t } = useI18n()
 const isLoading = ref(false)

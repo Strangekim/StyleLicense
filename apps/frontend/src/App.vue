@@ -1,7 +1,10 @@
 <script setup>
-// Main App component - just renders router views
+import Header from '@/components/layout/Header.vue'
 </script>
 
 <template>
-  <router-view />
+  <div>
+    <Header />
+    <router-view />
+  </div>
 </template>

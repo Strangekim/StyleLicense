@@ -1,62 +1,72 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-// Pages
-import Home from '@/pages/Home.vue'
-import Login from '@/pages/auth/Login.vue'
-import GoogleCallback from '@/pages/auth/GoogleCallback.vue'
-import ModelMarketplace from '@/pages/marketplace/ModelMarketplace.vue'
-import ModelDetail from '@/pages/marketplace/ModelDetail.vue'
-import ImageGeneration from '@/pages/generate/ImageGeneration.vue'
-import GenerationHistory from '@/pages/generate/GenerationHistory.vue'
-import Community from '@/pages/community/Community.vue'
+/**
+ * Router Configuration with Code Splitting
+ *
+ * All routes use lazy loading (dynamic imports) to split the bundle
+ * into smaller chunks that are loaded on-demand. This improves initial
+ * page load performance by reducing the main bundle size.
+ *
+ * Vite will automatically create separate chunks for each route component.
+ */
 
 const routes = [
   {
     path: '/',
     name: 'Home',
-    component: Home,
+    component: () => import('@/pages/community/Community.vue'), // Main feed as home
   },
   {
     path: '/login',
     name: 'Login',
-    component: Login,
+    component: () => import('@/pages/auth/Login.vue'),
     meta: { requiresGuest: true }, // Only accessible when not authenticated
   },
   {
     path: '/auth/google/callback',
     name: 'GoogleCallback',
-    component: GoogleCallback,
+    component: () => import('@/pages/auth/GoogleCallback.vue'),
   },
   // Marketplace routes (public)
   {
     path: '/marketplace',
     name: 'Marketplace',
-    component: ModelMarketplace,
+    component: () => import('@/pages/marketplace/ModelMarketplace.vue'),
   },
   {
     path: '/models/:id',
     name: 'ModelDetail',
-    component: ModelDetail,
+    component: () => import('@/pages/marketplace/StyleDetail.vue'),
   },
-  // Generation routes (authenticated users)
+  // Legacy generate route - redirect to marketplace
   {
     path: '/generate',
-    name: 'Generate',
-    component: ImageGeneration,
-    meta: { requiresAuth: true },
+    redirect: '/marketplace',
   },
   {
     path: '/generate/history',
     name: 'GenerationHistory',
-    component: GenerationHistory,
+    component: () => import('@/pages/generate/GenerationHistory.vue'),
     meta: { requiresAuth: true },
   },
   // Community routes (public)
   {
     path: '/community',
     name: 'Community',
-    component: Community,
+    component: () => import('@/pages/community/Community.vue'),
+  },
+  {
+    path: '/community/:id',
+    name: 'CommunityDetail',
+    component: () => import('@/pages/community/CommunityDetail.vue'),
+  },
+  // Profile route (protected)
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('@/pages/profile/Profile.vue'),
+    meta: { requiresAuth: true },
   },
   // Artist routes (protected)
   {
@@ -64,6 +74,12 @@ const routes = [
     name: 'StyleCreate',
     component: () => import('@/pages/artist/StyleCreate.vue'),
     meta: { requiresAuth: true, requiresArtist: true },
+  },
+  // 404 Not Found - must be last
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/pages/NotFound.vue'),
   },
 ]
 
@@ -76,8 +92,13 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
-  // Try to fetch user if not already loaded
-  if (!authStore.user && !authStore.loading) {
+  // Ensure localStorage is synced before any auth checks
+  authStore.syncFromLocalStorage()
+
+  // Only fetch user from API if the route requires authentication and user is still not loaded
+  const needsAuthCheck = to.meta.requiresAuth || to.meta.requiresArtist || to.meta.requiresGuest
+
+  if (needsAuthCheck && !authStore.user && !authStore.loading) {
     try {
       await authStore.fetchCurrentUser()
     } catch (error) {
