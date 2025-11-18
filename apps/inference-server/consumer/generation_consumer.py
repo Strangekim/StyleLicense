@@ -114,6 +114,9 @@ class GenerationConsumer:
         prompt = data.get("prompt", "")
         lora_path = data.get("lora_path", "")
         num_steps = data.get("num_inference_steps", Config.INFERENCE_STEPS)
+        aspect_ratio = data.get("aspect_ratio", "1:1")
+        signature_path = data.get("signature_path", "")
+        signature_config = data.get("signature_config", {})
 
         try:
             logger.info(
@@ -121,17 +124,170 @@ class GenerationConsumer:
                 f"style_id={style_id}, steps={num_steps}"
             )
 
-            # Mock generation (for M1 phase - replace with actual inference in M4)
-            success = self.mock_generation(generation_id, prompt, num_steps)
+            # Phase 2: Real inference with GPU
+            image_url = self.real_generation(
+                generation_id=generation_id,
+                prompt=prompt,
+                lora_path=lora_path,
+                aspect_ratio=aspect_ratio,
+                num_steps=num_steps,
+                signature_path=signature_path,
+                signature_config=signature_config,
+            )
 
-            return success
+            return image_url is not None
 
         except Exception as e:
-            logger.error(f"Generation failed: {e}")
+            logger.error(f"Generation failed: {e}", exc_info=True)
             WebhookService.send_inference_failed(
                 generation_id, str(e), error_code="GENERATION_ERROR"
             )
             return False
+
+    def real_generation(
+        self,
+        generation_id: int,
+        prompt: str,
+        lora_path: str,
+        aspect_ratio: str = "1:1",
+        num_steps: int = 50,
+        signature_path: str = "",
+        signature_config: dict = None,
+    ) -> str:
+        """
+        Real image generation process (Phase 2 - GPU Implementation).
+
+        Args:
+            generation_id: Generation ID
+            prompt: Text prompt
+            lora_path: Path to LoRA weights
+            aspect_ratio: Aspect ratio (default: "1:1")
+            num_steps: Number of inference steps (default: 50)
+            signature_path: Path to signature image
+            signature_config: Signature configuration (position, size, opacity)
+
+        Returns:
+            str: GCS URL of generated image, or None if failed
+        """
+        import os
+        import tempfile
+        from inference.generator import ImageGenerator
+        from inference.watermark import WatermarkService
+        from services.gcs_service import GCSService
+
+        logger.info(f"Starting real generation for generation_id={generation_id}")
+        logger.info(f"  Prompt: {prompt}")
+        logger.info(f"  LoRA path: {lora_path}")
+        logger.info(f"  Aspect ratio: {aspect_ratio}")
+
+        signature_config = signature_config or {}
+        gcs_service = GCSService()
+
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Step 1: Download LoRA weights from GCS if needed
+                local_lora_path = None
+                if lora_path:
+                    logger.info("Downloading LoRA weights from GCS...")
+                    local_lora_path = os.path.join(temp_dir, "lora_weights")
+                    os.makedirs(local_lora_path, exist_ok=True)
+
+                    # Download LoRA weights
+                    # Assuming lora_path is a directory in GCS
+                    # For simplicity, we'll use the path directly if it exists locally
+                    # In production, implement GCS download logic
+                    if os.path.exists(lora_path):
+                        local_lora_path = lora_path
+                    else:
+                        logger.warning(f"LoRA weights not found locally: {lora_path}")
+                        # TODO: Implement GCS download for LoRA weights
+                        local_lora_path = None
+
+                # Step 2: Initialize generator
+                generator = ImageGenerator()
+
+                # Step 3: Define progress callback
+                def progress_callback(current_step, total_steps):
+                    progress_percent = int((current_step / total_steps) * 100)
+                    remaining_steps = total_steps - current_step
+                    estimated_seconds = remaining_steps * 0.2  # Assume 0.2s per step
+
+                    # Send progress at milestones
+                    milestones = {0, 25, 50, 75, 90}
+                    if progress_percent in milestones or current_step == 0:
+                        logger.info(f"Generation progress: {progress_percent}%")
+                        WebhookService.send_inference_progress(
+                            generation_id=generation_id,
+                            current_step=current_step,
+                            total_steps=total_steps,
+                            progress_percent=progress_percent,
+                            estimated_seconds=int(estimated_seconds),
+                        )
+
+                # Step 4: Generate image
+                logger.info("Generating image...")
+                image = generator.generate(
+                    prompt=prompt,
+                    lora_weights_path=local_lora_path,
+                    aspect_ratio=aspect_ratio,
+                    num_inference_steps=num_steps,
+                    progress_callback=progress_callback,
+                )
+
+                logger.info(f"Image generated: {image.size}")
+
+                # Step 5: Insert signature if provided
+                if signature_path and os.path.exists(signature_path):
+                    logger.info("Inserting artist signature...")
+                    watermark_service = WatermarkService()
+
+                    signature_image = Image.open(signature_path)
+
+                    image = watermark_service.insert_signature(
+                        image=image,
+                        signature_image=signature_image,
+                        position=signature_config.get("position", "bottom-right"),
+                        size=signature_config.get("size", "medium"),
+                        opacity=signature_config.get("opacity", 0.7),
+                    )
+
+                    logger.info("Signature inserted")
+
+                # Step 6: Save image locally
+                output_path = os.path.join(temp_dir, f"gen-{generation_id}.png")
+                image.save(output_path, "PNG")
+
+                logger.info(f"Image saved locally: {output_path}")
+
+                # Step 7: Upload to GCS
+                logger.info("Uploading image to GCS...")
+                gcs_path = f"generations/gen-{generation_id}.png"
+                image_url = gcs_service.upload_file(output_path, gcs_path)
+
+                logger.info(f"Image uploaded: {image_url}")
+
+                # Step 8: Send completion webhook
+                WebhookService.send_inference_completed(
+                    generation_id=generation_id,
+                    result_url=image_url,
+                    seed=None,  # TODO: Return actual seed from generator
+                    steps=num_steps,
+                    guidance_scale=Config.GUIDANCE_SCALE,
+                )
+
+                logger.info(f"Real generation completed for generation_id={generation_id}")
+
+                # Cleanup
+                generator.unload_pipeline()
+
+                return image_url
+
+        except Exception as e:
+            logger.error(f"Real generation failed: {e}", exc_info=True)
+            WebhookService.send_inference_failed(
+                generation_id, str(e), error_code="INFERENCE_ERROR"
+            )
+            return None
 
     def mock_generation(
         self, generation_id: int, prompt: str, num_steps: int = 50

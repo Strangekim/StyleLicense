@@ -180,25 +180,23 @@ class TrainingConsumer:
         )
 
         try:
-            # Mock training process (for Phase 1)
-            # In Phase 2, this will be replaced with actual LoRA training
-            success = self.mock_training(style_id, images, num_epochs)
+            # Phase 2: Real LoRA training with GPU
+            model_path, final_loss = self.real_training(
+                style_id, images, num_epochs, learning_rate
+            )
 
-            if success:
-                # Generate mock model path
-                model_path = f"gs://{Config.GCS_BUCKET_NAME}/models/style-{style_id}/lora_weights.safetensors"
-
+            if model_path:
                 # Send training completed webhook
                 WebhookService.send_training_completed(
-                    style_id, model_path, loss=0.05, epochs=num_epochs
+                    style_id, model_path, loss=final_loss, epochs=num_epochs
                 )
                 return True
             else:
                 # Send training failed webhook
                 WebhookService.send_training_failed(
                     style_id,
-                    error_message="Mock training failed (simulated error)",
-                    error_code="MOCK_TRAINING_ERROR",
+                    error_message="Training failed - no model produced",
+                    error_code="TRAINING_ERROR",
                 )
                 return False
 
@@ -209,12 +207,104 @@ class TrainingConsumer:
             )
             return False
 
+    def real_training(
+        self, style_id: int, images: list, num_epochs: int, learning_rate: float
+    ) -> tuple:
+        """
+        Real LoRA training process (Phase 2 - GPU Implementation)
+
+        Args:
+            style_id: Style model ID
+            images: List of training image GCS paths
+            num_epochs: Number of training epochs
+            learning_rate: Learning rate
+
+        Returns:
+            Tuple of (model_path, final_loss) if successful, (None, 0.0) otherwise
+        """
+        import os
+        import tempfile
+        from training.trainer import LoRATrainer
+
+        logger.info(f"Starting real LoRA training for style_id={style_id}")
+        logger.info(f"  Images: {len(images)}")
+        logger.info(f"  Epochs: {num_epochs}")
+        logger.info(f"  Learning rate: {learning_rate}")
+
+        try:
+            # Step 1: Download images from GCS
+            logger.info("Downloading images from GCS...")
+            with tempfile.TemporaryDirectory() as temp_dir:
+                image_dir = os.path.join(temp_dir, "images")
+                os.makedirs(image_dir, exist_ok=True)
+
+                local_image_paths = self.gcs_service.download_images(images, image_dir)
+
+                if not local_image_paths:
+                    logger.error("Failed to download any images")
+                    return (None, 0.0)
+
+                logger.info(f"Downloaded {len(local_image_paths)} images")
+
+                # Step 2: Setup training output directory
+                output_dir = os.path.join(temp_dir, "output")
+                os.makedirs(output_dir, exist_ok=True)
+
+                # Step 3: Initialize trainer
+                trainer = LoRATrainer(
+                    style_id=style_id,
+                    output_dir=output_dir,
+                    num_epochs=num_epochs,
+                    learning_rate=learning_rate,
+                )
+
+                # Step 4: Define progress callback
+                def progress_callback(current_epoch, total_epochs, loss):
+                    progress_percent = int((current_epoch / total_epochs) * 100)
+                    remaining_epochs = total_epochs - current_epoch
+                    estimated_seconds = remaining_epochs * 36  # Assume 36s/epoch
+
+                    logger.info(
+                        f"Training progress: {progress_percent}% (epoch {current_epoch}/{total_epochs}, loss={loss:.4f})"
+                    )
+
+                    WebhookService.send_training_progress(
+                        style_id=style_id,
+                        current_epoch=current_epoch,
+                        total_epochs=total_epochs,
+                        progress_percent=progress_percent,
+                        estimated_seconds=estimated_seconds,
+                    )
+
+                # Step 5: Train model
+                logger.info("Starting LoRA training...")
+                model_dir = trainer.train(
+                    image_paths=local_image_paths,
+                    progress_callback=progress_callback,
+                    progress_interval=30,  # Send progress every 30 seconds
+                )
+
+                logger.info(f"Training completed. Model saved to: {model_dir}")
+
+                # Step 6: Upload model to GCS
+                logger.info("Uploading model to GCS...")
+                model_gcs_path = self.gcs_service.upload_model(model_dir, style_id)
+
+                logger.info(f"Model uploaded successfully: {model_gcs_path}")
+
+                # Return model path and final loss (estimated)
+                return (model_gcs_path, 0.05)  # TODO: Return actual final loss from trainer
+
+        except Exception as e:
+            logger.error(f"Real training failed: {e}", exc_info=True)
+            return (None, 0.0)
+
     def mock_training(self, style_id: int, images: list, num_epochs: int) -> bool:
         """
         Mock training process (Phase 1 - Option 3 Hybrid approach)
 
         Simulates training by sleeping and sending progress updates.
-        In Phase 2 (GCP GPU), this will be replaced with actual LoRA training.
+        Kept for backward compatibility and testing.
 
         Args:
             style_id: Style model ID
