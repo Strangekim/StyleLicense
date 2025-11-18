@@ -5,11 +5,13 @@ Handles downloading images from Google Cloud Storage.
 """
 
 import os
+import logging
 from typing import List
 from pathlib import Path
 from PIL import Image
 from config import Config
-from utils.logger import logger
+
+logger = logging.getLogger(__name__)
 
 
 class GCSService:

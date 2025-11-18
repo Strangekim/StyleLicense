@@ -13,10 +13,10 @@ pillow>=10.0.0                 # Image validation and watermark insertion
 pytest>=8.0.0                  # Testing framework
 pytest-mock>=3.12.0            # Mocking for tests
 
-# ML Dependencies (for M4 phase - install on GPU instance only)
-# torch>=2.1.0+cu118
-# diffusers>=0.25.0
-# transformers>=4.36.0
-# peft>=0.7.0
-# accelerate>=0.25.0
-# xformers>=0.0.23  # Memory optimization
+# ML Dependencies (for M4 Phase 2 - GPU Implementation)
+torch>=2.1.0
+diffusers>=0.25.0
+transformers>=4.36.0
+peft>=0.7.0
+accelerate>=0.25.0
+xformers>=0.0.23  # Memory optimization (optional)
