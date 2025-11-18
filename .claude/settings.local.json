@@ -21,7 +21,8 @@
       "Bash(git check-ignore:*)",
       "Bash(grep:*)",
       "Bash(git checkout:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(nvidia-smi:*)"
     ],
     "deny": [],
     "ask": []
