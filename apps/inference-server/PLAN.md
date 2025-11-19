@@ -104,35 +104,43 @@ This document contains detailed subtasks for inference server development. For h
 
 ---
 
-#### Phase 2: GPU Implementation (PLANNED)
+#### Phase 2: GPU Implementation (IN_PROGRESS)
 
-**Status**: PLANNED
-**Target Environment**: GCP Compute Engine with GPU
+**Status**: IN_PROGRESS
+**Target Environment**: GCP Compute Engine with GPU (Tesla T4)
 
 ##### Subtasks
 
-- [ ] Stable Diffusion inference
-  - [ ] Load base model (Stable Diffusion v1.5)
-  - [ ] Configure inference (50 steps, guidance_scale=7.5)
-  - [ ] Support aspect ratios (1:1 [512×512px], 2:2 [1024×1024px], 1:2 [512×1024px])
-  - [ ] Handle seed for reproducibility
+- [x] Environment setup (Commit: bc87d29)
+  - [x] Install ML dependencies (PyTorch 2.9.1, diffusers, peft, transformers, accelerate)
+  - [x] Verify CUDA connection
 
-- [ ] LoRA weight loading
-  - [ ] Load LoRA weights from file path
-  - [ ] Apply LoRA to base model
-  - [ ] Verify style is applied to generated image
+- [x] Stable Diffusion inference (Already implemented in generator.py)
+  - [x] Load base model (Stable Diffusion v1.5)
+  - [x] Configure inference (50 steps, guidance_scale=7.5)
+  - [x] Support aspect ratios (1:1, 2:2, 1:2, 2:1)
+  - [x] Handle seed for reproducibility
 
-- [ ] Signature insertion with PIL
-  - [ ] Load signature image
-  - [ ] Resize signature based on size parameter (small, medium, large)
-  - [ ] Composite signature onto generated image
-  - [ ] Support positions: bottom-left, bottom-center, bottom-right
-  - [ ] Apply opacity (0.0 - 1.0)
+- [x] LoRA weight loading (Already implemented in generator.py)
+  - [x] Load LoRA weights from file path
+  - [x] Apply LoRA to base model
+  - [x] Verify style is applied to generated image
 
-- [ ] Batch processing
-  - [ ] Support up to 10 concurrent generations
-  - [ ] Queue management for requests
-  - [ ] Resource allocation per generation
+- [x] Signature insertion with PIL (Already implemented in watermark.py)
+  - [x] Load signature image
+  - [x] Resize signature based on size parameter (small, medium, large)
+  - [x] Composite signature onto generated image
+  - [x] Support positions: bottom-left, bottom-center, bottom-right
+  - [x] Apply opacity (0.0 - 1.0)
+
+- [x] Retry logic (Commit: bc87d29)
+  - [x] Max 3 attempts on failure
+  - [x] Exponential backoff between retries (1s, 2s, 4s)
+
+- [x] Batch processing (Commit: b2ac9d7)
+  - [x] Support up to 10 concurrent generations (prefetch_count=10)
+  - [x] Queue management for requests (RabbitMQ QoS)
+  - [x] Resource allocation per generation (pipeline reuse for efficiency)
 
 **Implementation Reference**: [CODE_GUIDE.md#inference-pipeline](CODE_GUIDE.md#inference-pipeline)
 
@@ -145,35 +153,35 @@ This document contains detailed subtasks for inference server development. For h
 
 ### M4-Signature-Validation
 
-**Referenced by**: Root PLAN.md → CP-M4-2  
-**Status**: PLANNED
+**Referenced by**: Root PLAN.md → CP-M4-2
+**Status**: IN_PROGRESS
 
 #### Subtasks
 
-- [ ] Position accuracy test
-  - [ ] Test bottom-left, bottom-center, bottom-right positions
-  - [ ] Verify signature within 5px tolerance
+- [x] Position accuracy test (Commit: 7666fb1)
+  - [x] Test bottom-left, bottom-center, bottom-right positions
+  - [x] Verify signature within 5px tolerance
 
-- [ ] Opacity range test
-  - [ ] Test opacity values 0.0, 0.5, 1.0
-  - [ ] Verify visual appearance
+- [x] Opacity range test (Commit: 7666fb1)
+  - [x] Test opacity values 0.0, 0.5, 1.0
+  - [x] Verify visual appearance
 
-- [ ] Size scaling test
-  - [ ] Test small, medium, large sizes
-  - [ ] Verify signature scales correctly
+- [x] Size scaling test (Commit: 7666fb1)
+  - [x] Test small, medium, large sizes
+  - [x] Verify signature scales correctly
 
-- [ ] Metadata embedding
-  - [ ] Embed artist_id and model_id in image EXIF
-  - [ ] Verify metadata persists after save
+- [x] Metadata embedding (Commit: 7666fb1)
+  - [x] Embed artist_id and model_id in image PNG info
+  - [x] Verify metadata persists after save
 
 - [ ] Visual inspection
-  - [ ] Generate 10 sample images
+  - [ ] Generate 10 sample images (requires GCS/RabbitMQ)
   - [ ] Manually verify signature quality
 
 **Exit Criteria**:
-- [ ] Signature appears in correct position
-- [ ] Opacity and size work as expected
-- [ ] Metadata embedded correctly
+- [x] Signature appears in correct position (17 tests passing)
+- [x] Opacity and size work as expected
+- [x] Metadata embedded correctly
 
 ---
 

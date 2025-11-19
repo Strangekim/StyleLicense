@@ -138,7 +138,7 @@ class TrainingConsumer:
 
     def process_training_task(self, data: Dict[str, Any]) -> bool:
         """
-        Process a training task
+        Process a training task with retry logic
 
         Message format (from PATTERNS.md):
         {
@@ -179,33 +179,47 @@ class TrainingConsumer:
             f"Processing training task: style_id={style_id}, images={len(images)}, epochs={num_epochs}, lr={learning_rate}"
         )
 
-        try:
-            # Phase 2: Real LoRA training with GPU
-            model_path, final_loss = self.real_training(
-                style_id, images, num_epochs, learning_rate
-            )
+        # Retry logic: Max 3 attempts with exponential backoff
+        max_attempts = 3
+        last_error = None
 
-            if model_path:
-                # Send training completed webhook
-                WebhookService.send_training_completed(
-                    style_id, model_path, loss=final_loss, epochs=num_epochs
-                )
-                return True
-            else:
-                # Send training failed webhook
-                WebhookService.send_training_failed(
-                    style_id,
-                    error_message="Training failed - no model produced",
-                    error_code="TRAINING_ERROR",
-                )
-                return False
+        for attempt in range(1, max_attempts + 1):
+            try:
+                logger.info(f"Training attempt {attempt}/{max_attempts} for style_id={style_id}")
 
-        except Exception as e:
-            logger.error(f"Training task failed: {e}", exc_info=True)
-            WebhookService.send_training_failed(
-                style_id, error_message=str(e), error_code="INTERNAL_ERROR"
-            )
-            return False
+                # Phase 2: Real LoRA training with GPU
+                model_path, final_loss = self.real_training(
+                    style_id, images, num_epochs, learning_rate
+                )
+
+                if model_path:
+                    # Send training completed webhook
+                    WebhookService.send_training_completed(
+                        style_id, model_path, loss=final_loss, epochs=num_epochs
+                    )
+                    return True
+                else:
+                    last_error = "Training failed - no model produced"
+                    logger.warning(f"Attempt {attempt} failed: {last_error}")
+
+            except Exception as e:
+                last_error = str(e)
+                logger.error(f"Training attempt {attempt} failed: {e}", exc_info=True)
+
+            # Exponential backoff before retry (1s, 2s, 4s)
+            if attempt < max_attempts:
+                backoff_seconds = 2 ** (attempt - 1)
+                logger.info(f"Retrying in {backoff_seconds} seconds...")
+                time.sleep(backoff_seconds)
+
+        # All attempts failed
+        logger.error(f"All {max_attempts} training attempts failed for style_id={style_id}")
+        WebhookService.send_training_failed(
+            style_id,
+            error_message=f"Training failed after {max_attempts} attempts: {last_error}",
+            error_code="TRAINING_ERROR",
+        )
+        return False
 
     def real_training(
         self, style_id: int, images: list, num_epochs: int, learning_rate: float

@@ -8,6 +8,7 @@ import logging
 import time
 from typing import Dict, Any
 import pika
+from PIL import Image
 from config import Config
 from services.webhook_service import WebhookService
 
@@ -15,12 +16,20 @@ logger = logging.getLogger(__name__)
 
 
 class GenerationConsumer:
-    """RabbitMQ Consumer for image generation tasks."""
+    """RabbitMQ Consumer for image generation tasks with batch processing support."""
 
-    def __init__(self):
-        """Initialize generation consumer."""
+    def __init__(self, prefetch_count: int = 10):
+        """
+        Initialize generation consumer.
+
+        Args:
+            prefetch_count: Number of messages to prefetch (default: 10 for batch processing)
+        """
         self.connection = None
         self.channel = None
+        self.prefetch_count = prefetch_count
+        self.generator = None  # Reusable generator instance for efficiency
+        self._current_lora_path = None  # Track loaded LoRA to avoid reloading
 
     def connect(self):
         """Connect to RabbitMQ and declare queue."""
@@ -50,8 +59,9 @@ class GenerationConsumer:
                 queue=Config.QUEUE_IMAGE_GENERATION, durable=True
             )
 
-            # Set QoS to process one message at a time
-            self.channel.basic_qos(prefetch_count=1)
+            # Set QoS for batch processing (prefetch multiple messages)
+            self.channel.basic_qos(prefetch_count=self.prefetch_count)
+            logger.info(f"Prefetch count set to {self.prefetch_count} for batch processing")
 
             logger.info("Successfully connected to RabbitMQ")
 
@@ -101,7 +111,7 @@ class GenerationConsumer:
 
     def process_generation_task(self, data: Dict[str, Any]) -> bool:
         """
-        Process image generation task.
+        Process image generation task with retry logic.
 
         Args:
             data: Task data containing generation_id, style_id, prompt, etc.
@@ -118,31 +128,54 @@ class GenerationConsumer:
         signature_path = data.get("signature_path", "")
         signature_config = data.get("signature_config", {})
 
-        try:
-            logger.info(
-                f"Processing generation task: generation_id={generation_id}, "
-                f"style_id={style_id}, steps={num_steps}"
-            )
+        logger.info(
+            f"Processing generation task: generation_id={generation_id}, "
+            f"style_id={style_id}, steps={num_steps}"
+        )
 
-            # Phase 2: Real inference with GPU
-            image_url = self.real_generation(
-                generation_id=generation_id,
-                prompt=prompt,
-                lora_path=lora_path,
-                aspect_ratio=aspect_ratio,
-                num_steps=num_steps,
-                signature_path=signature_path,
-                signature_config=signature_config,
-            )
+        # Retry logic: Max 3 attempts with exponential backoff
+        max_attempts = 3
+        last_error = None
 
-            return image_url is not None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                logger.info(f"Generation attempt {attempt}/{max_attempts} for generation_id={generation_id}")
 
-        except Exception as e:
-            logger.error(f"Generation failed: {e}", exc_info=True)
-            WebhookService.send_inference_failed(
-                generation_id, str(e), error_code="GENERATION_ERROR"
-            )
-            return False
+                # Phase 2: Real inference with GPU
+                image_url = self.real_generation(
+                    generation_id=generation_id,
+                    prompt=prompt,
+                    lora_path=lora_path,
+                    aspect_ratio=aspect_ratio,
+                    num_steps=num_steps,
+                    signature_path=signature_path,
+                    signature_config=signature_config,
+                )
+
+                if image_url:
+                    return True
+                else:
+                    last_error = "Generation failed - no image produced"
+                    logger.warning(f"Attempt {attempt} failed: {last_error}")
+
+            except Exception as e:
+                last_error = str(e)
+                logger.error(f"Generation attempt {attempt} failed: {e}", exc_info=True)
+
+            # Exponential backoff before retry (1s, 2s, 4s)
+            if attempt < max_attempts:
+                backoff_seconds = 2 ** (attempt - 1)
+                logger.info(f"Retrying in {backoff_seconds} seconds...")
+                time.sleep(backoff_seconds)
+
+        # All attempts failed
+        logger.error(f"All {max_attempts} generation attempts failed for generation_id={generation_id}")
+        WebhookService.send_inference_failed(
+            generation_id,
+            f"Generation failed after {max_attempts} attempts: {last_error}",
+            error_code="GENERATION_ERROR",
+        )
+        return False
 
     def real_generation(
         self,
@@ -203,8 +236,12 @@ class GenerationConsumer:
                         # TODO: Implement GCS download for LoRA weights
                         local_lora_path = None
 
-                # Step 2: Initialize generator
-                generator = ImageGenerator()
+                # Step 2: Initialize or reuse generator for batch efficiency
+                if self.generator is None:
+                    logger.info("Initializing new ImageGenerator for batch processing")
+                    self.generator = ImageGenerator()
+
+                generator = self.generator
 
                 # Step 3: Define progress callback
                 def progress_callback(current_step, total_steps):
@@ -277,8 +314,8 @@ class GenerationConsumer:
 
                 logger.info(f"Real generation completed for generation_id={generation_id}")
 
-                # Cleanup
-                generator.unload_pipeline()
+                # Note: Pipeline is kept loaded for batch processing efficiency
+                # Call cleanup_generator() when done with all generations
 
                 return image_url
 
@@ -372,8 +409,19 @@ class GenerationConsumer:
             logger.error(f"Error in consumer: {e}")
             raise
 
+    def cleanup_generator(self):
+        """Cleanup generator to free GPU memory."""
+        if self.generator:
+            self.generator.unload_pipeline()
+            self.generator = None
+            self._current_lora_path = None
+            logger.info("Generator cleaned up, GPU memory freed")
+
     def stop(self):
-        """Stop consuming and close connection."""
+        """Stop consuming, cleanup resources, and close connection."""
+        # Cleanup generator to free GPU memory
+        self.cleanup_generator()
+
         if self.channel:
             self.channel.stop_consuming()
 

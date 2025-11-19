@@ -94,39 +94,43 @@ This document contains detailed subtasks for training server development. For hi
 
 ### M4-Training-Pipeline-Phase2 (GPU Implementation)
 
-**Status**: PLANNED
+**Status**: IN_PROGRESS
 **Environment**: GCP Compute Engine with GPU (L4 or T4)
 
 #### Subtasks
 
-- [ ] Image preprocessing
-  - [ ] Download images from GCS
-  - [ ] Resize to 512x512
-  - [ ] Convert to RGB format
-  - [ ] Validate image quality
+- [x] Environment setup (Commit: a55e5c9)
+  - [x] Install ML dependencies (PyTorch 2.9.1, diffusers, peft, transformers, accelerate)
+  - [x] Verify CUDA connection (Tesla T4 GPU, CUDA 12.8)
 
-- [ ] LoRA fine-tuning implementation
-  - [ ] Load Stable Diffusion v1.5 base model
-  - [ ] Configure LoRA parameters (rank=8, alpha=32)
-  - [ ] Set learning rate=1e-4, num_epochs=100-500
-  - [ ] Use AdamW optimizer
-  - [ ] Mixed precision training (fp16)
-  - [ ] Enable gradient checkpointing
+- [x] Image preprocessing (Already implemented)
+  - [x] Download images from GCS (gcs_service.py)
+  - [x] Resize to 512x512 (dataset.py)
+  - [x] Convert to RGB format (dataset.py)
+  - [x] Validate image quality (dataset.py, gcs_service.py)
 
-- [ ] Checkpoint saving
-  - [ ] Save checkpoint every 10 epochs
-  - [ ] Save final LoRA weights to GCS
-  - [ ] Include training metrics
+- [x] LoRA fine-tuning implementation (Already implemented in trainer.py)
+  - [x] Load Stable Diffusion v1.5 base model
+  - [x] Configure LoRA parameters (rank=8, alpha=32)
+  - [x] Set learning rate=1e-4, num_epochs=100-500
+  - [x] Use AdamW optimizer
+  - [x] Mixed precision training (fp16)
+  - [x] Enable gradient checkpointing
 
-- [ ] Progress reporting
-  - [ ] Send progress update every 30 seconds
-  - [ ] Include current_epoch, total_epochs, estimated_seconds
-  - [ ] Calculate actual training time
+- [x] Checkpoint saving (Already implemented in trainer.py)
+  - [x] Save checkpoint every 10 epochs
+  - [x] Save final LoRA weights to GCS
+  - [x] Include training metrics
 
-- [ ] Retry logic
-  - [ ] Max 3 attempts on failure
-  - [ ] Exponential backoff between retries
-  - [ ] Log errors to Cloud Logging
+- [x] Progress reporting (Already implemented in training_consumer.py)
+  - [x] Send progress update every 30 seconds
+  - [x] Include current_epoch, total_epochs, estimated_seconds
+  - [x] Calculate actual training time
+
+- [x] Retry logic (Commit: a55e5c9)
+  - [x] Max 3 attempts on failure
+  - [x] Exponential backoff between retries (1s, 2s, 4s)
+  - [x] Log errors to Cloud Logging
 
 **Implementation Reference**: [CODE_GUIDE.md#training-pipeline](CODE_GUIDE.md#training-pipeline)
 
