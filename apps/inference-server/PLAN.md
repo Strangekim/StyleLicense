@@ -153,35 +153,35 @@ This document contains detailed subtasks for inference server development. For h
 
 ### M4-Signature-Validation
 
-**Referenced by**: Root PLAN.md → CP-M4-2  
-**Status**: PLANNED
+**Referenced by**: Root PLAN.md → CP-M4-2
+**Status**: IN_PROGRESS
 
 #### Subtasks
 
-- [ ] Position accuracy test
-  - [ ] Test bottom-left, bottom-center, bottom-right positions
-  - [ ] Verify signature within 5px tolerance
+- [x] Position accuracy test (Commit: pending)
+  - [x] Test bottom-left, bottom-center, bottom-right positions
+  - [x] Verify signature within 5px tolerance
 
-- [ ] Opacity range test
-  - [ ] Test opacity values 0.0, 0.5, 1.0
-  - [ ] Verify visual appearance
+- [x] Opacity range test (Commit: pending)
+  - [x] Test opacity values 0.0, 0.5, 1.0
+  - [x] Verify visual appearance
 
-- [ ] Size scaling test
-  - [ ] Test small, medium, large sizes
-  - [ ] Verify signature scales correctly
+- [x] Size scaling test (Commit: pending)
+  - [x] Test small, medium, large sizes
+  - [x] Verify signature scales correctly
 
-- [ ] Metadata embedding
-  - [ ] Embed artist_id and model_id in image EXIF
-  - [ ] Verify metadata persists after save
+- [x] Metadata embedding (Commit: pending)
+  - [x] Embed artist_id and model_id in image PNG info
+  - [x] Verify metadata persists after save
 
 - [ ] Visual inspection
-  - [ ] Generate 10 sample images
+  - [ ] Generate 10 sample images (requires GCS/RabbitMQ)
   - [ ] Manually verify signature quality
 
 **Exit Criteria**:
-- [ ] Signature appears in correct position
-- [ ] Opacity and size work as expected
-- [ ] Metadata embedded correctly
+- [x] Signature appears in correct position (17 tests passing)
+- [x] Opacity and size work as expected
+- [x] Metadata embedded correctly
 
 ---
 
