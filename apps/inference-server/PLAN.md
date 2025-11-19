@@ -158,19 +158,19 @@ This document contains detailed subtasks for inference server development. For h
 
 #### Subtasks
 
-- [x] Position accuracy test (Commit: pending)
+- [x] Position accuracy test (Commit: 7666fb1)
   - [x] Test bottom-left, bottom-center, bottom-right positions
   - [x] Verify signature within 5px tolerance
 
-- [x] Opacity range test (Commit: pending)
+- [x] Opacity range test (Commit: 7666fb1)
   - [x] Test opacity values 0.0, 0.5, 1.0
   - [x] Verify visual appearance
 
-- [x] Size scaling test (Commit: pending)
+- [x] Size scaling test (Commit: 7666fb1)
   - [x] Test small, medium, large sizes
   - [x] Verify signature scales correctly
 
-- [x] Metadata embedding (Commit: pending)
+- [x] Metadata embedding (Commit: 7666fb1)
   - [x] Embed artist_id and model_id in image PNG info
   - [x] Verify metadata persists after save
 
