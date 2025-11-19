@@ -16,12 +16,20 @@ logger = logging.getLogger(__name__)
 
 
 class GenerationConsumer:
-    """RabbitMQ Consumer for image generation tasks."""
+    """RabbitMQ Consumer for image generation tasks with batch processing support."""
 
-    def __init__(self):
-        """Initialize generation consumer."""
+    def __init__(self, prefetch_count: int = 10):
+        """
+        Initialize generation consumer.
+
+        Args:
+            prefetch_count: Number of messages to prefetch (default: 10 for batch processing)
+        """
         self.connection = None
         self.channel = None
+        self.prefetch_count = prefetch_count
+        self.generator = None  # Reusable generator instance for efficiency
+        self._current_lora_path = None  # Track loaded LoRA to avoid reloading
 
     def connect(self):
         """Connect to RabbitMQ and declare queue."""
@@ -51,8 +59,9 @@ class GenerationConsumer:
                 queue=Config.QUEUE_IMAGE_GENERATION, durable=True
             )
 
-            # Set QoS to process one message at a time
-            self.channel.basic_qos(prefetch_count=1)
+            # Set QoS for batch processing (prefetch multiple messages)
+            self.channel.basic_qos(prefetch_count=self.prefetch_count)
+            logger.info(f"Prefetch count set to {self.prefetch_count} for batch processing")
 
             logger.info("Successfully connected to RabbitMQ")
 
@@ -227,8 +236,12 @@ class GenerationConsumer:
                         # TODO: Implement GCS download for LoRA weights
                         local_lora_path = None
 
-                # Step 2: Initialize generator
-                generator = ImageGenerator()
+                # Step 2: Initialize or reuse generator for batch efficiency
+                if self.generator is None:
+                    logger.info("Initializing new ImageGenerator for batch processing")
+                    self.generator = ImageGenerator()
+
+                generator = self.generator
 
                 # Step 3: Define progress callback
                 def progress_callback(current_step, total_steps):
@@ -301,8 +314,8 @@ class GenerationConsumer:
 
                 logger.info(f"Real generation completed for generation_id={generation_id}")
 
-                # Cleanup
-                generator.unload_pipeline()
+                # Note: Pipeline is kept loaded for batch processing efficiency
+                # Call cleanup_generator() when done with all generations
 
                 return image_url
 
@@ -396,8 +409,19 @@ class GenerationConsumer:
             logger.error(f"Error in consumer: {e}")
             raise
 
+    def cleanup_generator(self):
+        """Cleanup generator to free GPU memory."""
+        if self.generator:
+            self.generator.unload_pipeline()
+            self.generator = None
+            self._current_lora_path = None
+            logger.info("Generator cleaned up, GPU memory freed")
+
     def stop(self):
-        """Stop consuming and close connection."""
+        """Stop consuming, cleanup resources, and close connection."""
+        # Cleanup generator to free GPU memory
+        self.cleanup_generator()
+
         if self.channel:
             self.channel.stop_consuming()
 

@@ -137,10 +137,10 @@ This document contains detailed subtasks for inference server development. For h
   - [x] Max 3 attempts on failure
   - [x] Exponential backoff between retries (1s, 2s, 4s)
 
-- [ ] Batch processing
-  - [ ] Support up to 10 concurrent generations
-  - [ ] Queue management for requests
-  - [ ] Resource allocation per generation
+- [x] Batch processing (Commit: pending)
+  - [x] Support up to 10 concurrent generations (prefetch_count=10)
+  - [x] Queue management for requests (RabbitMQ QoS)
+  - [x] Resource allocation per generation (pipeline reuse for efficiency)
 
 **Implementation Reference**: [CODE_GUIDE.md#inference-pipeline](CODE_GUIDE.md#inference-pipeline)
 
