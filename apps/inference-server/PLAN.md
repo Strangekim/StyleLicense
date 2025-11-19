@@ -111,7 +111,7 @@ This document contains detailed subtasks for inference server development. For h
 
 ##### Subtasks
 
-- [x] Environment setup (Commit: pending)
+- [x] Environment setup (Commit: bc87d29)
   - [x] Install ML dependencies (PyTorch 2.9.1, diffusers, peft, transformers, accelerate)
   - [x] Verify CUDA connection
 
@@ -133,7 +133,7 @@ This document contains detailed subtasks for inference server development. For h
   - [x] Support positions: bottom-left, bottom-center, bottom-right
   - [x] Apply opacity (0.0 - 1.0)
 
-- [x] Retry logic (Commit: pending)
+- [x] Retry logic (Commit: bc87d29)
   - [x] Max 3 attempts on failure
   - [x] Exponential backoff between retries (1s, 2s, 4s)
 
