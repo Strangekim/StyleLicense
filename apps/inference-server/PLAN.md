@@ -104,30 +104,38 @@ This document contains detailed subtasks for inference server development. For h
 
 ---
 
-#### Phase 2: GPU Implementation (PLANNED)
+#### Phase 2: GPU Implementation (IN_PROGRESS)
 
-**Status**: PLANNED
-**Target Environment**: GCP Compute Engine with GPU
+**Status**: IN_PROGRESS
+**Target Environment**: GCP Compute Engine with GPU (Tesla T4)
 
 ##### Subtasks
 
-- [ ] Stable Diffusion inference
-  - [ ] Load base model (Stable Diffusion v1.5)
-  - [ ] Configure inference (50 steps, guidance_scale=7.5)
-  - [ ] Support aspect ratios (1:1 [512×512px], 2:2 [1024×1024px], 1:2 [512×1024px])
-  - [ ] Handle seed for reproducibility
+- [x] Environment setup (Commit: pending)
+  - [x] Install ML dependencies (PyTorch 2.9.1, diffusers, peft, transformers, accelerate)
+  - [x] Verify CUDA connection
 
-- [ ] LoRA weight loading
-  - [ ] Load LoRA weights from file path
-  - [ ] Apply LoRA to base model
-  - [ ] Verify style is applied to generated image
+- [x] Stable Diffusion inference (Already implemented in generator.py)
+  - [x] Load base model (Stable Diffusion v1.5)
+  - [x] Configure inference (50 steps, guidance_scale=7.5)
+  - [x] Support aspect ratios (1:1, 2:2, 1:2, 2:1)
+  - [x] Handle seed for reproducibility
 
-- [ ] Signature insertion with PIL
-  - [ ] Load signature image
-  - [ ] Resize signature based on size parameter (small, medium, large)
-  - [ ] Composite signature onto generated image
-  - [ ] Support positions: bottom-left, bottom-center, bottom-right
-  - [ ] Apply opacity (0.0 - 1.0)
+- [x] LoRA weight loading (Already implemented in generator.py)
+  - [x] Load LoRA weights from file path
+  - [x] Apply LoRA to base model
+  - [x] Verify style is applied to generated image
+
+- [x] Signature insertion with PIL (Already implemented in watermark.py)
+  - [x] Load signature image
+  - [x] Resize signature based on size parameter (small, medium, large)
+  - [x] Composite signature onto generated image
+  - [x] Support positions: bottom-left, bottom-center, bottom-right
+  - [x] Apply opacity (0.0 - 1.0)
+
+- [x] Retry logic (Commit: pending)
+  - [x] Max 3 attempts on failure
+  - [x] Exponential backoff between retries (1s, 2s, 4s)
 
 - [ ] Batch processing
   - [ ] Support up to 10 concurrent generations

@@ -8,6 +8,7 @@ import logging
 import time
 from typing import Dict, Any
 import pika
+from PIL import Image
 from config import Config
 from services.webhook_service import WebhookService
 
@@ -101,7 +102,7 @@ class GenerationConsumer:
 
     def process_generation_task(self, data: Dict[str, Any]) -> bool:
         """
-        Process image generation task.
+        Process image generation task with retry logic.
 
         Args:
             data: Task data containing generation_id, style_id, prompt, etc.
@@ -118,31 +119,54 @@ class GenerationConsumer:
         signature_path = data.get("signature_path", "")
         signature_config = data.get("signature_config", {})
 
-        try:
-            logger.info(
-                f"Processing generation task: generation_id={generation_id}, "
-                f"style_id={style_id}, steps={num_steps}"
-            )
+        logger.info(
+            f"Processing generation task: generation_id={generation_id}, "
+            f"style_id={style_id}, steps={num_steps}"
+        )
 
-            # Phase 2: Real inference with GPU
-            image_url = self.real_generation(
-                generation_id=generation_id,
-                prompt=prompt,
-                lora_path=lora_path,
-                aspect_ratio=aspect_ratio,
-                num_steps=num_steps,
-                signature_path=signature_path,
-                signature_config=signature_config,
-            )
+        # Retry logic: Max 3 attempts with exponential backoff
+        max_attempts = 3
+        last_error = None
 
-            return image_url is not None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                logger.info(f"Generation attempt {attempt}/{max_attempts} for generation_id={generation_id}")
 
-        except Exception as e:
-            logger.error(f"Generation failed: {e}", exc_info=True)
-            WebhookService.send_inference_failed(
-                generation_id, str(e), error_code="GENERATION_ERROR"
-            )
-            return False
+                # Phase 2: Real inference with GPU
+                image_url = self.real_generation(
+                    generation_id=generation_id,
+                    prompt=prompt,
+                    lora_path=lora_path,
+                    aspect_ratio=aspect_ratio,
+                    num_steps=num_steps,
+                    signature_path=signature_path,
+                    signature_config=signature_config,
+                )
+
+                if image_url:
+                    return True
+                else:
+                    last_error = "Generation failed - no image produced"
+                    logger.warning(f"Attempt {attempt} failed: {last_error}")
+
+            except Exception as e:
+                last_error = str(e)
+                logger.error(f"Generation attempt {attempt} failed: {e}", exc_info=True)
+
+            # Exponential backoff before retry (1s, 2s, 4s)
+            if attempt < max_attempts:
+                backoff_seconds = 2 ** (attempt - 1)
+                logger.info(f"Retrying in {backoff_seconds} seconds...")
+                time.sleep(backoff_seconds)
+
+        # All attempts failed
+        logger.error(f"All {max_attempts} generation attempts failed for generation_id={generation_id}")
+        WebhookService.send_inference_failed(
+            generation_id,
+            f"Generation failed after {max_attempts} attempts: {last_error}",
+            error_code="GENERATION_ERROR",
+        )
+        return False
 
     def real_generation(
         self,
