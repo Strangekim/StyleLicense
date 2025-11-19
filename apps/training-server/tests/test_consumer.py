@@ -42,6 +42,13 @@ def test_process_training_task_success(
     mock_webhook_service.send_training_progress.return_value = True
 
     consumer = TrainingConsumer()
+
+    # Mock the real_training method to return success
+    consumer.real_training = Mock(return_value=(
+        "gs://stylelicense-media/models/style-123/adapter_model.safetensors",
+        0.05
+    ))
+
     data = mock_training_message["data"]
 
     # Process task
@@ -55,7 +62,7 @@ def test_process_training_task_success(
 
     # Check arguments
     assert call_args[0][0] == data["style_id"]  # style_id
-    assert "lora_weights.safetensors" in call_args[0][1]  # model_path
+    assert "adapter_model.safetensors" in call_args[0][1]  # model_path
     assert call_args[1]["loss"] == 0.05
     assert call_args[1]["epochs"] == data["parameters"]["epochs"]
 
@@ -93,10 +100,10 @@ def test_process_training_task_missing_images(mock_webhook_service):
 @patch("consumer.training_consumer.time.sleep")
 def test_process_training_task_exception(mock_sleep, mock_webhook_service):
     """Test task processing with exception"""
-    # Setup mock to raise exception
-    mock_webhook_service.send_training_progress.side_effect = Exception("Network error")
-
     consumer = TrainingConsumer()
+
+    # Mock real_training to raise exception
+    consumer.real_training = Mock(side_effect=Exception("Network error"))
 
     data = {
         "style_id": 123,
@@ -112,7 +119,7 @@ def test_process_training_task_exception(mock_sleep, mock_webhook_service):
     mock_webhook_service.send_training_failed.assert_called_once()
     call_args = mock_webhook_service.send_training_failed.call_args
     assert call_args[0][0] == 123  # style_id
-    assert call_args[1]["error_code"] == "INTERNAL_ERROR"
+    assert call_args[1]["error_code"] == "TRAINING_ERROR"
 
 
 def test_consumer_connect():
