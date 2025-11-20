@@ -29,6 +29,7 @@ class Config:
     # Google Cloud Storage Configuration
     GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "stylelicense-media")
     GCS_PROJECT_ID = os.getenv("GCS_PROJECT_ID", "stylelicense")
+    GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
 
     # Inference Configuration (for M4 phase)
     MODEL_STORAGE_PATH = os.getenv("MODEL_STORAGE_PATH", "./models")
