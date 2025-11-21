@@ -10,6 +10,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useModelsStore } from '@/stores/models'
 import { useAuthStore } from '@/stores/auth'
+import AppLayout from '@/components/layout/AppLayout.vue'
 
 const router = useRouter()
 const modelsStore = useModelsStore()
@@ -112,9 +113,10 @@ const followingModels = computed(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-white pb-20">
-    <!-- Search Bar -->
-    <div class="sticky top-14 z-30 bg-white border-b border-neutral-100 px-4 py-3">
+  <div class="min-h-screen bg-white">
+    <AppLayout>
+      <!-- Search Bar -->
+      <div class="sticky top-0 z-30 bg-white border-b border-neutral-100 px-4 py-3">
       <div class="max-w-mobile mx-auto">
         <div class="relative">
           <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -351,5 +353,6 @@ const followingModels = computed(() => {
         </div>
       </div>
     </div>
+    </AppLayout>
   </div>
 </template>

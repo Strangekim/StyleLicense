@@ -11,6 +11,7 @@ import { useModelsStore } from '@/stores/models'
 import { useGenerationStore } from '@/stores/generations'
 import { useTokenStore } from '@/stores/tokens'
 import { useAuthStore } from '@/stores/auth'
+import AppLayout from '@/components/layout/AppLayout.vue'
 import TagButton from '@/components/shared/TagButton.vue'
 
 const route = useRoute()
@@ -210,7 +211,8 @@ onMounted(async () => {
     <div class="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent"></div>
   </div>
 
-  <div v-else-if="model" class="min-h-screen bg-white pb-20">
+  <div v-else-if="model" class="min-h-screen bg-white">
+    <AppLayout>
     <!-- Training Image Section -->
     <div class="px-4 pt-3 pb-2">
       <h2 class="text-base font-semibold text-neutral-900">Training Image</h2>
@@ -448,6 +450,7 @@ onMounted(async () => {
         </p>
       </div>
     </div>
+    </AppLayout>
   </div>
 
   <!-- Error state -->
