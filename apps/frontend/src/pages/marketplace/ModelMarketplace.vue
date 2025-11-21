@@ -283,8 +283,8 @@ const followingModels = computed(() => {
       </div>
     </div>
 
-    <!-- Following Artists Section (Horizontal Scroll) -->
-    <div v-if="authStore.isAuthenticated && followingModels.length > 0" class="mb-8">
+        <!-- Following Artists Section (Horizontal Scroll) -->
+        <div v-if="authStore.isAuthenticated && followingModels.length > 0" class="mb-8">
       <h2 class="text-sm font-semibold text-neutral-900 px-4 mb-3">Following Artists</h2>
       <div class="overflow-x-auto -mx-4 px-4">
         <div class="flex gap-3 pb-4" style="width: max-content;">
@@ -390,6 +390,7 @@ const followingModels = computed(() => {
         </div>
       </div>
     </div>
+      </div>
     </AppLayout>
   </div>
 </template>
