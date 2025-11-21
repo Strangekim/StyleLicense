@@ -81,6 +81,13 @@ const routes = [
     component: () => import('@/pages/notifications/Notifications.vue'),
     meta: { requiresAuth: true },
   },
+  // Token/Payment route (protected)
+  {
+    path: '/tokens',
+    name: 'Tokens',
+    component: () => import('@/pages/tokens/TokenPage.vue'),
+    meta: { requiresAuth: true },
+  },
   // Artist routes (protected)
   {
     path: '/styles/create',
