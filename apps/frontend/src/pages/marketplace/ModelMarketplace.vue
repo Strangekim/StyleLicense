@@ -18,6 +18,18 @@ const authStore = useAuthStore()
 const searchQuery = ref('')
 const sortBy = ref('recent')
 const followingArtists = ref(new Set()) // Track following status
+const expandedDescriptions = ref(new Set()) // Track expanded descriptions
+
+const toggleDescription = (modelId, event) => {
+  event.stopPropagation()
+  const newSet = new Set(expandedDescriptions.value)
+  if (newSet.has(modelId)) {
+    newSet.delete(modelId)
+  } else {
+    newSet.add(modelId)
+  }
+  expandedDescriptions.value = newSet
+}
 
 onMounted(async () => {
   // Load initial models (only completed styles)
@@ -115,39 +127,40 @@ const followingModels = computed(() => {
 <template>
   <div class="min-h-screen bg-white">
     <AppLayout>
-      <!-- Search Bar -->
-      <div class="sticky top-0 z-30 bg-white border-b border-neutral-100 px-4 py-3">
-      <div class="max-w-mobile mx-auto">
-        <div class="relative">
-          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-          </svg>
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search"
-            class="w-full pl-10 pr-4 py-2 bg-neutral-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
+      <div class="max-w-screen-lg mx-auto">
+        <!-- Search Bar -->
+        <div class="sticky top-0 z-30 bg-white border-b border-neutral-100 px-4 py-3">
+          <div class="max-w-screen-sm mx-auto">
+            <div class="relative">
+              <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+              <input
+                v-model="searchQuery"
+                type="text"
+                placeholder="Search"
+                class="w-full pl-10 pr-4 py-2 bg-neutral-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Sort Dropdown -->
-    <div class="px-4 py-2 flex justify-end">
-      <div class="max-w-mobile mx-auto w-full flex justify-end">
-        <select
-          v-model="sortBy"
-          class="text-sm font-medium text-neutral-900 bg-transparent border-none focus:outline-none cursor-pointer"
-        >
-          <option value="recent">recent</option>
-          <option value="popular">popular</option>
-        </select>
-      </div>
-    </div>
+        <!-- Sort Dropdown -->
+        <div class="px-4 py-2 flex justify-end">
+          <div class="max-w-screen-sm mx-auto w-full flex justify-end">
+            <select
+              v-model="sortBy"
+              class="text-sm font-medium text-neutral-900 bg-transparent border-none focus:outline-none cursor-pointer"
+            >
+              <option value="recent">recent</option>
+              <option value="popular">popular</option>
+            </select>
+          </div>
+        </div>
 
-    <!-- Recent/Popular Section (Horizontal Scroll) -->
-    <div class="mb-8">
-      <div v-if="recentOrPopularModels.length > 0" class="overflow-x-auto -mx-4 px-4">
+        <!-- Recent/Popular Section (Horizontal Scroll) -->
+        <div class="mb-8">
+          <div v-if="recentOrPopularModels.length > 0" class="overflow-x-auto px-4">
         <div class="flex gap-3 pb-4" style="width: max-content;">
           <div
             v-for="model in recentOrPopularModels"
@@ -184,7 +197,7 @@ const followingModels = computed(() => {
             </div>
 
             <!-- Card Content -->
-            <div class="p-3">
+            <div class="p-3 flex flex-col" style="min-height: 180px;">
               <!-- Artist Name -->
               <h3
                 class="font-semibold text-sm text-neutral-900 mb-1 cursor-pointer hover:underline truncate"
@@ -194,12 +207,24 @@ const followingModels = computed(() => {
               </h3>
 
               <!-- Description -->
-              <p class="text-xs text-neutral-600 mb-0.5 line-clamp-2">
-                {{ model.description || 'No description' }}
-                <span v-if="model.artist?.username" class="text-primary-500">
-                  @{{ model.artist.username }}
-                </span>
-              </p>
+              <div class="mb-0.5 flex-grow">
+                <p
+                  class="text-xs text-neutral-600"
+                  :class="expandedDescriptions.has(model.id) ? '' : 'line-clamp-2'"
+                >
+                  {{ model.description || 'No description' }}
+                  <span v-if="model.artist?.username" class="text-primary-500">
+                    @{{ model.artist.username }}
+                  </span>
+                </p>
+                <button
+                  v-if="(model.description?.length || 0) > 60"
+                  @click="toggleDescription(model.id, $event)"
+                  class="text-xs text-neutral-500 hover:text-neutral-700 mt-1"
+                >
+                  {{ expandedDescriptions.has(model.id) ? 'less' : 'more' }}
+                </button>
+              </div>
 
               <!-- Model Name -->
               <p class="text-xs text-neutral-500 mb-3 truncate">
@@ -298,7 +323,7 @@ const followingModels = computed(() => {
             </div>
 
             <!-- Card Content -->
-            <div class="p-3">
+            <div class="p-3 flex flex-col" style="min-height: 180px;">
               <!-- Artist Name -->
               <h3
                 class="font-semibold text-sm text-neutral-900 mb-1 cursor-pointer hover:underline truncate"
@@ -308,12 +333,24 @@ const followingModels = computed(() => {
               </h3>
 
               <!-- Description -->
-              <p class="text-xs text-neutral-600 mb-0.5 line-clamp-2">
-                {{ model.description || 'No description' }}
-                <span v-if="model.artist?.username" class="text-primary-500">
-                  @{{ model.artist.username }}
-                </span>
-              </p>
+              <div class="mb-0.5 flex-grow">
+                <p
+                  class="text-xs text-neutral-600"
+                  :class="expandedDescriptions.has(model.id) ? '' : 'line-clamp-2'"
+                >
+                  {{ model.description || 'No description' }}
+                  <span v-if="model.artist?.username" class="text-primary-500">
+                    @{{ model.artist.username }}
+                  </span>
+                </p>
+                <button
+                  v-if="(model.description?.length || 0) > 60"
+                  @click="toggleDescription(model.id, $event)"
+                  class="text-xs text-neutral-500 hover:text-neutral-700 mt-1"
+                >
+                  {{ expandedDescriptions.has(model.id) ? 'less' : 'more' }}
+                </button>
+              </div>
 
               <!-- Model Name -->
               <p class="text-xs text-neutral-500 mb-3 truncate">

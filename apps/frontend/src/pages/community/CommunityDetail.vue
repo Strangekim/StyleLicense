@@ -37,9 +37,9 @@
     </div>
 
     <!-- Feed Detail Content -->
-    <div v-else-if="feedItem" class="max-w-2xl mx-auto px-4 py-4">
+    <div v-else-if="feedItem" class="max-w-2xl mx-auto py-4">
       <!-- Author Info (moved from Back button location) -->
-      <div class="mb-4 flex items-center space-x-2">
+      <div class="mb-4 px-4 flex items-center space-x-2">
         <!-- Avatar -->
         <img
           :src="feedItem.user.avatar || '/default-avatar.png'"
@@ -121,7 +121,7 @@
         </div>
 
         <!-- Tags Section -->
-        <div v-if="tags.length > 0" class="mb-4 flex items-center space-x-2 overflow-x-auto pb-2">
+        <div v-if="tags.length > 0" class="mb-4 px-4 flex items-center space-x-2 overflow-x-auto pb-2">
           <button
             v-for="tag in tags"
             :key="tag"
@@ -136,17 +136,56 @@
 
         <!-- Actions and Info -->
         <div class="bg-white rounded-lg shadow-sm px-4 py-4">
-          <!-- Like and Comment Buttons -->
-          <div class="flex items-center space-x-4 mb-3">
+          <!-- Like and Comment Buttons with Visibility Toggle -->
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-4">
+              <button
+                @click="handleLike"
+                :disabled="liking"
+                class="flex items-center transition-colors"
+                :class="feedItem.is_liked_by_current_user ? 'text-red-500' : 'text-gray-600 hover:text-red-500'"
+              >
+                <svg
+                  class="w-7 h-7"
+                  :fill="feedItem.is_liked_by_current_user ? 'currentColor' : 'none'"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                  />
+                </svg>
+              </button>
+
+              <button
+                @click="openComments"
+                class="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <!-- Public/Private Toggle Button (only for image owner) -->
             <button
-              @click="handleLike"
-              :disabled="liking"
-              class="flex items-center transition-colors"
-              :class="feedItem.is_liked_by_current_user ? 'text-red-500' : 'text-gray-600 hover:text-red-500'"
+              v-if="isCurrentUserOwner"
+              @click="handleToggleVisibility"
+              class="flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+              :class="isPublic ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
             >
               <svg
-                class="w-7 h-7"
-                :fill="feedItem.is_liked_by_current_user ? 'currentColor' : 'none'"
+                v-if="isPublic"
+                class="w-4 h-4"
+                fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
@@ -154,23 +193,30 @@
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                 />
-              </svg>
-            </button>
-
-            <button
-              @click="openComments"
-              class="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                 />
               </svg>
+              <svg
+                v-else
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                />
+              </svg>
+              <span>{{ isPublic ? 'Public' : 'Private' }}</span>
             </button>
           </div>
 
@@ -246,6 +292,7 @@ const liking = ref(false)
 const bookmarking = ref(false)
 const isCommentModalOpen = ref(false)
 const showFullDescription = ref(false)
+const isPublic = ref(true) // Track visibility status
 
 // Computed
 const truncatedDescription = computed(() => {
@@ -275,6 +322,12 @@ const isAuthorArtist = computed(() => {
   // TODO: Replace with actual artist comparison when API is ready
   // For now, check if user has artist role or if user_id matches style artist_id
   return feedItem.value.user?.id === feedItem.value.style?.artist_id
+})
+
+// Check if current user owns this image
+const isCurrentUserOwner = computed(() => {
+  if (!authStore.isAuthenticated || !feedItem.value) return false
+  return authStore.user?.id === feedItem.value.user?.id
 })
 
 // Methods
@@ -376,6 +429,19 @@ async function handleBookmark() {
     console.error('Failed to toggle bookmark:', err)
   } finally {
     bookmarking.value = false
+  }
+}
+
+async function handleToggleVisibility() {
+  try {
+    // TODO: Replace with actual API call
+    // await updateImageVisibility(feedItem.value.id, !isPublic.value)
+
+    // Toggle local state
+    isPublic.value = !isPublic.value
+    console.log('Image visibility toggled to:', isPublic.value ? 'Public' : 'Private')
+  } catch (err) {
+    console.error('Failed to toggle visibility:', err)
   }
 }
 
