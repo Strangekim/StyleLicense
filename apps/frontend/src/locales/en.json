@@ -30,7 +30,9 @@
     "edit": "Edit",
     "search": "Search",
     "filter": "Filter",
-    "sort": "Sort"
+    "sort": "Sort",
+    "grid": "Grid View",
+    "private": "Private View"
   },
   "tokens": {
     "balance": "Token Balance",
@@ -60,5 +62,20 @@
     "popularity": "Popularity",
     "newest": "Newest",
     "price": "Price"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllAsRead": "Mark all as read",
+    "empty": {
+      "title": "No notifications",
+      "description": "New notifications will appear here"
+    }
+  },
+  "comments": {
+    "title": "Comments",
+    "placeholder": "Write a comment...",
+    "post": "Post",
+    "posting": "Posting...",
+    "empty": "Be the first to comment"
   }
 }

@@ -2,20 +2,20 @@
 
 **Version**: 1.0.0
 **Last Updated**: 2025-11-11
-**Status**: M2 Complete, M3 Planned
+**Status**: M5 Complete, M6 In Progress (GCP Deployed)
 
 ---
 
 ## Overview
 ```
-Total Progress: █████████████░░░░░░░ 65%
+Total Progress: ████████████████░░░░ 80%
 
 M1 Foundation        ████████████████████ 100%
 M2 Core Backend      ████████████████████ 100%
 M3 Core Frontend     ████████████████████ 100%
-M4 AI Integration    ██████████░░░░░░░░░░  50% (Phase 1 Complete)
+M4 AI Integration    ████████████░░░░░░░░  60% (Phase 2 Testing Complete)
 M5 Community         ████████████████████ 100%
-M6 Launch            ░░░░░░░░░░░░░░░░░░░░   0%
+M6 Launch            ██████░░░░░░░░░░░░░░  30% (Backend Deployed to GCP)
 ```
 
 ---
@@ -436,11 +436,11 @@ PT-M3-Components ⫽ PT-M3-StylePages ⫽ PT-M3-Generation ⫽ PT-M3-Stores
 
 ## M4: AI Integration
 
-**ID**: M4  
-**Status**: PLANNED  
-**Dependencies**: [M2]  
-**Blocking**: [M5]  
-**Completion**: 0%
+**ID**: M4
+**Status**: IN_PROGRESS
+**Dependencies**: [M2]
+**Blocking**: [M5]
+**Completion**: 60%
 
 ### Objectives
 - [ ] LoRA training pipeline operational
@@ -530,7 +530,7 @@ PT-M4-Training ⫽ PT-M4-Inference ⫽ PT-M4-Backend
     - [ ] Retry logic (max 3 attempts) on failure
 
 #### PT-M4-Inference: Inference Pipeline
-- **Status**: IN_PROGRESS (Phase 1 DONE, Phase 2 PLANNED)
+- **Status**: DONE (Phase 1 & Phase 2 Complete)
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M4-Training, PT-M4-Backend]
 - **Dependencies**: [M2]
@@ -542,11 +542,13 @@ PT-M4-Training ⫽ PT-M4-Inference ⫽ PT-M4-Backend
     - [x] Webhook service matching API.md (PATCH /progress, POST /complete, POST /failed)
     - [x] Mock generation pipeline with progress updates
     - [x] Comprehensive tests (8 tests passing)
-  - **Phase 2 (GPU Implementation)**: PLANNED
-    - [ ] Stable Diffusion inference (50 steps, guidance_scale=7.5)
-    - [ ] LoRA weight loading from file path
-    - [ ] Signature insertion with PIL (position, opacity, size)
-    - [ ] Batch processing (10 concurrent generations)
+  - **Phase 2 (GPU Implementation)**: DONE (Tested on GCP)
+    - [x] Stable Diffusion inference (50 steps, guidance_scale=7.5)
+    - [x] LoRA weight loading from file path
+    - [x] Signature insertion with PIL (position, opacity, size)
+    - [x] Batch processing (10 concurrent generations)
+    - [x] GCS upload working (gs://stylelicense-media/generations/)
+    - [x] Webhook to backend working (with INTERNAL_API_TOKEN)
 
 #### PT-M4-Backend: Backend AI Integration
 - **Status**: DONE (Commit: d693513)
@@ -680,11 +682,11 @@ PT-M5-CommunityBackend ⫽ PT-M5-CommunityFrontend
 
 ## M6: Launch
 
-**ID**: M6  
-**Status**: PLANNED  
-**Dependencies**: [M5]  
-**Blocking**: []  
-**Completion**: 0%
+**ID**: M6
+**Status**: IN_PROGRESS
+**Dependencies**: [M5]
+**Blocking**: []
+**Completion**: 30%
 
 ### Objectives
 - [ ] All E2E tests passing
@@ -788,18 +790,22 @@ PT-M6-BackendDeploy ⫽ PT-M6-FrontendBuild ⫽ PT-M6-CICD
 ```
 
 #### PT-M6-BackendDeploy: Backend Production Config
-- **Status**: PLANNED
+- **Status**: DONE (Deployed to GCP Cloud Run)
 - **Type**: PARALLEL
 - **Can Run With**: [PT-M6-FrontendBuild, PT-M6-CICD]
 - **Dependencies**: [M5]
 - **Owner**: Backend
 - **Reference**: [apps/backend/PLAN.md#m6-production-config](apps/backend/PLAN.md#m6-production-config)
 - **Summary**:
-  - [ ] Production settings.py (DEBUG=False, ALLOWED_HOSTS)
-  - [ ] Static files collection (WhiteNoise or S3)
-  - [ ] Gunicorn configuration (workers, timeout)
-  - [ ] Nginx reverse proxy config
-  - [ ] Database connection pooling
+  - [x] Production settings.py (DEBUG=False, ALLOWED_HOSTS) - Cloud Run env vars
+  - [x] Static files collection - Not needed for API-only backend
+  - [x] Gunicorn configuration - Cloud Run handles automatically
+  - [x] Nginx reverse proxy - Cloud Run handles automatically
+  - [x] Database connection pooling - Cloud SQL Proxy
+  - [x] Backend URL: https://stylelicense-backend-606831968092.asia-northeast3.run.app
+  - [x] Cloud SQL: 34.64.169.208
+  - [x] RabbitMQ: 10.178.15.222 (Compute Engine)
+  - [x] GCS: gs://stylelicense-media
 
 #### PT-M6-FrontendBuild: Frontend Optimization
 - **Status**: DONE

@@ -10,16 +10,27 @@
 
 **첫 작업 시작 전 필수 읽기:**
 
-1. **Read [TECHSPEC.md](TECHSPEC.md)** - 전체 시스템 구조, 아키텍처, 핵심 Context 이해
-   - Section 4: 시스템 아키텍처 및 컴포넌트 간 관계
-   - Section 5: 데이터 모델 및 스키마
-   - Section 6: API 설계
+1. **Read [TECHSPEC_SUMMARY.md](TECHSPEC_SUMMARY.md)** - 전체 시스템 핵심 요약 (필수, 45분 내 파악 가능)
+   - Section 1-2: 프로젝트 정체성, 아키텍처, 기술 스택
+   - **Section 4**: **프론트엔드 페이지 9개 목록** (페이지 누락 방지!)
+   - Section 3.7: API 그룹 7개 개요 (API 누락 방지!)
+   - Section 3.8: 에러 코드 체계 (일관된 에러 처리)
+   - Section 3.9-3.11: 보안, 성능, 테스트 전략
 2. **Read [PLAN.md](PLAN.md)** - 현재 진행 중인 Milestone 확인
+3. **필요시 Read [TECHSPEC.md](TECHSPEC.md)** - 상세 명세 (선택적, SUMMARY의 앵커 링크 활용)
+   - Section 6: API 전체 스펙 (특정 엔드포인트 구현 시)
+   - Section 7: 프론트엔드 아키텍처 전체 (프론트엔드 구현 시)
+   - Section 10-13: 보안/에러/성능/테스트 상세 (필요 시)
 
 **항상 참조:**
 - [docs/database/README.md](docs/database/README.md) - DB 스키마 확인 시
 - [docs/API.md](docs/API.md) - API 엔드포인트 구현 시
 - [docs/PATTERNS.md](docs/PATTERNS.md) - 공통 코드 패턴 확인 시
+
+**토큰 절약 전략:**
+- **TECHSPEC_SUMMARY.md (300줄)을 먼저 읽어 전체 맵 파악**
+- TECHSPEC.md (1853줄)은 필요한 섹션만 선택적으로 읽기
+- 예: Frontend 페이지 구현 → SUMMARY Section 4 확인 → 필요시 TECHSPEC Section 7 전체 읽기
 
 ---
 
@@ -190,10 +201,47 @@ Claude 사고: "Google OAuth는 브라우저 필요... 간단하게 email/passwo
 - 명세에 없는 필드는 `None`으로 비활성화 또는 `models.Model` 직접 상속
 
 **Vue Router:**
-- 기본 라우팅 패턴이 아닌 TECHSPEC.md의 화면 정의 우선
+- 기본 라우팅 패턴이 아닌 TECHSPEC_SUMMARY.md Section 4의 페이지 정의 우선
 
 **FastAPI:**
 - Pydantic 모델의 자동 검증이 명세의 제약조건과 일치하는지 확인
+
+#### 3.7. Frontend 페이지 작성 시 필수 체크리스트
+
+**PLAN.md 작성 또는 페이지 구현 전:**
+
+- [ ] **Step 1**: `TECHSPEC_SUMMARY.md` Section 4 열기
+- [ ] **Step 2**: 필수 페이지 목록 9개 확인
+  ```
+  1. Main Page
+  2. Feed Detail Page (Comment Modal 포함)
+  3. Search & Following Artist Page
+  4. Style Detail Page
+  5. My Page (공개/비공개 피드 그리드)
+  6. Edit/Create Style Page
+  7. Edit Profile
+  8. Payment Page
+  9. Notification Page
+  ```
+- [ ] **Step 3**: `apps/frontend/PLAN.md`에 모든 페이지가 포함되었는지 검증
+- [ ] **Step 4**: 각 페이지의 핵심 섹션 확인 (Modal, Grid, 검색창 등)
+- [ ] **Step 5**: 명세에 없는 페이지 추가 또는 제외 시:
+  1. **반드시 사용자에게 먼저 물어보기** (한국어로)
+  2. 사용자 승인 후 `TECHSPEC.md` Section 7.2 업데이트
+  3. `TECHSPEC_SUMMARY.md` Section 4도 업데이트
+  4. 그 다음 `PLAN.md` 업데이트
+
+**예시:**
+```
+❌ 잘못된 예:
+- PLAN.md에 "Feed Detail Page - deferred to post-MVP" 작성
+- TECHSPEC_SUMMARY.md 확인 없이 "MVP에 너무 복잡하니 제외" 판단
+
+✅ 올바른 예:
+1. TECHSPEC_SUMMARY.md Section 4 확인 → "Feed Detail Page 필수"
+2. PLAN.md에 페이지 포함 또는
+3. 사용자에게 "명세에는 Feed Detail Page가 필수인데 제외하려면 TECHSPEC 수정 필요" 문의
+```
 
 ---
 
@@ -337,6 +385,7 @@ Claude 사고: "Google OAuth는 브라우저 필요... 간단하게 email/passwo
 - ❌ TABLES.md 확인 없이 Django AbstractBaseUser 사용 → password 자동 추가
 - ❌ Migration 생성 후 명세와 대조하지 않음
 - ❌ "개발 편의"를 이유로 명세에 없는 API 엔드포인트 추가 (예: email/password 로그인)
+- ❌ **TECHSPEC_SUMMARY.md Section 4 확인 없이 Frontend 페이지 제외** (예: Feed Detail, Profile, Payment 등)
 - ❌ 프레임워크 관습을 명세보다 우선시
 - ❌ 사용자 요구를 명세 확인 없이 바로 구현
 
@@ -449,7 +498,12 @@ git push origin dev
 ## Key Principles
 
 ### 🎯 Token Efficiency
-- **Always start with TECHSPEC.md** (한 번만 읽기)
+- **Always start with TECHSPEC_SUMMARY.md** (300줄, 빠른 전체 맵 파악)
+- **Lazy load TECHSPEC.md** (1853줄, 필요한 섹션만 선택적 읽기)
+  - Frontend 페이지 구현 시: Section 7 전체 읽기
+  - API 구현 시: Section 6 해당 그룹만 읽기
+  - 보안 관련: Section 10 읽기
+  - 성능/테스트: Section 12-13 읽기
 - **Load CODE_GUIDE.md once per app** (여러 Task에 재사용)
 - **Lazy load docs/** (필요할 때만 읽기)
 - **Don't load cross-app context** (Backend 작업 시 Frontend CODE_GUIDE 읽지 않기)

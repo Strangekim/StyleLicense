@@ -61,11 +61,31 @@ const routes = [
     name: 'CommunityDetail',
     component: () => import('@/pages/community/CommunityDetail.vue'),
   },
-  // Profile route (protected)
+  // Profile routes (protected)
   {
     path: '/profile',
     name: 'Profile',
     component: () => import('@/pages/profile/Profile.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/profile/edit',
+    name: 'EditProfile',
+    component: () => import('@/pages/profile/EditProfile.vue'),
+    meta: { requiresAuth: true },
+  },
+  // Notifications route (protected)
+  {
+    path: '/notifications',
+    name: 'Notifications',
+    component: () => import('@/pages/notifications/Notifications.vue'),
+    meta: { requiresAuth: true },
+  },
+  // Token/Payment route (protected)
+  {
+    path: '/tokens',
+    name: 'Tokens',
+    component: () => import('@/pages/tokens/TokenPage.vue'),
     meta: { requiresAuth: true },
   },
   // Artist routes (protected)
