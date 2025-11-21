@@ -1,29 +1,50 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useCommunityStore } from '@/stores/community'
 import AppLayout from '@/components/layout/AppLayout.vue'
 
 const router = useRouter()
+const communityStore = useCommunityStore()
 
-// Mock data for testing
-const feedItems = ref([
-  { id: 1, image: 'https://picsum.photos/400/600?random=1', height: 'h-80' },
-  { id: 2, image: 'https://picsum.photos/400/400?random=2', height: 'h-64' },
-  { id: 3, image: 'https://picsum.photos/400/500?random=3', height: 'h-72' },
-  { id: 4, image: 'https://picsum.photos/400/450?random=4', height: 'h-68' },
-  { id: 5, image: 'https://picsum.photos/400/550?random=5', height: 'h-76' },
-  { id: 6, image: 'https://picsum.photos/400/400?random=6', height: 'h-64' },
-  { id: 7, image: 'https://picsum.photos/400/600?random=7', height: 'h-80' },
-  { id: 8, image: 'https://picsum.photos/400/450?random=8', height: 'h-68' },
-  { id: 9, image: 'https://picsum.photos/400/500?random=9', height: 'h-72' },
-  { id: 10, image: 'https://picsum.photos/400/550?random=10', height: 'h-76' },
-])
+const observer = ref(null)
+const loadMoreTrigger = ref(null)
 
-const loading = ref(false)
+// Separate feed into left and right columns
+const leftColumnItems = computed(() =>
+  communityStore.feed.filter((_, index) => index % 2 === 0)
+)
 
-onMounted(() => {
-  console.log('Community page mounted successfully')
+const rightColumnItems = computed(() =>
+  communityStore.feed.filter((_, index) => index % 2 === 1)
+)
+
+onMounted(async () => {
+  console.log('Community page mounted')
+  await communityStore.fetchFeed()
+  setupInfiniteScroll()
 })
+
+onUnmounted(() => {
+  if (observer.value) {
+    observer.value.disconnect()
+  }
+})
+
+function setupInfiniteScroll() {
+  observer.value = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting && communityStore.hasMore && !communityStore.loading) {
+        communityStore.fetchNextPage()
+      }
+    },
+    { threshold: 0.1 }
+  )
+
+  if (loadMoreTrigger.value) {
+    observer.value.observe(loadMoreTrigger.value)
+  }
+}
 
 function handleImageClick(item) {
   console.log('Image clicked:', item.id)
@@ -35,30 +56,35 @@ function handleImageClick(item) {
   <div class="min-h-screen bg-white">
     <AppLayout>
       <!-- Loading State -->
-      <div v-if="loading" class="flex justify-center items-center py-12">
+      <div v-if="communityStore.loading && communityStore.feed.length === 0" class="flex justify-center items-center py-12">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
 
-      <!-- Masonry Grid (2 columns) -->
-      <div v-else class="max-w-screen-sm mx-auto px-2 py-4">
-        <div class="grid grid-cols-2 gap-2">
+      <!-- Empty State -->
+      <div v-else-if="!communityStore.loading && communityStore.feed.length === 0" class="text-center py-12">
+        <p class="text-gray-500">No generations yet. Be the first to share!</p>
+      </div>
+
+      <!-- Masonry Grid (2 columns) - No horizontal padding -->
+      <div v-else class="max-w-screen-sm mx-auto">
+        <div class="grid grid-cols-2 gap-1">
           <!-- Left Column -->
-          <div class="space-y-2">
+          <div class="space-y-1">
             <div
-              v-for="(item, index) in feedItems.filter((_, i) => i % 2 === 0)"
+              v-for="item in leftColumnItems"
               :key="item.id"
               @click="handleImageClick(item)"
-              class="relative cursor-pointer rounded-lg overflow-hidden group"
+              class="relative cursor-pointer overflow-hidden group bg-gray-100"
             >
               <img
-                :src="item.image"
-                :alt="`Feed item ${item.id}`"
+                :src="item.result_url"
+                :alt="item.description || 'Generated image'"
                 class="w-full object-cover"
-                :class="item.height"
+                loading="lazy"
               />
               <!-- Bookmark icon -->
               <button
-                @click.stop="console.log('Bookmark clicked')"
+                @click.stop="console.log('Bookmark clicked', item.id)"
                 class="absolute top-2 right-2 bg-white bg-opacity-80 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,22 +95,22 @@ function handleImageClick(item) {
           </div>
 
           <!-- Right Column -->
-          <div class="space-y-2">
+          <div class="space-y-1">
             <div
-              v-for="(item, index) in feedItems.filter((_, i) => i % 2 === 1)"
+              v-for="item in rightColumnItems"
               :key="item.id"
               @click="handleImageClick(item)"
-              class="relative cursor-pointer rounded-lg overflow-hidden group"
+              class="relative cursor-pointer overflow-hidden group bg-gray-100"
             >
               <img
-                :src="item.image"
-                :alt="`Feed item ${item.id}`"
+                :src="item.result_url"
+                :alt="item.description || 'Generated image'"
                 class="w-full object-cover"
-                :class="item.height"
+                loading="lazy"
               />
               <!-- Bookmark icon -->
               <button
-                @click.stop="console.log('Bookmark clicked')"
+                @click.stop="console.log('Bookmark clicked', item.id)"
                 class="absolute top-2 right-2 bg-white bg-opacity-80 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -93,6 +119,11 @@ function handleImageClick(item) {
               </button>
             </div>
           </div>
+        </div>
+
+        <!-- Load More Trigger -->
+        <div ref="loadMoreTrigger" class="py-8 flex justify-center">
+          <div v-if="communityStore.loading && communityStore.feed.length > 0" class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       </div>
     </AppLayout>

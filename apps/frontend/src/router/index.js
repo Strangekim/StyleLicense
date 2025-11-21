@@ -61,32 +61,28 @@ const routes = [
     name: 'CommunityDetail',
     component: () => import('@/pages/community/CommunityDetail.vue'),
   },
-  // Profile routes (protected)
+  // Profile routes (public - auth check inside component)
   {
     path: '/profile',
     name: 'Profile',
     component: () => import('@/pages/profile/Profile.vue'),
-    meta: { requiresAuth: true },
   },
   {
     path: '/profile/edit',
     name: 'EditProfile',
     component: () => import('@/pages/profile/EditProfile.vue'),
-    meta: { requiresAuth: true },
   },
-  // Notifications route (protected)
+  // Notifications route (public - auth check inside component)
   {
     path: '/notifications',
     name: 'Notifications',
     component: () => import('@/pages/notifications/Notifications.vue'),
-    meta: { requiresAuth: true },
   },
-  // Token/Payment route (protected)
+  // Token/Payment route (public - auth check inside component)
   {
     path: '/tokens',
     name: 'Tokens',
     component: () => import('@/pages/tokens/TokenPage.vue'),
-    meta: { requiresAuth: true },
   },
   // Artist routes (protected)
   {

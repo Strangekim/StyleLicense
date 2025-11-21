@@ -10,10 +10,9 @@
         <div class="fixed inset-0 bg-black bg-opacity-60 transition-opacity" @click="close"></div>
 
         <!-- Modal Content - Bottom Sheet Style -->
-        <div class="fixed bottom-0 left-0 right-0 max-h-[80vh] flex flex-col">
+        <div class="fixed bottom-0 left-0 right-0 flex flex-col" style="height: 65vh">
           <div
-            class="bg-white rounded-t-3xl shadow-xl max-w-screen-sm mx-auto w-full flex flex-col"
-            style="max-height: 80vh"
+            class="bg-white rounded-t-3xl shadow-xl max-w-screen-sm mx-auto w-full flex flex-col h-full"
             @click.stop
           >
             <!-- Drag Handle -->
