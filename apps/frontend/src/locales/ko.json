@@ -68,5 +68,12 @@
       "title": "알림이 없습니다",
       "description": "새로운 알림이 도착하면 여기에 표시됩니다"
     }
+  },
+  "comments": {
+    "title": "댓글",
+    "placeholder": "댓글을 입력하세요...",
+    "post": "게시",
+    "posting": "게시 중...",
+    "empty": "첫 댓글을 남겨보세요"
   }
 }

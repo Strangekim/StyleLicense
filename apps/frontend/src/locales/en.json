@@ -68,5 +68,12 @@
       "title": "No notifications",
       "description": "New notifications will appear here"
     }
+  },
+  "comments": {
+    "title": "Comments",
+    "placeholder": "Write a comment...",
+    "post": "Post",
+    "posting": "Posting...",
+    "empty": "Be the first to comment"
   }
 }
