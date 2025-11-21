@@ -21,16 +21,12 @@ const formData = ref({
   name: '',
   description: '',
   price_per_generation: 10,
-  tags: [],
 })
 
 // Image upload state
 const trainingImages = ref([])
 const signatureImage = ref(null)
 const isDragging = ref(false)
-
-// Tag input
-const tagInput = ref('')
 
 // Submission state
 const isSubmitting = ref(false)
@@ -116,6 +112,7 @@ const addFiles = (files) => {
         trainingImages.value.push({
           file: file,
           preview: e.target.result,
+          caption: '', // Caption for Stable Diffusion Fine-tuning
         })
       }
       reader.readAsDataURL(file)
@@ -154,18 +151,11 @@ const removeSignature = () => {
   signatureImage.value = null
 }
 
-// Add tag
-const addTag = () => {
-  const tag = tagInput.value.trim()
-  if (tag && !formData.value.tags.includes(tag)) {
-    formData.value.tags.push(tag)
-    tagInput.value = ''
+// Update caption for a training image
+const updateCaption = (index, caption) => {
+  if (trainingImages.value[index]) {
+    trainingImages.value[index].caption = caption
   }
-}
-
-// Remove tag
-const removeTag = (index) => {
-  formData.value.tags.splice(index, 1)
 }
 
 // Validate form
@@ -200,13 +190,15 @@ const handleSubmit = async () => {
   uploadProgress.value = 0
 
   try {
-    // Prepare data
+    // Prepare data with captions
     const data = {
       name: formData.value.name,
       description: formData.value.description,
       price_per_generation: formData.value.price_per_generation,
-      tags: formData.value.tags,
-      training_images: trainingImages.value.map((img) => img.file),
+      training_images: trainingImages.value.map((img) => ({
+        file: img.file,
+        caption: img.caption || '', // Include caption for each image
+      })),
     }
 
     // Add signature if provided
@@ -243,11 +235,9 @@ const resetForm = () => {
     name: '',
     description: '',
     price_per_generation: 10,
-    tags: [],
   }
   trainingImages.value = []
   signatureImage.value = null
-  tagInput.value = ''
   errors.value = {}
 }
 </script>
@@ -376,64 +366,54 @@ const resetForm = () => {
             {{ errors.images }}
           </p>
 
-          <!-- Image Grid Preview -->
+          <!-- Image Grid Preview with Captions -->
           <div
             v-if="trainingImages.length > 0"
-            class="mt-6 grid grid-cols-4 sm:grid-cols-6 gap-3"
+            class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4"
           >
             <div
               v-for="(image, index) in trainingImages"
               :key="index"
-              class="relative aspect-square bg-neutral-100 rounded-lg overflow-hidden group"
+              class="bg-white border border-neutral-200 rounded-lg p-3"
             >
-              <img
-                :src="image.preview"
-                :alt="`Training image ${index + 1}`"
-                class="w-full h-full object-cover"
-              />
-              <button
-                type="button"
-                class="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                @click="removeImage(index)"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <!-- Image Preview -->
+              <div class="relative aspect-square bg-neutral-100 rounded-lg overflow-hidden group mb-3">
+                <img
+                  :src="image.preview"
+                  :alt="`Training image ${index + 1}`"
+                  class="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  class="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg"
+                  @click="removeImage(index)"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                <div class="absolute bottom-2 left-2 px-2 py-1 bg-black bg-opacity-50 text-white text-xs rounded">
+                  #{{ index + 1 }}
+                </div>
+              </div>
+
+              <!-- Caption Input -->
+              <div>
+                <label class="block text-sm font-medium text-neutral-700 mb-1">
+                  Caption/Tags (for training)
+                </label>
+                <input
+                  v-model="image.caption"
+                  type="text"
+                  placeholder="e.g., watercolor portrait, vibrant colors, detailed..."
+                  class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  @input="updateCaption(index, $event.target.value)"
+                />
+                <p class="text-xs text-neutral-500 mt-1">
+                  Describe this image to improve training quality (optional)
+                </p>
+              </div>
             </div>
-          </div>
-        </Card>
-
-        <!-- Tags -->
-        <Card>
-          <h2 class="text-xl font-semibold text-neutral-900 mb-4">
-            Tags
-          </h2>
-
-          <div class="flex gap-2 mb-3">
-            <Input
-              v-model="tagInput"
-              placeholder="Add tags (e.g., watercolor, portrait, vibrant)"
-              @keydown.enter.prevent="addTag"
-            />
-            <Button type="button" variant="outline" @click="addTag">
-              Add
-            </Button>
-          </div>
-
-          <div v-if="formData.tags.length > 0" class="flex flex-wrap gap-2">
-            <button
-              v-for="(tag, index) in formData.tags"
-              :key="index"
-              type="button"
-              class="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm flex items-center gap-1 hover:bg-primary-200 transition-colors"
-              @click="removeTag(index)"
-            >
-              {{ tag }}
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
         </Card>
 
