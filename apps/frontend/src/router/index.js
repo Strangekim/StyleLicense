@@ -61,11 +61,17 @@ const routes = [
     name: 'CommunityDetail',
     component: () => import('@/pages/community/CommunityDetail.vue'),
   },
-  // Profile route (protected)
+  // Profile routes (protected)
   {
     path: '/profile',
     name: 'Profile',
     component: () => import('@/pages/profile/Profile.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/profile/edit',
+    name: 'EditProfile',
+    component: () => import('@/pages/profile/EditProfile.vue'),
     meta: { requiresAuth: true },
   },
   // Notifications route (protected)
