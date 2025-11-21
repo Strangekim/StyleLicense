@@ -56,12 +56,26 @@
   },
   "marketplace": {
     "title": "Style Marketplace",
-    "search": "Search styles...",
+    "search": "Search",
+    "searchPlaceholder": "Search styles...",
     "filterByTag": "Filter by tag",
     "sortBy": "Sort by",
+    "recent": "recent",
+    "popular": "popular",
     "popularity": "Popularity",
     "newest": "Newest",
-    "price": "Price"
+    "price": "Price",
+    "unknownArtist": "Unknown Artist",
+    "artist": "Artist",
+    "noDescription": "No description",
+    "more": "more",
+    "less": "less",
+    "styledBy": "Styled by",
+    "follow": "follow",
+    "following": "following",
+    "followingArtists": "Following Artists",
+    "noStylesFound": "No styles found",
+    "tryAdjusting": "Try adjusting your search"
   },
   "notifications": {
     "title": "Notifications",

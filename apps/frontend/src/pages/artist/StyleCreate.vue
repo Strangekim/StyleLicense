@@ -112,7 +112,8 @@ const addFiles = (files) => {
         trainingImages.value.push({
           file: file,
           preview: e.target.result,
-          caption: '', // Caption for Stable Diffusion Fine-tuning
+          tags: [], // Tags for Stable Diffusion Fine-tuning
+          tagInput: '', // Temp input for adding tags
         })
       }
       reader.readAsDataURL(file)
@@ -151,10 +152,33 @@ const removeSignature = () => {
   signatureImage.value = null
 }
 
-// Update caption for a training image
-const updateCaption = (index, caption) => {
+// Update tags for a training image
+const updateImageTags = (index, tags) => {
   if (trainingImages.value[index]) {
-    trainingImages.value[index].caption = caption
+    trainingImages.value[index].tags = tags
+  }
+}
+
+// Add tag to a specific image
+const addImageTag = (index, tag) => {
+  if (!trainingImages.value[index]) return
+
+  const trimmedTag = tag.trim()
+  if (!trimmedTag) return
+
+  if (!trainingImages.value[index].tags) {
+    trainingImages.value[index].tags = []
+  }
+
+  if (!trainingImages.value[index].tags.includes(trimmedTag)) {
+    trainingImages.value[index].tags.push(trimmedTag)
+  }
+}
+
+// Remove tag from a specific image
+const removeImageTag = (imageIndex, tagIndex) => {
+  if (trainingImages.value[imageIndex]?.tags) {
+    trainingImages.value[imageIndex].tags.splice(tagIndex, 1)
   }
 }
 
@@ -190,14 +214,14 @@ const handleSubmit = async () => {
   uploadProgress.value = 0
 
   try {
-    // Prepare data with captions
+    // Prepare data with captions (convert tags to caption string)
     const data = {
       name: formData.value.name,
       description: formData.value.description,
       price_per_generation: formData.value.price_per_generation,
       training_images: trainingImages.value.map((img) => ({
         file: img.file,
-        caption: img.caption || '', // Include caption for each image
+        caption: img.tags?.join(', ') || '', // Convert tags array to comma-separated caption
       })),
     }
 
@@ -366,52 +390,85 @@ const resetForm = () => {
             {{ errors.images }}
           </p>
 
-          <!-- Image Grid Preview with Captions -->
+          <!-- Image Horizontal Scroll Preview with Tags -->
           <div
             v-if="trainingImages.length > 0"
-            class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4"
+            class="mt-6 overflow-x-auto pb-4"
           >
-            <div
-              v-for="(image, index) in trainingImages"
-              :key="index"
-              class="bg-white border border-neutral-200 rounded-lg p-3"
-            >
-              <!-- Image Preview -->
-              <div class="relative aspect-square bg-neutral-100 rounded-lg overflow-hidden group mb-3">
-                <img
-                  :src="image.preview"
-                  :alt="`Training image ${index + 1}`"
-                  class="w-full h-full object-cover"
-                />
-                <button
-                  type="button"
-                  class="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg"
-                  @click="removeImage(index)"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-                <div class="absolute bottom-2 left-2 px-2 py-1 bg-black bg-opacity-50 text-white text-xs rounded">
-                  #{{ index + 1 }}
+            <div class="flex gap-4" style="min-width: max-content;">
+              <div
+                v-for="(image, index) in trainingImages"
+                :key="index"
+                class="w-80 flex-shrink-0 bg-white border border-neutral-200 rounded-lg p-3"
+              >
+                <!-- Image Preview -->
+                <div class="relative aspect-square bg-neutral-100 rounded-lg overflow-hidden group mb-3">
+                  <img
+                    :src="image.preview"
+                    :alt="`Training image ${index + 1}`"
+                    class="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    class="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg"
+                    @click="removeImage(index)"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                  <div class="absolute bottom-2 left-2 px-2 py-1 bg-black bg-opacity-50 text-white text-xs rounded">
+                    #{{ index + 1 }}
+                  </div>
                 </div>
-              </div>
 
-              <!-- Caption Input -->
-              <div>
-                <label class="block text-sm font-medium text-neutral-700 mb-1">
-                  Caption/Tags (for training)
-                </label>
-                <input
-                  v-model="image.caption"
-                  type="text"
-                  placeholder="e.g., watercolor portrait, vibrant colors, detailed..."
-                  class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  @input="updateCaption(index, $event.target.value)"
-                />
-                <p class="text-xs text-neutral-500 mt-1">
-                  Describe this image to improve training quality (optional)
-                </p>
+                <!-- Tag Input -->
+                <div>
+                  <label class="block text-sm font-medium text-neutral-700 mb-2">
+                    Tags (for training)
+                  </label>
+
+                  <!-- Tag Input Field -->
+                  <div class="flex gap-2 mb-3">
+                    <input
+                      v-model="image.tagInput"
+                      type="text"
+                      placeholder="Add tag..."
+                      class="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      @keydown.enter.prevent="addImageTag(index, image.tagInput); image.tagInput = ''"
+                    />
+                    <button
+                      type="button"
+                      class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+                      @click="addImageTag(index, image.tagInput); image.tagInput = ''"
+                    >
+                      Add
+                    </button>
+                  </div>
+
+                  <!-- Tag Chips Display -->
+                  <div v-if="image.tags?.length" class="flex flex-wrap gap-2 min-h-[32px]">
+                    <button
+                      v-for="(tag, tagIdx) in image.tags"
+                      :key="tagIdx"
+                      type="button"
+                      class="group px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-medium hover:bg-primary-200 transition-colors flex items-center gap-1"
+                      @click="removeImageTag(index, tagIdx)"
+                    >
+                      {{ tag }}
+                      <svg class="w-3 h-3 opacity-60 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <p v-else class="text-xs text-neutral-400 italic min-h-[32px] flex items-center">
+                    No tags added yet
+                  </p>
+
+                  <p class="text-xs text-neutral-500 mt-2">
+                    e.g., watercolor, portrait, vibrant colors
+                  </p>
+                </div>
               </div>
             </div>
           </div>
