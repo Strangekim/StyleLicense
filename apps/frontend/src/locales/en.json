@@ -60,5 +60,13 @@
     "popularity": "Popularity",
     "newest": "Newest",
     "price": "Price"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllAsRead": "Mark all as read",
+    "empty": {
+      "title": "No notifications",
+      "description": "New notifications will appear here"
+    }
   }
 }

@@ -69,6 +69,13 @@ const routes = [
     component: () => import('@/pages/profile/Profile.vue'),
     meta: { requiresAuth: true },
   },
+  // Notifications route (protected)
+  {
+    path: '/notifications',
+    name: 'Notifications',
+    component: () => import('@/pages/notifications/Notifications.vue'),
+    meta: { requiresAuth: true },
+  },
   // Artist routes (protected)
   {
     path: '/styles/create',
