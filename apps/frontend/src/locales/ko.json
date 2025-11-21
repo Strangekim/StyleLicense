@@ -30,7 +30,9 @@
     "edit": "수정",
     "search": "검색",
     "filter": "필터",
-    "sort": "정렬"
+    "sort": "정렬",
+    "grid": "그리드 보기",
+    "private": "비공개 보기"
   },
   "tokens": {
     "balance": "토큰 잔액",
