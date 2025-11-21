@@ -55,6 +55,18 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
   }
 
+  function syncFromLocalStorage() {
+    // Try to load user from localStorage
+    try {
+      const storedUser = localStorage.getItem('user')
+      if (storedUser) {
+        user.value = JSON.parse(storedUser)
+      }
+    } catch (err) {
+      console.error('Failed to sync from localStorage:', err)
+    }
+  }
+
   return {
     // State
     user,
@@ -68,5 +80,6 @@ export const useAuthStore = defineStore('auth', () => {
     fetchCurrentUser,
     logout,
     clearUser,
+    syncFromLocalStorage,
   }
 })

@@ -337,10 +337,7 @@ async function handleBookmark() {
 }
 
 function openComments() {
-  if (!authStore.isAuthenticated) {
-    router.push({ name: 'Login', query: { returnUrl: route.fullPath } })
-    return
-  }
+  // Just open the modal - authentication check will be done inside the modal if needed
   isCommentModalOpen.value = true
 }
 
