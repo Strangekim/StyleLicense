@@ -35,6 +35,33 @@
         <!-- Main Image -->
         <div class="bg-white rounded-lg overflow-hidden shadow-sm mb-4">
           <div class="relative">
+            <!-- Author Bar (Overlay on top of image) -->
+            <div class="absolute top-0 left-0 right-0 z-10 px-4 py-3">
+              <div class="flex items-center space-x-2">
+                <!-- Avatar -->
+                <img
+                  :src="feedItem.user.avatar || '/default-avatar.png'"
+                  :alt="feedItem.user.username"
+                  class="w-8 h-8 rounded-full object-cover border-2 border-white"
+                />
+                <!-- Username -->
+                <router-link
+                  :to="`/profile/${feedItem.user.id}`"
+                  class="font-semibold text-white text-sm drop-shadow-lg hover:text-gray-200"
+                >
+                  {{ feedItem.user.username }}
+                </router-link>
+                <!-- Brush Icon (if author is artist) -->
+                <img
+                  v-if="isAuthorArtist"
+                  :src="brushIcon"
+                  alt="Artist"
+                  class="w-5 h-5"
+                />
+              </div>
+            </div>
+
+            <!-- Image -->
             <img
               v-if="feedItem.result_url"
               :src="feedItem.result_url"
@@ -198,6 +225,7 @@ import { useCommunityStore } from '@/stores/community'
 import { useAuthStore } from '@/stores/auth'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import CommentModal from '@/components/modals/CommentModal.vue'
+import brushIcon from '@/assets/icons/brush_icon.png'
 
 const route = useRoute()
 const router = useRouter()
@@ -235,6 +263,14 @@ const tags = computed(() => {
   return tagList
 })
 
+// Check if the post author is also the style artist
+const isAuthorArtist = computed(() => {
+  if (!feedItem.value) return false
+  // TODO: Replace with actual artist comparison when API is ready
+  // For now, check if user has artist role or if user_id matches style artist_id
+  return feedItem.value.user?.id === feedItem.value.style?.artist_id
+})
+
 // Methods
 onMounted(async () => {
   await fetchFeedItem()
@@ -269,6 +305,7 @@ async function fetchFeedItem() {
         style: {
           id: 1,
           name: 'Van Gogh Style',
+          artist_id: 1, // Same as user.id to show brush icon
         },
         like_count: 100,
         comment_count: 5,
