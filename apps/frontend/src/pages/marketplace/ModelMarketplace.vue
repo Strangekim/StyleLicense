@@ -8,13 +8,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
 import { useModelsStore } from '@/stores/models'
 import { useAuthStore } from '@/stores/auth'
 import AppLayout from '@/components/layout/AppLayout.vue'
 
 const router = useRouter()
-const { t } = useI18n()
 const modelsStore = useModelsStore()
 const authStore = useAuthStore()
 const searchQuery = ref('')
@@ -140,7 +138,7 @@ const followingModels = computed(() => {
               <input
                 v-model="searchQuery"
                 type="text"
-                :placeholder="t('marketplace.search')"
+                :placeholder="$t('marketplace.search')"
                 class="w-full pl-10 pr-4 py-2 bg-neutral-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
@@ -154,8 +152,8 @@ const followingModels = computed(() => {
               v-model="sortBy"
               class="text-sm font-medium text-neutral-900 bg-transparent border-none focus:outline-none cursor-pointer"
             >
-              <option value="recent">{{ t('marketplace.recent') }}</option>
-              <option value="popular">{{ t('marketplace.popular') }}</option>
+              <option value="recent">{{ $t('marketplace.recent') }}</option>
+              <option value="popular">{{ $t('marketplace.popular') }}</option>
             </select>
           </div>
         </div>
@@ -205,7 +203,7 @@ const followingModels = computed(() => {
                 class="font-semibold text-sm text-neutral-900 mb-1 cursor-pointer hover:underline truncate"
                 @click="handleArtistClick(model.artist?.id, $event)"
               >
-                {{ model.artist?.username || t('marketplace.unknownArtist') }}
+                {{ model.artist?.username || $t('marketplace.unknownArtist') }}
               </h3>
 
               <!-- Description -->
@@ -214,7 +212,7 @@ const followingModels = computed(() => {
                   class="text-xs text-neutral-600"
                   :class="expandedDescriptions.has(model.id) ? '' : 'line-clamp-2'"
                 >
-                  {{ model.description || t('marketplace.noDescription') }}
+                  {{ model.description || $t('marketplace.noDescription') }}
                   <span v-if="model.artist?.username" class="text-primary-500">
                     @{{ model.artist.username }}
                   </span>
@@ -224,7 +222,7 @@ const followingModels = computed(() => {
                   @click="toggleDescription(model.id, $event)"
                   class="text-xs text-neutral-500 hover:text-neutral-700 mt-1"
                 >
-                  {{ expandedDescriptions.has(model.id) ? t('marketplace.less') : t('marketplace.more') }}
+                  {{ expandedDescriptions.has(model.id) ? $t('marketplace.less') : $t('marketplace.more') }}
                 </button>
               </div>
 
@@ -234,36 +232,20 @@ const followingModels = computed(() => {
               </p>
 
               <!-- Styled by Section -->
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2 flex-1 min-w-0">
-                  <span class="text-xs italic text-neutral-900 flex-shrink-0" style="font-family: 'Brush Script MT', cursive;">
-                    {{ t('marketplace.styledBy') }}
+              <div class="flex items-center justify-end gap-2">
+                <span class="text-xs italic text-neutral-900 flex-shrink-0" style="font-family: 'Brush Script MT', cursive;">
+                  Styled by
+                </span>
+                <!-- Artist Avatar -->
+                <div class="w-5 h-5 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <span class="text-xs font-semibold text-neutral-700">
+                    {{ model.artist?.username?.charAt(0).toUpperCase() || 'A' }}
                   </span>
-                  <div class="flex items-center gap-1.5 min-w-0">
-                    <!-- Artist Avatar -->
-                    <div class="w-5 h-5 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                      <span class="text-xs font-semibold text-neutral-700">
-                        {{ model.artist?.username?.charAt(0).toUpperCase() || 'A' }}
-                      </span>
-                    </div>
-                    <!-- Artist Name -->
-                    <span class="text-xs font-semibold text-neutral-900 truncate">
-                      {{ model.artist?.username || t('marketplace.artist') }}
-                    </span>
-                  </div>
                 </div>
-
-                <!-- Following Button -->
-                <button
-                  v-if="model.artist?.id !== authStore.user?.id"
-                  class="px-3 py-1 rounded-md text-xs font-medium transition-colors flex-shrink-0"
-                  :class="followingArtists.has(model.artist?.id)
-                    ? 'bg-neutral-200 text-neutral-900'
-                    : 'bg-primary-500 text-white'"
-                  @click="toggleFollow(model.artist?.id, $event)"
-                >
-                  {{ followingArtists.has(model.artist?.id) ? t('marketplace.following') : t('marketplace.follow') }}
-                </button>
+                <!-- Artist Name -->
+                <span class="text-xs font-semibold text-neutral-900 truncate">
+                  {{ model.artist?.username || $t('marketplace.artist') }}
+                </span>
               </div>
             </div>
           </div>
@@ -275,8 +257,8 @@ const followingModels = computed(() => {
         <svg class="mx-auto h-12 w-12 text-neutral-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
         </svg>
-        <p class="text-neutral-500 text-sm">{{ t('marketplace.noStylesFound') }}</p>
-        <p class="text-neutral-400 text-xs mt-1">{{ t('marketplace.tryAdjusting') }}</p>
+        <p class="text-neutral-500 text-sm">{{ $t('marketplace.noStylesFound') }}</p>
+        <p class="text-neutral-400 text-xs mt-1">{{ $t('marketplace.tryAdjusting') }}</p>
       </div>
 
       <!-- Loading spinner -->
@@ -287,7 +269,7 @@ const followingModels = computed(() => {
 
         <!-- Following Artists Section (Horizontal Scroll) -->
         <div v-if="authStore.isAuthenticated && followingModels.length > 0" class="mb-8">
-      <h2 class="text-sm font-semibold text-neutral-900 px-4 mb-3">{{ t('marketplace.followingArtists') }}</h2>
+      <h2 class="text-sm font-semibold text-neutral-900 px-4 mb-3">{{ $t('marketplace.followingArtists') }}</h2>
       <div class="overflow-x-auto -mx-4 px-4">
         <div class="flex gap-3 pb-4" style="width: max-content;">
           <div
@@ -331,7 +313,7 @@ const followingModels = computed(() => {
                 class="font-semibold text-sm text-neutral-900 mb-1 cursor-pointer hover:underline truncate"
                 @click="handleArtistClick(model.artist?.id, $event)"
               >
-                {{ model.artist?.username || t('marketplace.unknownArtist') }}
+                {{ model.artist?.username || $t('marketplace.unknownArtist') }}
               </h3>
 
               <!-- Description -->
@@ -340,7 +322,7 @@ const followingModels = computed(() => {
                   class="text-xs text-neutral-600"
                   :class="expandedDescriptions.has(model.id) ? '' : 'line-clamp-2'"
                 >
-                  {{ model.description || t('marketplace.noDescription') }}
+                  {{ model.description || $t('marketplace.noDescription') }}
                   <span v-if="model.artist?.username" class="text-primary-500">
                     @{{ model.artist.username }}
                   </span>
@@ -350,7 +332,7 @@ const followingModels = computed(() => {
                   @click="toggleDescription(model.id, $event)"
                   class="text-xs text-neutral-500 hover:text-neutral-700 mt-1"
                 >
-                  {{ expandedDescriptions.has(model.id) ? t('marketplace.less') : t('marketplace.more') }}
+                  {{ expandedDescriptions.has(model.id) ? $t('marketplace.less') : $t('marketplace.more') }}
                 </button>
               </div>
 
@@ -360,32 +342,20 @@ const followingModels = computed(() => {
               </p>
 
               <!-- Styled by Section -->
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2 flex-1 min-w-0">
-                  <span class="text-xs italic text-neutral-900 flex-shrink-0" style="font-family: 'Brush Script MT', cursive;">
-                    Styled by
+              <div class="flex items-center justify-end gap-2">
+                <span class="text-xs italic text-neutral-900 flex-shrink-0" style="font-family: 'Brush Script MT', cursive;">
+                  Styled by
+                </span>
+                <!-- Artist Avatar -->
+                <div class="w-5 h-5 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <span class="text-xs font-semibold text-neutral-700">
+                    {{ model.artist?.username?.charAt(0).toUpperCase() || 'A' }}
                   </span>
-                  <div class="flex items-center gap-1.5 min-w-0">
-                    <!-- Artist Avatar -->
-                    <div class="w-5 h-5 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                      <span class="text-xs font-semibold text-neutral-700">
-                        {{ model.artist?.username?.charAt(0).toUpperCase() || 'A' }}
-                      </span>
-                    </div>
-                    <!-- Artist Name -->
-                    <span class="text-xs font-semibold text-neutral-900 truncate">
-                      {{ model.artist?.username || 'Artist' }}
-                    </span>
-                  </div>
                 </div>
-
-                <!-- Following Button -->
-                <button
-                  class="px-3 py-1 rounded-md text-xs font-medium transition-colors flex-shrink-0 bg-neutral-200 text-neutral-900"
-                  @click="toggleFollow(model.artist?.id, $event)"
-                >
-                  {{ t('marketplace.following') }}
-                </button>
+                <!-- Artist Name -->
+                <span class="text-xs font-semibold text-neutral-900 truncate">
+                  {{ model.artist?.username || $t('marketplace.artist') }}
+                </span>
               </div>
             </div>
           </div>
