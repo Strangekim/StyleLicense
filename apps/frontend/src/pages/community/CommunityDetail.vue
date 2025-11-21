@@ -104,7 +104,7 @@
 
             <!-- Styled By -->
             <div class="flex items-center space-x-2">
-              <span class="text-sm text-gray-600">Styled By</span>
+              <span class="text-sm italic text-gray-900" style="font-family: 'Brush Script MT', cursive;">Styled by</span>
               <img
                 :src="feedItem.user.avatar || '/default-avatar.png'"
                 :alt="feedItem.user.username"

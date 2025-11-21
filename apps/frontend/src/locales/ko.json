@@ -32,7 +32,11 @@
     "filter": "필터",
     "sort": "정렬",
     "grid": "그리드 보기",
-    "private": "비공개 보기"
+    "private": "비공개 보기",
+    "justNow": "방금 전",
+    "minutesAgo": "{n}분 전",
+    "hoursAgo": "{n}시간 전",
+    "daysAgo": "{n}일 전"
   },
   "tokens": {
     "balance": "토큰 잔액",
@@ -91,5 +95,22 @@
     "post": "게시",
     "posting": "게시 중...",
     "empty": "첫 댓글을 남겨보세요"
+  },
+  "profile": {
+    "generations": "생성",
+    "followers": "팔로워",
+    "following": "팔로잉",
+    "editStyle": "스타일 편집",
+    "payment": "결제",
+    "editProfile": "프로필 편집",
+    "noGenerationsYet": "아직 생성한 이미지가 없습니다",
+    "startCreating": "마켓플레이스에서 시작하세요",
+    "browseStyles": "스타일 둘러보기",
+    "queued": "대기 중",
+    "processing": "처리 중",
+    "failed": "실패",
+    "private": "비공개",
+    "noPrivateGenerations": "비공개 이미지가 없습니다",
+    "privateImagesWillAppear": "비공개 이미지가 여기에 표시됩니다"
   }
 }

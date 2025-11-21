@@ -32,7 +32,11 @@
     "filter": "Filter",
     "sort": "Sort",
     "grid": "Grid View",
-    "private": "Private View"
+    "private": "Private View",
+    "justNow": "just now",
+    "minutesAgo": "{n}m ago",
+    "hoursAgo": "{n}h ago",
+    "daysAgo": "{n}d ago"
   },
   "tokens": {
     "balance": "Token Balance",
@@ -91,5 +95,22 @@
     "post": "Post",
     "posting": "Posting...",
     "empty": "Be the first to comment"
+  },
+  "profile": {
+    "generations": "Generations",
+    "followers": "Followers",
+    "following": "Following",
+    "editStyle": "Edit Style",
+    "payment": "Payment",
+    "editProfile": "Edit Profile",
+    "noGenerationsYet": "No generations yet",
+    "startCreating": "Start creating by visiting the marketplace",
+    "browseStyles": "Browse Styles",
+    "queued": "Queued",
+    "processing": "Processing",
+    "failed": "Failed",
+    "private": "Private",
+    "noPrivateGenerations": "No private generations",
+    "privateImagesWillAppear": "Your private images will appear here"
   }
 }

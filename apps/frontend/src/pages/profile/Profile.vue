@@ -42,15 +42,15 @@
               <div class="flex items-center gap-6 mt-4 text-sm">
                 <div class="text-center">
                   <div class="font-semibold text-gray-900">{{ profile.generation_count || 0 }}</div>
-                  <div class="text-gray-500">Generations</div>
+                  <div class="text-gray-500">{{ $t('profile.generations') }}</div>
                 </div>
                 <div class="text-center">
                   <div class="font-semibold text-gray-900">{{ profile.follower_count || 0 }}</div>
-                  <div class="text-gray-500">Followers</div>
+                  <div class="text-gray-500">{{ $t('profile.followers') }}</div>
                 </div>
                 <div class="text-center">
                   <div class="font-semibold text-gray-900">{{ profile.following_count || 0 }}</div>
-                  <div class="text-gray-500">Following</div>
+                  <div class="text-gray-500">{{ $t('profile.following') }}</div>
                 </div>
               </div>
             </div>
@@ -61,19 +61,19 @@
                 to="/styles/create"
                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-center"
               >
-                Edit Style
+                {{ $t('profile.editStyle') }}
               </router-link>
               <router-link
                 to="/tokens"
                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-center"
               >
-                Payment
+                {{ $t('profile.payment') }}
               </router-link>
               <router-link
                 to="/profile/edit"
                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-center"
               >
-                Edit Profile
+                {{ $t('profile.editProfile') }}
               </router-link>
             </div>
           </div>
@@ -118,13 +118,13 @@
               <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <h3 class="mt-4 text-lg font-medium text-gray-900">No generations yet</h3>
-              <p class="mt-2 text-gray-600">Start creating by visiting the marketplace</p>
+              <h3 class="mt-4 text-lg font-medium text-gray-900">{{ $t('profile.noGenerationsYet') }}</h3>
+              <p class="mt-2 text-gray-600">{{ $t('profile.startCreating') }}</p>
               <router-link
                 to="/marketplace"
                 class="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
-                Browse Styles
+                {{ $t('profile.browseStyles') }}
               </router-link>
             </div>
 
@@ -145,7 +145,7 @@
                   >
                     <div class="text-center">
                       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                      <p class="text-sm text-gray-600">{{ image.status === 'queued' ? 'Queued' : 'Processing' }}</p>
+                      <p class="text-sm text-gray-600">{{ image.status === 'queued' ? $t('profile.queued') : $t('profile.processing') }}</p>
                     </div>
                   </div>
 
@@ -166,7 +166,7 @@
                       <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      <p class="text-sm">Failed</p>
+                      <p class="text-sm">{{ $t('profile.failed') }}</p>
                     </div>
                   </div>
 
@@ -178,7 +178,7 @@
                     <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                     </svg>
-                    Private
+                    {{ $t('profile.private') }}
                   </div>
                 </div>
 
@@ -231,7 +231,7 @@
                     <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                     </svg>
-                    Private
+                    {{ $t('profile.private') }}
                   </div>
                 </div>
                 <div class="p-3 border-t border-gray-100">
@@ -247,8 +247,8 @@
               <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
               </svg>
-              <h3 class="mt-4 text-lg font-medium text-gray-900">No private generations</h3>
-              <p class="mt-2 text-gray-600">Your private images will appear here</p>
+              <h3 class="mt-4 text-lg font-medium text-gray-900">{{ $t('profile.noPrivateGenerations') }}</h3>
+              <p class="mt-2 text-gray-600">{{ $t('profile.privateImagesWillAppear') }}</p>
             </div>
           </div>
         </div>
@@ -260,10 +260,12 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import AppLayout from '@/components/layout/AppLayout.vue'
 
 const router = useRouter()
+const { t, locale } = useI18n()
 const authStore = useAuthStore()
 
 // State
@@ -405,18 +407,19 @@ function formatTime(timestamp) {
   const diffInSeconds = Math.floor((now - imageTime) / 1000)
 
   if (diffInSeconds < 60) {
-    return 'just now'
+    return t('common.justNow')
   } else if (diffInSeconds < 3600) {
     const minutes = Math.floor(diffInSeconds / 60)
-    return `${minutes}m ago`
+    return t('common.minutesAgo', { n: minutes })
   } else if (diffInSeconds < 86400) {
     const hours = Math.floor(diffInSeconds / 3600)
-    return `${hours}h ago`
+    return t('common.hoursAgo', { n: hours })
   } else if (diffInSeconds < 604800) {
     const days = Math.floor(diffInSeconds / 86400)
-    return `${days}d ago`
+    return t('common.daysAgo', { n: days })
   } else {
-    return imageTime.toLocaleDateString('en-US', {
+    const localeStr = locale.value === 'ko' ? 'ko-KR' : 'en-US'
+    return imageTime.toLocaleDateString(localeStr, {
       month: 'short',
       day: 'numeric',
     })
