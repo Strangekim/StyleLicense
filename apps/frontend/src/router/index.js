@@ -84,12 +84,11 @@ const routes = [
     name: 'Tokens',
     component: () => import('@/pages/tokens/TokenPage.vue'),
   },
-  // Artist routes (protected)
+  // Artist routes (temporarily public - auth check inside component)
   {
     path: '/styles/create',
     name: 'StyleCreate',
     component: () => import('@/pages/artist/StyleCreate.vue'),
-    meta: { requiresAuth: true, requiresArtist: true },
   },
   // 404 Not Found - must be last
   {
