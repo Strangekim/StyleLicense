@@ -4,9 +4,9 @@
       <!-- Logo -->
       <router-link to="/" class="flex items-center">
         <img
-          src="@/assets/images/main_typo.webp"
+          src="@/assets/images/main_typo_transverse.png"
           alt="Style License"
-          class="h-8"
+          class="h-10"
         />
       </router-link>
 
