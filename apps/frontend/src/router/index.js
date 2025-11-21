@@ -56,12 +56,11 @@ const routes = [
     name: 'Community',
     component: () => import('@/pages/community/Community.vue'),
   },
-  // CommunityDetail deferred to post-MVP
-  // {
-  //   path: '/community/:id',
-  //   name: 'CommunityDetail',
-  //   component: () => import('@/pages/community/CommunityDetail.vue'),
-  // },
+  {
+    path: '/community/:id',
+    name: 'CommunityDetail',
+    component: () => import('@/pages/community/CommunityDetail.vue'),
+  },
   // Profile route (protected)
   {
     path: '/profile',
