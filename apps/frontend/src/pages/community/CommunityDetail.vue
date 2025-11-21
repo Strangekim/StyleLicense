@@ -1,66 +1,70 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <AppLayout>
-      <!-- Loading State -->
-      <div v-if="loading" class="flex justify-center items-center min-h-screen">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-
-      <!-- Error State -->
-      <div v-else-if="error" class="max-w-2xl mx-auto px-4 py-12">
-        <div class="bg-red-50 text-red-800 p-4 rounded-lg">
-          {{ error }}
-        </div>
-        <router-link
-          to="/community"
-          class="mt-4 inline-block text-blue-600 hover:text-blue-700"
-        >
-          ← Back to Community
-        </router-link>
-      </div>
-
-      <!-- Feed Detail Content -->
-      <div v-else-if="feedItem" class="max-w-2xl mx-auto px-4 py-4">
-        <!-- Back Button -->
+  <div class="min-h-screen bg-gray-50 pb-16">
+    <!-- Custom Header -->
+    <header class="sticky top-0 z-40 bg-white border-b border-gray-200">
+      <div class="max-w-screen-sm mx-auto px-4 h-14 flex items-center justify-between">
+        <!-- Back Button (only <) -->
         <button
           @click="handleBack"
-          class="mb-4 flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+          class="text-gray-900 hover:text-gray-600 transition-colors"
         >
-          <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
-          Back
         </button>
+
+        <!-- Empty space for balance -->
+        <div class="w-6"></div>
+      </div>
+    </header>
+
+    <!-- Loading State -->
+    <div v-if="loading" class="flex justify-center items-center min-h-screen">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="error" class="max-w-2xl mx-auto px-4 py-12">
+      <div class="bg-red-50 text-red-800 p-4 rounded-lg">
+        {{ error }}
+      </div>
+      <router-link
+        to="/community"
+        class="mt-4 inline-block text-blue-600 hover:text-blue-700"
+      >
+        ← Back to Community
+      </router-link>
+    </div>
+
+    <!-- Feed Detail Content -->
+    <div v-else-if="feedItem" class="max-w-2xl mx-auto px-4 py-4">
+      <!-- Author Info (moved from Back button location) -->
+      <div class="mb-4 flex items-center space-x-2">
+        <!-- Avatar -->
+        <img
+          :src="feedItem.user.avatar || '/default-avatar.png'"
+          :alt="feedItem.user.username"
+          class="w-10 h-10 rounded-full object-cover"
+        />
+        <!-- Username -->
+        <router-link
+          :to="`/profile/${feedItem.user.id}`"
+          class="font-semibold text-gray-900 hover:text-blue-600"
+        >
+          {{ feedItem.user.username }}
+        </router-link>
+        <!-- Brush Icon (if author is artist) -->
+        <img
+          v-if="isAuthorArtist"
+          :src="brushIcon"
+          alt="Artist"
+          class="w-5 h-5"
+        />
+      </div>
 
         <!-- Main Image -->
         <div class="bg-white rounded-lg overflow-hidden shadow-sm mb-4">
           <div class="relative">
-            <!-- Author Bar (Overlay on top of image) -->
-            <div class="absolute top-0 left-0 right-0 z-10 px-4 py-3">
-              <div class="flex items-center space-x-2">
-                <!-- Avatar -->
-                <img
-                  :src="feedItem.user.avatar || '/default-avatar.png'"
-                  :alt="feedItem.user.username"
-                  class="w-8 h-8 rounded-full object-cover border-2 border-white"
-                />
-                <!-- Username -->
-                <router-link
-                  :to="`/profile/${feedItem.user.id}`"
-                  class="font-semibold text-white text-sm drop-shadow-lg hover:text-gray-200"
-                >
-                  {{ feedItem.user.username }}
-                </router-link>
-                <!-- Brush Icon (if author is artist) -->
-                <img
-                  v-if="isAuthorArtist"
-                  :src="brushIcon"
-                  alt="Artist"
-                  class="w-5 h-5"
-                />
-              </div>
-            </div>
-
             <!-- Image -->
             <img
               v-if="feedItem.result_url"
@@ -206,15 +210,17 @@
         </div>
       </div>
 
-      <!-- Comment Modal -->
-      <CommentModal
-        :is-open="isCommentModalOpen"
-        :image-id="feedItem?.id"
-        @close="closeComments"
-        @comment-added="handleCommentAdded"
-        @comment-deleted="handleCommentDeleted"
-      />
-    </AppLayout>
+    <!-- Comment Modal -->
+    <CommentModal
+      :is-open="isCommentModalOpen"
+      :image-id="feedItem?.id"
+      @close="closeComments"
+      @comment-added="handleCommentAdded"
+      @comment-deleted="handleCommentDeleted"
+    />
+
+    <!-- Bottom Navigation -->
+    <BottomNav />
   </div>
 </template>
 
@@ -223,7 +229,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCommunityStore } from '@/stores/community'
 import { useAuthStore } from '@/stores/auth'
-import AppLayout from '@/components/layout/AppLayout.vue'
+import BottomNav from '@/components/layout/BottomNav.vue'
 import CommentModal from '@/components/modals/CommentModal.vue'
 import brushIcon from '@/assets/icons/brush_icon.png'
 
