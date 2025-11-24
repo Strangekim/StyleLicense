@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "noted-sled-478700-r3",
     "public": "dist",
     "ignore": [
       "firebase.json",
