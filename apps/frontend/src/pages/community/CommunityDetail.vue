@@ -32,7 +32,7 @@
         to="/community"
         class="mt-4 inline-block text-blue-600 hover:text-blue-700"
       >
-        ← Back to Community
+        ← {{ $t('communityDetail.backToCommunity') }}
       </router-link>
     </div>
 
@@ -216,13 +216,13 @@
                   d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
                 />
               </svg>
-              <span>{{ isPublic ? 'Public' : 'Private' }}</span>
+              <span>{{ isPublic ? $t('communityDetail.public') : $t('communityDetail.private') }}</span>
             </button>
           </div>
 
           <!-- Like Count -->
           <div class="mb-3">
-            <span class="font-semibold text-gray-900">{{ feedItem.like_count }} Likes</span>
+            <span class="font-semibold text-gray-900">{{ feedItem.like_count }} {{ $t('communityDetail.likes') }}</span>
           </div>
 
           <!-- Post Description -->
@@ -236,7 +236,7 @@
               @click="showFullDescription = !showFullDescription"
               class="ml-1 text-gray-500 hover:text-gray-700"
             >
-              {{ showFullDescription ? 'less' : 'more' }}
+              {{ showFullDescription ? $t('communityDetail.less') : $t('communityDetail.more') }}
             </button>
           </div>
 
@@ -251,7 +251,7 @@
             @click="openComments"
             class="mt-2 text-sm text-gray-500 hover:text-gray-700"
           >
-            View all {{ feedItem.comment_count }} comments
+            {{ $t('communityDetail.viewAllComments', { count: feedItem.comment_count }) }}
           </button>
         </div>
       </div>
@@ -273,6 +273,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useCommunityStore } from '@/stores/community'
 import { useAuthStore } from '@/stores/auth'
 import BottomNav from '@/components/layout/BottomNav.vue'
@@ -281,6 +282,7 @@ import brushIcon from '@/assets/icons/brush_icon.png'
 
 const route = useRoute()
 const router = useRouter()
+const { t, locale } = useI18n()
 const communityStore = useCommunityStore()
 const authStore = useAuthStore()
 
@@ -375,7 +377,7 @@ async function fetchFeedItem() {
     }
   } catch (err) {
     console.error('Failed to fetch feed item:', err)
-    error.value = 'Failed to load image details'
+    error.value = t('communityDetail.loadFailed')
   } finally {
     loading.value = false
   }
@@ -486,18 +488,25 @@ function formatTime(timestamp) {
   const diffInSeconds = Math.floor((now - commentTime) / 1000)
 
   if (diffInSeconds < 60) {
-    return 'just now'
+    return t('communityDetail.justNow')
   } else if (diffInSeconds < 3600) {
     const minutes = Math.floor(diffInSeconds / 60)
-    return `${minutes} minute${minutes > 1 ? 's' : ''} ago`
+    return minutes === 1
+      ? t('communityDetail.minuteAgo', { count: minutes })
+      : t('communityDetail.minutesAgo', { count: minutes })
   } else if (diffInSeconds < 86400) {
     const hours = Math.floor(diffInSeconds / 3600)
-    return `${hours} hour${hours > 1 ? 's' : ''} ago`
+    return hours === 1
+      ? t('communityDetail.hourAgo', { count: hours })
+      : t('communityDetail.hoursAgo', { count: hours })
   } else if (diffInSeconds < 604800) {
     const days = Math.floor(diffInSeconds / 86400)
-    return `${days} day${days > 1 ? 's' : ''} ago`
+    return days === 1
+      ? t('communityDetail.dayAgo', { count: days })
+      : t('communityDetail.daysAgo', { count: days })
   } else {
-    return commentTime.toLocaleDateString('en-US', {
+    const localeStr = locale.value === 'ko' ? 'ko-KR' : 'en-US'
+    return commentTime.toLocaleDateString(localeStr, {
       month: 'short',
       day: 'numeric',
     })
