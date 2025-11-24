@@ -261,10 +261,11 @@ CREATE INDEX idx_styles_usage ON styles(usage_count DESC, created_at DESC);
 ```sql
 CREATE TABLE artworks (
     id                      BIGSERIAL PRIMARY KEY,
-    style_id                BIGINT NOT NULL 
+    style_id                BIGINT NOT NULL
                             REFERENCES styles(id) ON DELETE CASCADE,
     image_url               TEXT NOT NULL,
     processed_image_url     TEXT,
+    caption                 TEXT,
     is_valid                BOOLEAN DEFAULT TRUE NOT NULL,
     validation_reason       TEXT,
     created_at              TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -278,11 +279,16 @@ CREATE INDEX idx_artworks_valid ON artworks(is_valid) WHERE is_valid = true;
 **주요 컬럼**:
 - `image_url`: 원본 이미지 (S3)
 - `processed_image_url`: 전처리된 이미지
+- `caption`: 이미지 설명/태그 (Stable Diffusion Fine-tuning용 텍스트 캡션)
+  - 예시: "watercolor portrait, vibrant colors, detailed brushstrokes"
+  - 각 이미지마다 고유한 설명으로 학습 품질 향상
+  - NULL 허용 (선택사항)
 - `is_valid`: 검증 통과 여부 (형식, 해상도, NSFW)
 
 **비즈니스 규칙**:
 - 스타일당 10~100장 필요
 - is_valid=true인 이미지만 학습에 사용
+- caption 제공 시 Fine-tuning 품질 향상 (선택사항)
 
 ---
 

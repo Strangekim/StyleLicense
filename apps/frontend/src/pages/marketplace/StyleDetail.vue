@@ -7,14 +7,17 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useModelsStore } from '@/stores/models'
 import { useGenerationStore } from '@/stores/generations'
 import { useTokenStore } from '@/stores/tokens'
 import { useAuthStore } from '@/stores/auth'
+import AppLayout from '@/components/layout/AppLayout.vue'
 import TagButton from '@/components/shared/TagButton.vue'
 
 const route = useRoute()
 const router = useRouter()
+const { t, locale } = useI18n()
 const modelsStore = useModelsStore()
 const generationStore = useGenerationStore()
 const tokenStore = useTokenStore()
@@ -33,8 +36,8 @@ const newTagInput = ref('')
 const userTags = ref([]) // User-created tags
 const isGenerating = ref(false)
 const showWarning = ref(false)
-const showAspectRatioSelector = ref(false)
 const selectedAspectRatio = ref('1:1') // Default aspect ratio
+const tagError = ref(false) // Track non-English input attempt
 
 // Aspect ratio options
 const aspectRatioOptions = [
@@ -73,11 +76,11 @@ const formatTimeAgo = (dateString) => {
   const now = new Date()
   const seconds = Math.floor((now - date) / 1000)
 
-  if (seconds < 60) return 'Just now'
-  if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`
-  if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`
-  return `${Math.floor(seconds / 604800)} weeks ago`
+  if (seconds < 60) return t('styleDetail.justNow')
+  if (seconds < 3600) return t('styleDetail.minutesAgo', { count: Math.floor(seconds / 60) })
+  if (seconds < 86400) return t('styleDetail.hoursAgo', { count: Math.floor(seconds / 3600) })
+  if (seconds < 604800) return t('styleDetail.daysAgo', { count: Math.floor(seconds / 86400) })
+  return t('styleDetail.weeksAgo', { count: Math.floor(seconds / 604800) })
 }
 
 // Actions
@@ -90,9 +93,32 @@ const toggleBookmark = () => {
   // TODO: Call API to bookmark/unbookmark
 }
 
+// Filter to allow only English letters and spaces
+const filterTagEnglishOnly = (event) => {
+  const input = event.target.value
+  const filtered = input.replace(/[^a-zA-Z\s]/g, '')
+
+  // Check if non-English characters were attempted
+  if (input !== filtered) {
+    tagError.value = true
+    newTagInput.value = filtered
+    // Trigger input event to update cursor position
+    event.target.value = filtered
+  } else {
+    tagError.value = false
+  }
+}
+
 const addNewTag = () => {
   const tagText = newTagInput.value.trim()
   if (!tagText) return
+
+  // Validate English only
+  const englishOnlyRegex = /^[a-zA-Z\s]*$/
+  if (!englishOnlyRegex.test(tagText)) {
+    alert(t('generation.errors.englishOnly'))
+    return
+  }
 
   // Check for inappropriate words
   const inappropriateWords = ['irrelevant', 'inappropriate', 'misleading']
@@ -113,23 +139,15 @@ const addNewTag = () => {
     userTags.value.push(tagText)
   }
 
-  // Clear input
+  // Clear input and error state
   newTagInput.value = ''
+  tagError.value = false
 }
 
 const removeTag = (index) => {
   // Can't remove the first tag (style name)
   if (index === 0) return
   userTags.value.splice(index - 1, 1) // -1 because first tag is default
-}
-
-const toggleAspectRatioSelector = () => {
-  showAspectRatioSelector.value = !showAspectRatioSelector.value
-}
-
-const selectAspectRatio = (ratio) => {
-  selectedAspectRatio.value = ratio
-  showAspectRatioSelector.value = false
 }
 
 const handleGenerate = async () => {
@@ -160,10 +178,14 @@ const handleGenerate = async () => {
     // Combine all tags as the prompt
     const combinedPrompt = allTags.value.join(', ')
 
+    // Generate random seed
+    const randomSeed = Math.floor(Math.random() * 2147483647)
+
     const data = {
       style_id: modelId.value,
       prompt: combinedPrompt,
       aspect_ratio: selectedAspectRatio.value,
+      seed: randomSeed,
     }
 
     await generationStore.generateImage(data)
@@ -210,10 +232,11 @@ onMounted(async () => {
     <div class="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent"></div>
   </div>
 
-  <div v-else-if="model" class="min-h-screen bg-white pb-20">
+  <div v-else-if="model" class="min-h-screen bg-white">
+    <AppLayout>
     <!-- Training Image Section -->
     <div class="px-4 pt-3 pb-2">
-      <h2 class="text-base font-semibold text-neutral-900">Training Image</h2>
+      <h2 class="text-base font-semibold text-neutral-900">{{ $t('styleDetail.trainingImage') }}</h2>
     </div>
 
     <!-- Main Image with Carousel -->
@@ -275,7 +298,7 @@ onMounted(async () => {
 
       <!-- Subtitle -->
       <p class="text-sm text-neutral-600 py-1">
-        This is my new Artistic Style
+        {{ $t('styleDetail.subtitle') }}
       </p>
 
       <!-- Description -->
@@ -291,7 +314,7 @@ onMounted(async () => {
       </div>
 
       <!-- Styled By (Artist) -->
-      <div class="flex items-center gap-2 py-3 border-t border-neutral-100">
+      <div class="flex items-center justify-end gap-2 py-3 border-t border-neutral-100">
         <span class="text-sm italic text-neutral-900" style="font-family: 'Brush Script MT', cursive;">
           Styled by
         </span>
@@ -309,7 +332,7 @@ onMounted(async () => {
 
       <!-- Example Generate Image Section -->
       <div class="py-4 border-t border-neutral-100">
-        <h2 class="text-base font-semibold text-neutral-900 mb-3">Example Generate Image</h2>
+        <h2 class="text-base font-semibold text-neutral-900 mb-3">{{ $t('styleDetail.exampleGenerateImage') }}</h2>
 
         <!-- Example Image (same as training image for now) -->
         <div class="relative w-full aspect-square bg-neutral-100 mb-4 rounded-lg overflow-hidden">
@@ -340,9 +363,9 @@ onMounted(async () => {
             </svg>
           </div>
           <div class="flex-1">
-            <h3 class="text-sm font-semibold text-red-900 mb-1">Do not Write Like These Tag</h3>
+            <h3 class="text-sm font-semibold text-red-900 mb-1">{{ $t('styleDetail.warningTitle') }}</h3>
             <p class="text-xs text-red-700">
-              Avoid using Irrelevant, inappropriate, or misleading words when adding tags or descriptions
+              {{ $t('styleDetail.warningMessage') }}
             </p>
           </div>
         </div>
@@ -371,8 +394,14 @@ onMounted(async () => {
             <input
               v-model="newTagInput"
               type="text"
-              placeholder="write create img prompt"
-              class="w-full pl-3 pr-10 py-3 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              :placeholder="$t('styleDetail.tagInputPlaceholder')"
+              :class="[
+                'w-full pl-3 pr-10 py-3 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors',
+                tagError
+                  ? 'border-red-500 focus:ring-red-500 bg-red-50'
+                  : 'border-neutral-300 focus:ring-primary-500 focus:border-transparent'
+              ]"
+              @input="filterTagEnglishOnly"
               @keyup.enter="addNewTag"
             />
             <button
@@ -385,15 +414,18 @@ onMounted(async () => {
               </svg>
             </button>
           </div>
+          <p v-if="tagError" class="text-xs text-red-600 mt-2">
+            {{ $t('generation.errors.englishOnly') }}
+          </p>
         </div>
 
-        <!-- Aspect Ratio Selector (conditional) -->
-        <div v-if="showAspectRatioSelector" class="mb-3 p-3 bg-neutral-50 border border-neutral-200 rounded-lg">
+        <!-- Aspect Ratio Selector -->
+        <div class="mb-3 p-3 bg-neutral-50 border border-neutral-200 rounded-lg">
           <div class="grid grid-cols-3 gap-2">
             <button
               v-for="option in aspectRatioOptions"
               :key="option.value"
-              @click="selectAspectRatio(option.value)"
+              @click="selectedAspectRatio = option.value"
               class="p-3 border-2 rounded-lg text-xs font-medium transition-colors flex flex-col items-center gap-2"
               :class="selectedAspectRatio === option.value
                 ? 'border-primary-500 bg-primary-50 text-primary-700'
@@ -412,42 +444,24 @@ onMounted(async () => {
         <button
           @click="handleGenerate"
           :disabled="!canGenerate"
-          class="w-full py-3.5 rounded-lg font-semibold text-white transition-all flex items-center justify-center gap-2"
+          class="w-full py-3.5 rounded-lg font-semibold text-white transition-all flex items-center justify-center"
           :class="canGenerate
             ? 'bg-gradient-to-r from-orange-400 via-yellow-400 to-green-400 hover:shadow-lg'
             : 'bg-neutral-300 cursor-not-allowed'"
         >
-          <span>Image Generate</span>
-          <button
-            @click.stop="toggleAspectRatioSelector"
-            class="flex items-center gap-1 px-2 py-1 bg-white/20 rounded hover:bg-white/30 transition-colors"
-          >
-            <!-- Aspect ratio icons -->
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 20 20">
-              <rect x="3" y="3" width="14" height="14" rx="2" stroke-width="1.5"/>
-            </svg>
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 20 20">
-              <rect x="3" y="5" width="14" height="10" rx="2" stroke-width="1.5"/>
-            </svg>
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 20 20">
-              <rect x="5" y="3" width="10" height="14" rx="2" stroke-width="1.5"/>
-            </svg>
-            <!-- Settings icon -->
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
-            </svg>
-          </button>
+          <span>{{ $t('styleDetail.generateButton') }}</span>
         </button>
 
         <!-- Helper text -->
         <p v-if="!authStore.isAuthenticated" class="text-xs text-neutral-500 text-center mt-2">
-          Please login to generate images
+          {{ $t('styleDetail.pleaseLogin') }}
         </p>
         <p v-else-if="isGenerating" class="text-xs text-primary-600 text-center mt-2">
-          Generating...
+          {{ $t('styleDetail.generating') }}
         </p>
       </div>
     </div>
+    </AppLayout>
   </div>
 
   <!-- Error state -->
@@ -455,9 +469,9 @@ onMounted(async () => {
     <svg class="w-16 h-16 text-neutral-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
     </svg>
-    <p class="text-neutral-500 mb-4">Style not found</p>
+    <p class="text-neutral-500 mb-4">{{ $t('styleDetail.styleNotFound') }}</p>
     <button @click="router.back()" class="px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium">
-      Go Back
+      {{ $t('styleDetail.goBack') }}
     </button>
   </div>
 </template>

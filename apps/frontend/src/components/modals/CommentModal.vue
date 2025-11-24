@@ -3,29 +3,35 @@
     <Transition name="modal">
       <div
         v-if="isOpen"
-        class="fixed inset-0 z-50 overflow-y-auto"
+        class="fixed inset-0 z-50"
         @click.self="close"
       >
         <!-- Backdrop -->
-        <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" @click="close"></div>
+        <div class="fixed inset-0 bg-black bg-opacity-60 transition-opacity" @click="close"></div>
 
-        <!-- Modal Content -->
-        <div class="flex min-h-screen items-center justify-center p-4">
+        <!-- Modal Content - Bottom Sheet Style -->
+        <div class="modal-content fixed bottom-0 left-0 right-0 flex flex-col" style="height: 65vh">
           <div
-            class="relative bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[80vh] flex flex-col"
+            class="bg-white rounded-t-3xl shadow-xl max-w-screen-sm mx-auto w-full flex flex-col h-full"
             @click.stop
           >
+            <!-- Drag Handle -->
+            <div class="flex justify-center pt-3 pb-2">
+              <div class="w-10 h-1 bg-gray-300 rounded-full"></div>
+            </div>
+
             <!-- Header -->
-            <div class="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 class="text-lg font-semibold text-gray-900">
-                {{ $t('comments.title') }}
+            <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <div class="w-6"></div>
+              <h3 class="text-base font-semibold text-gray-900">
+                Comments
               </h3>
               <button
                 @click="close"
                 class="text-gray-400 hover:text-gray-600 transition-colors"
               >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
                 </svg>
               </button>
             </div>
@@ -56,12 +62,13 @@
                 <img
                   :src="comment.user.avatar || '/default-avatar.png'"
                   :alt="comment.user.username"
-                  class="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                  class="w-9 h-9 rounded-full object-cover flex-shrink-0"
                 />
 
                 <!-- Comment Content -->
                 <div class="flex-1 min-w-0">
-                  <div class="flex items-center space-x-2">
+                  <!-- Username and Time -->
+                  <div class="flex items-center space-x-2 mb-1">
                     <span class="font-semibold text-sm text-gray-900">
                       {{ comment.user.username }}
                     </span>
@@ -69,38 +76,82 @@
                       {{ formatTime(comment.created_at) }}
                     </span>
                   </div>
-                  <p class="mt-1 text-sm text-gray-700 break-words">
+
+                  <!-- Comment Text -->
+                  <p class="text-sm text-gray-900 break-words mb-2">
                     {{ comment.content }}
                   </p>
 
-                  <!-- Delete Button (only for own comments) -->
-                  <button
-                    v-if="canDelete(comment)"
-                    @click="handleDelete(comment.id)"
-                    class="mt-1 text-xs text-red-600 hover:text-red-700"
-                  >
-                    {{ $t('common.delete') }}
-                  </button>
+                  <!-- Actions -->
+                  <div class="flex items-center space-x-4 text-xs text-gray-500">
+                    <button
+                      @click="handleLikeComment(comment.id)"
+                      class="font-semibold hover:text-gray-700"
+                    >
+                      {{ comment.like_count || 0 }} {{ comment.like_count === 1 ? 'like' : 'likes' }}
+                    </button>
+                    <button class="font-semibold hover:text-gray-700">
+                      Reply
+                    </button>
+                    <button
+                      v-if="canDelete(comment)"
+                      @click="handleDelete(comment.id)"
+                      class="font-semibold text-red-600 hover:text-red-700"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
+
+                <!-- Like Button -->
+                <button
+                  @click="handleLikeComment(comment.id)"
+                  class="flex-shrink-0 text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  <svg
+                    class="w-5 h-5"
+                    :fill="comment.is_liked ? 'currentColor' : 'none'"
+                    :class="comment.is_liked ? 'text-red-500' : ''"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                    />
+                  </svg>
+                </button>
               </div>
             </div>
 
             <!-- Comment Input -->
-            <div class="border-t border-gray-200 p-4">
-              <form @submit.prevent="handleSubmit" class="flex space-x-2">
+            <div class="border-t border-gray-200 p-3 bg-white">
+              <form @submit.prevent="handleSubmit" class="flex items-center space-x-3">
+                <!-- User Avatar -->
+                <img
+                  :src="authStore.user?.avatar || '/default-avatar.png'"
+                  :alt="authStore.user?.username || 'You'"
+                  class="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                />
+
+                <!-- Input Field -->
                 <input
                   v-model="newComment"
                   type="text"
-                  :placeholder="$t('comments.placeholder')"
-                  class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Add a comment..."
+                  class="flex-1 px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:border-gray-400 text-sm"
                   :disabled="submitting"
                 />
+
+                <!-- Post Button -->
                 <button
                   type="submit"
                   :disabled="!newComment.trim() || submitting"
-                  class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  class="text-blue-500 font-semibold text-sm disabled:opacity-30 disabled:cursor-not-allowed"
                 >
-                  {{ submitting ? $t('comments.posting') : $t('comments.post') }}
+                  {{ submitting ? 'Posting...' : 'Post' }}
                 </button>
               </form>
             </div>
@@ -163,6 +214,8 @@ async function fetchComments() {
           avatar: null,
         },
         content: '정말 멋진 작품이네요!',
+        like_count: 1,
+        is_liked: false,
         created_at: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
       },
       {
@@ -173,6 +226,8 @@ async function fetchComments() {
           avatar: null,
         },
         content: '색감이 정말 환상적입니다 👏',
+        like_count: 10,
+        is_liked: false,
         created_at: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
       },
     ]
@@ -227,6 +282,22 @@ async function handleDelete(commentId) {
   }
 }
 
+async function handleLikeComment(commentId) {
+  try {
+    // TODO: Replace with actual API call
+    // await toggleCommentLike(commentId)
+
+    // Mock: Toggle like locally
+    const comment = comments.value.find(c => c.id === commentId)
+    if (comment) {
+      comment.is_liked = !comment.is_liked
+      comment.like_count += comment.is_liked ? 1 : -1
+    }
+  } catch (error) {
+    console.error('Failed to like comment:', error)
+  }
+}
+
 function canDelete(comment) {
   return authStore.user && comment.user.id === authStore.user.id
 }
@@ -261,6 +332,7 @@ function formatTime(timestamp) {
 </script>
 
 <style scoped>
+/* Backdrop fade animation */
 .modal-enter-active,
 .modal-leave-active {
   transition: opacity 0.3s ease;
@@ -271,13 +343,18 @@ function formatTime(timestamp) {
   opacity: 0;
 }
 
-.modal-enter-active .bg-white,
-.modal-leave-active .bg-white {
-  transition: transform 0.3s ease;
+/* Modal content slide-up animation */
+.modal-enter-active .modal-content,
+.modal-leave-active .modal-content {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.modal-enter-from .bg-white,
-.modal-leave-to .bg-white {
-  transform: scale(0.95);
+.modal-enter-from .modal-content,
+.modal-leave-to .modal-content {
+  transform: translateY(100%);
+}
+
+.modal-enter-to .modal-content {
+  transform: translateY(0);
 }
 </style>

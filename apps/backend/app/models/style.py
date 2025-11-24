@@ -127,6 +127,9 @@ class Artwork(models.Model):
     image_url = models.TextField()
     processed_image_url = models.TextField(null=True, blank=True)
 
+    # Caption for Stable Diffusion Fine-tuning
+    caption = models.TextField(null=True, blank=True)
+
     # Validation
     is_valid = models.BooleanField(default=True)
     validation_reason = models.TextField(null=True, blank=True)

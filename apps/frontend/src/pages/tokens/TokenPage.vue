@@ -5,7 +5,7 @@
         <!-- Page Header -->
         <div class="mb-6">
           <h1 class="text-3xl font-bold text-gray-900">{{ $t('tokens.balance') }}</h1>
-          <p class="mt-2 text-gray-600">Manage your tokens and view transaction history</p>
+          <p class="mt-2 text-gray-600">{{ $t('tokens.manageTokens') }}</p>
         </div>
 
         <!-- Loading State -->
@@ -17,9 +17,9 @@
         <div v-else class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg shadow-lg p-8 mb-6 text-white">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-blue-100 text-sm font-medium mb-2">Current Balance</p>
+              <p class="text-blue-100 text-sm font-medium mb-2">{{ $t('tokens.currentBalance') }}</p>
               <p class="text-5xl font-bold">{{ tokenBalance.toLocaleString() }}</p>
-              <p class="text-blue-100 text-sm mt-2">Tokens</p>
+              <p class="text-blue-100 text-sm mt-2">{{ $t('tokens.tokenUnit') }}</p>
             </div>
             <div class="text-right">
               <svg class="w-20 h-20 text-blue-300 opacity-50" fill="currentColor" viewBox="0 0 20 20">
@@ -33,7 +33,7 @@
         <!-- Purchase Tokens Section -->
         <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
           <h2 class="text-xl font-semibold text-gray-900 mb-4">{{ $t('tokens.purchase') }}</h2>
-          <p class="text-sm text-gray-600 mb-6">Select a package to purchase tokens</p>
+          <p class="text-sm text-gray-600 mb-6">{{ $t('tokens.selectPackage') }}</p>
 
           <!-- Token Packages Grid -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -50,22 +50,22 @@
               <!-- Popular Badge -->
               <div v-if="pkg.popular" class="mb-2">
                 <span class="inline-block px-2 py-1 bg-blue-600 text-white text-xs font-semibold rounded-full">
-                  Popular
+                  {{ $t('tokens.popular') }}
                 </span>
               </div>
 
               <!-- Package Info -->
               <div class="text-center">
                 <p class="text-3xl font-bold text-gray-900">{{ pkg.tokens.toLocaleString() }}</p>
-                <p class="text-sm text-gray-600 mt-1">Tokens</p>
+                <p class="text-sm text-gray-600 mt-1">{{ $t('tokens.tokenUnit') }}</p>
                 <div class="mt-4 mb-4 border-t border-gray-200"></div>
                 <p class="text-2xl font-bold text-blue-600">${{ pkg.price }}</p>
-                <p class="text-xs text-gray-500 mt-1">${{ (pkg.price / pkg.tokens).toFixed(3) }} per token</p>
+                <p class="text-xs text-gray-500 mt-1">${{ (pkg.price / pkg.tokens).toFixed(3) }} {{ $t('tokens.perToken') }}</p>
 
                 <!-- Bonus Badge -->
                 <div v-if="pkg.bonus" class="mt-3">
                   <span class="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded">
-                    +{{ pkg.bonus }}% Bonus
+                    +{{ pkg.bonus }}% {{ $t('tokens.bonus') }}
                   </span>
                 </div>
               </div>
@@ -79,17 +79,17 @@
               :disabled="!selectedPackage || purchasing"
               class="px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {{ purchasing ? 'Processing...' : 'Purchase Tokens' }}
+              {{ purchasing ? $t('tokens.processing') : $t('tokens.purchaseButton') }}
             </button>
             <p class="mt-2 text-xs text-gray-500">
-              Secure payment powered by Stripe
+              {{ $t('tokens.securePayment') }}
             </p>
           </div>
         </div>
 
         <!-- Transaction History -->
         <div class="bg-white rounded-lg shadow-sm p-6">
-          <h2 class="text-xl font-semibold text-gray-900 mb-4">Transaction History</h2>
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">{{ $t('tokens.transactionHistory') }}</h2>
 
           <!-- Loading Transactions -->
           <div v-if="loadingTransactions" class="text-center py-8">
@@ -101,7 +101,7 @@
             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
-            <p class="mt-2 text-sm text-gray-600">No transactions yet</p>
+            <p class="mt-2 text-sm text-gray-600">{{ $t('tokens.noTransactions') }}</p>
           </div>
 
           <!-- Transaction List -->
@@ -145,7 +145,7 @@
                   {{ transaction.type === 'purchase' ? '+' : '-' }}{{ Math.abs(transaction.amount).toLocaleString() }}
                 </p>
                 <p class="text-xs text-gray-500">
-                  {{ transaction.type === 'purchase' ? 'Purchased' : 'Used' }}
+                  {{ transaction.type === 'purchase' ? $t('tokens.purchased') : $t('tokens.used') }}
                 </p>
               </div>
             </div>
@@ -159,9 +159,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import AppLayout from '@/components/layout/AppLayout.vue'
 
 const router = useRouter()
+const { t, locale } = useI18n()
 
 // State
 const loading = ref(false)
@@ -283,7 +285,7 @@ async function handlePurchase() {
     // window.location.href = response.data.checkout_url
 
     // Mock: Simulate purchase
-    alert(`Purchasing ${selectedPackage.value.tokens} tokens for $${selectedPackage.value.price}`)
+    alert(t('tokens.purchasingMessage', { tokens: selectedPackage.value.tokens, price: selectedPackage.value.price }))
 
     // In production, this would redirect to Stripe checkout
     // For now, just simulate success
@@ -297,17 +299,17 @@ async function handlePurchase() {
       id: Date.now(),
       type: 'purchase',
       amount: selectedPackage.value.tokens,
-      description: `Purchased ${selectedPackage.value.tokens} tokens`,
+      description: t('tokens.purchasedTokens', { tokens: selectedPackage.value.tokens }),
       created_at: new Date().toISOString(),
     })
 
     // Clear selection
     selectedPackage.value = null
 
-    alert('Purchase successful!')
+    alert(t('tokens.purchaseSuccess'))
   } catch (error) {
     console.error('Failed to purchase tokens:', error)
-    alert('Purchase failed. Please try again.')
+    alert(t('tokens.purchaseFailed'))
   } finally {
     purchasing.value = false
   }
@@ -325,18 +327,19 @@ function formatTime(timestamp) {
   const diffInSeconds = Math.floor((now - date) / 1000)
 
   if (diffInSeconds < 60) {
-    return 'just now'
+    return t('common.justNow')
   } else if (diffInSeconds < 3600) {
     const minutes = Math.floor(diffInSeconds / 60)
-    return `${minutes}m ago`
+    return t('common.minutesAgo', { n: minutes })
   } else if (diffInSeconds < 86400) {
     const hours = Math.floor(diffInSeconds / 3600)
-    return `${hours}h ago`
+    return t('common.hoursAgo', { n: hours })
   } else if (diffInSeconds < 604800) {
     const days = Math.floor(diffInSeconds / 86400)
-    return `${days}d ago`
+    return t('common.daysAgo', { n: days })
   } else {
-    return date.toLocaleDateString('en-US', {
+    const localeStr = locale.value === 'ko' ? 'ko-KR' : 'en-US'
+    return date.toLocaleDateString(localeStr, {
       month: 'short',
       day: 'numeric',
       year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,

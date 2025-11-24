@@ -61,7 +61,7 @@ const routes = [
     name: 'CommunityDetail',
     component: () => import('@/pages/community/CommunityDetail.vue'),
   },
-  // Profile routes (protected)
+  // Profile routes (require authentication)
   {
     path: '/profile',
     name: 'Profile',
@@ -74,26 +74,26 @@ const routes = [
     component: () => import('@/pages/profile/EditProfile.vue'),
     meta: { requiresAuth: true },
   },
-  // Notifications route (protected)
+  // Notifications route (require authentication)
   {
     path: '/notifications',
     name: 'Notifications',
     component: () => import('@/pages/notifications/Notifications.vue'),
     meta: { requiresAuth: true },
   },
-  // Token/Payment route (protected)
+  // Token/Payment route (require authentication)
   {
     path: '/tokens',
     name: 'Tokens',
     component: () => import('@/pages/tokens/TokenPage.vue'),
     meta: { requiresAuth: true },
   },
-  // Artist routes (protected)
+  // Artist routes (require authentication)
   {
     path: '/styles/create',
     name: 'StyleCreate',
     component: () => import('@/pages/artist/StyleCreate.vue'),
-    meta: { requiresAuth: true, requiresArtist: true },
+    meta: { requiresAuth: true },
   },
   // 404 Not Found - must be last
   {

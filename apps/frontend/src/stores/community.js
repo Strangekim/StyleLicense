@@ -42,8 +42,8 @@ export const useCommunityStore = defineStore('community', () => {
 
       return data
     } catch (err) {
-      error.value = err.message || 'Failed to fetch feed'
-      console.error('Failed to fetch feed:', err)
+      console.error('Failed to fetch feed from API:', err)
+      error.value = err.response?.data?.error?.message || 'Failed to load feed'
       throw err
     } finally {
       loading.value = false

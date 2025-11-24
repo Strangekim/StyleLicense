@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:prod": "vite build --mode production",
     "preview": "vite preview",
+    "deploy:firebase": "npm run build:prod && firebase deploy --only hosting",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",

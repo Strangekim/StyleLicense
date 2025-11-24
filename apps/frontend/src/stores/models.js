@@ -49,9 +49,10 @@ export const useModelsStore = defineStore('models', () => {
         }
       }
     } catch (err) {
-      error.value = err.response?.data?.error?.message || 'Failed to fetch models'
-      console.error('Error fetching models:', err)
-    } finally {
+      console.error('Failed to fetch models from API:', err)
+      error.value = err.response?.data?.error?.message || 'Failed to load models'
+      throw err
+    } finally{
       loading.value = false
     }
   }
@@ -71,8 +72,8 @@ export const useModelsStore = defineStore('models', () => {
         currentModel.value = response.data
       }
     } catch (err) {
-      error.value = err.response?.data?.error?.message || 'Failed to fetch model detail'
-      console.error('Error fetching model detail:', err)
+      console.error('Failed to fetch model detail from API:', err)
+      error.value = err.response?.data?.error?.message || 'Failed to load model detail'
       throw err
     } finally {
       loading.value = false

@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-neutral-50">
+  <div class="min-h-screen flex flex-col bg-white pb-16">
     <!-- Header -->
     <Header />
 
@@ -8,12 +8,12 @@
       <slot />
     </main>
 
-    <!-- Footer -->
-    <Footer />
+    <!-- Bottom Navigation -->
+    <BottomNav />
   </div>
 </template>
 
 <script setup>
 import Header from './Header.vue'
-import Footer from './Footer.vue'
+import BottomNav from './BottomNav.vue'
 </script>

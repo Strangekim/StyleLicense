@@ -67,19 +67,44 @@
             }"
           >
             <div class="flex items-start space-x-3">
-              <!-- Icon -->
-              <div
-                class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
-                :class="getNotificationIconClass(notification.notification_type)"
-              >
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path :d="getNotificationIconPath(notification.notification_type)" />
-                </svg>
+              <!-- Avatar or Icon -->
+              <div class="flex-shrink-0 relative">
+                <!-- User Avatar (for social notifications) -->
+                <div
+                  v-if="notification.user?.avatar"
+                  class="w-12 h-12 rounded-full overflow-hidden bg-gray-200 ring-2"
+                  :class="getNotificationRingClass(notification.notification_type)"
+                >
+                  <img
+                    :src="notification.user.avatar"
+                    :alt="notification.user.username"
+                    class="w-full h-full object-cover"
+                  />
+                </div>
+                <!-- Icon (for system notifications) -->
+                <div
+                  v-else
+                  class="w-12 h-12 rounded-full flex items-center justify-center"
+                  :class="getNotificationIconClass(notification.notification_type)"
+                >
+                  <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                    <path :d="getNotificationIconPath(notification.notification_type)" />
+                  </svg>
+                </div>
+                <!-- Type Badge -->
+                <div
+                  class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
+                  :class="getNotificationIconClass(notification.notification_type)"
+                >
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path :d="getNotificationIconPath(notification.notification_type)" />
+                  </svg>
+                </div>
               </div>
 
               <!-- Content -->
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-gray-900">
+                <p class="text-sm font-medium text-gray-900 leading-relaxed">
                   {{ notification.message }}
                 </p>
                 <p class="mt-1 text-xs text-gray-500">
@@ -87,9 +112,23 @@
                 </p>
               </div>
 
-              <!-- Unread Indicator -->
-              <div v-if="!notification.is_read" class="flex-shrink-0">
-                <div class="w-2 h-2 bg-blue-600 rounded-full"></div>
+              <!-- Thumbnail or Unread Indicator -->
+              <div class="flex-shrink-0">
+                <!-- Thumbnail Image -->
+                <div
+                  v-if="notification.thumbnail"
+                  class="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 border border-gray-200"
+                >
+                  <img
+                    :src="notification.thumbnail"
+                    alt="Notification preview"
+                    class="w-full h-full object-cover"
+                  />
+                </div>
+                <!-- Unread Indicator (when no thumbnail) -->
+                <div v-else-if="!notification.is_read" class="pt-1">
+                  <div class="w-2.5 h-2.5 bg-blue-600 rounded-full"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -183,6 +222,26 @@ function getNotificationIconClass(type) {
       return 'bg-purple-100 text-purple-600'
     default:
       return 'bg-gray-100 text-gray-600'
+  }
+}
+
+function getNotificationRingClass(type) {
+  switch (type) {
+    case 'image_liked':
+      return 'ring-red-200'
+    case 'image_commented':
+      return 'ring-blue-200'
+    case 'model_training_completed':
+      return 'ring-green-200'
+    case 'model_training_failed':
+    case 'image_generation_failed':
+      return 'ring-red-200'
+    case 'image_generation_completed':
+      return 'ring-green-200'
+    case 'new_follower':
+      return 'ring-purple-200'
+    default:
+      return 'ring-gray-200'
   }
 }
 

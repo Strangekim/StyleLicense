@@ -7,6 +7,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useModelsStore } from '@/stores/models'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Input from '@/components/shared/Input.vue'
@@ -14,6 +15,7 @@ import Button from '@/components/shared/Button.vue'
 import Card from '@/components/shared/Card.vue'
 
 const router = useRouter()
+const { t } = useI18n()
 const modelsStore = useModelsStore()
 
 // Form state
@@ -21,16 +23,12 @@ const formData = ref({
   name: '',
   description: '',
   price_per_generation: 10,
-  tags: [],
 })
 
 // Image upload state
 const trainingImages = ref([])
 const signatureImage = ref(null)
 const isDragging = ref(false)
-
-// Tag input
-const tagInput = ref('')
 
 // Submission state
 const isSubmitting = ref(false)
@@ -51,9 +49,9 @@ const isValid = computed(() => {
 
 const imageCountStatus = computed(() => {
   const count = trainingImages.value.length
-  if (count < 10) return { text: `${count}/10 minimum`, color: 'text-red-600' }
-  if (count > 100) return { text: `${count}/100 maximum (too many!)`, color: 'text-red-600' }
-  return { text: `${count} images selected`, color: 'text-green-600' }
+  if (count < 10) return { text: t('styleCreate.imagesMinimum', { count }), color: 'text-red-600' }
+  if (count > 100) return { text: t('styleCreate.imagesMaximum', { count }), color: 'text-red-600' }
+  return { text: t('styleCreate.imagesSelected', { count }), color: 'text-green-600' }
 })
 
 // File validation
@@ -62,11 +60,11 @@ const validateImageFile = (file) => {
   const maxSize = 10 * 1024 * 1024 // 10MB
 
   if (!validTypes.includes(file.type)) {
-    return 'Only JPG and PNG images are allowed'
+    return t('styleCreate.errors.invalidImageType')
   }
 
   if (file.size > maxSize) {
-    return 'Image size must be less than 10MB'
+    return t('styleCreate.errors.imageTooLarge')
   }
 
   return null
@@ -116,6 +114,9 @@ const addFiles = (files) => {
         trainingImages.value.push({
           file: file,
           preview: e.target.result,
+          tags: [], // Tags for Stable Diffusion Fine-tuning
+          tagInput: '', // Temp input for adding tags
+          tagError: false, // Track validation error
         })
       }
       reader.readAsDataURL(file)
@@ -154,18 +155,56 @@ const removeSignature = () => {
   signatureImage.value = null
 }
 
-// Add tag
-const addTag = () => {
-  const tag = tagInput.value.trim()
-  if (tag && !formData.value.tags.includes(tag)) {
-    formData.value.tags.push(tag)
-    tagInput.value = ''
+// Update tags for a training image
+const updateImageTags = (index, tags) => {
+  if (trainingImages.value[index]) {
+    trainingImages.value[index].tags = tags
   }
 }
 
-// Remove tag
-const removeTag = (index) => {
-  formData.value.tags.splice(index, 1)
+// Filter to allow only English letters and spaces for tags
+const filterTagEnglishOnly = (event, index) => {
+  const input = event.target.value
+  const filtered = input.replace(/[^a-zA-Z\s]/g, '')
+
+  // Check if non-English characters were attempted
+  if (input !== filtered) {
+    trainingImages.value[index].tagError = true
+    trainingImages.value[index].tagInput = filtered
+    event.target.value = filtered
+  } else {
+    trainingImages.value[index].tagError = false
+  }
+}
+
+// Add tag to a specific image
+const addImageTag = (index, tag) => {
+  if (!trainingImages.value[index]) return
+
+  const trimmedTag = tag.trim()
+  if (!trimmedTag) return
+
+  // Validate English only
+  const englishOnlyRegex = /^[a-zA-Z\s]*$/
+  if (!englishOnlyRegex.test(trimmedTag)) {
+    alert(t('styleCreate.errors.tagEnglishOnly'))
+    return
+  }
+
+  if (!trainingImages.value[index].tags) {
+    trainingImages.value[index].tags = []
+  }
+
+  if (!trainingImages.value[index].tags.includes(trimmedTag)) {
+    trainingImages.value[index].tags.push(trimmedTag)
+  }
+}
+
+// Remove tag from a specific image
+const removeImageTag = (imageIndex, tagIndex) => {
+  if (trainingImages.value[imageIndex]?.tags) {
+    trainingImages.value[imageIndex].tags.splice(tagIndex, 1)
+  }
 }
 
 // Validate form
@@ -173,17 +212,17 @@ const validateForm = () => {
   const newErrors = {}
 
   if (!formData.value.name.trim()) {
-    newErrors.name = 'Style name is required'
+    newErrors.name = t('styleCreate.errors.styleNameRequired')
   }
 
   if (trainingImages.value.length < 10) {
-    newErrors.images = 'At least 10 training images are required'
+    newErrors.images = t('styleCreate.errors.minimumImagesRequired')
   } else if (trainingImages.value.length > 100) {
-    newErrors.images = 'Maximum 100 training images allowed'
+    newErrors.images = t('styleCreate.errors.maximumImagesExceeded')
   }
 
   if (formData.value.price_per_generation < 1) {
-    newErrors.price = 'Price must be at least 1 token'
+    newErrors.price = t('styleCreate.errors.minimumPrice')
   }
 
   errors.value = newErrors
@@ -200,13 +239,15 @@ const handleSubmit = async () => {
   uploadProgress.value = 0
 
   try {
-    // Prepare data
+    // Prepare data with captions (convert tags to caption string)
     const data = {
       name: formData.value.name,
       description: formData.value.description,
       price_per_generation: formData.value.price_per_generation,
-      tags: formData.value.tags,
-      training_images: trainingImages.value.map((img) => img.file),
+      training_images: trainingImages.value.map((img) => ({
+        file: img.file,
+        caption: img.tags?.join(', ') || '', // Convert tags array to comma-separated caption
+      })),
     }
 
     // Add signature if provided
@@ -231,7 +272,7 @@ const handleSubmit = async () => {
     }, 500)
   } catch (err) {
     console.error('Failed to create style:', err)
-    errors.value.submit = err.response?.data?.error?.message || 'Failed to create style'
+    errors.value.submit = err.response?.data?.error?.message || t('styleCreate.errors.createFailed')
   } finally {
     isSubmitting.value = false
   }
@@ -243,11 +284,9 @@ const resetForm = () => {
     name: '',
     description: '',
     price_per_generation: 10,
-    tags: [],
   }
   trainingImages.value = []
   signatureImage.value = null
-  tagInput.value = ''
   errors.value = {}
 }
 </script>
@@ -258,10 +297,10 @@ const resetForm = () => {
       <!-- Page Header -->
       <div class="mb-8">
         <h1 class="text-3xl font-bold text-neutral-900 mb-2">
-          Create New Style
+          {{ $t('styleCreate.title') }}
         </h1>
         <p class="text-neutral-600">
-          Upload your artwork to train a custom AI style model
+          {{ $t('styleCreate.subtitle') }}
         </p>
       </div>
 
@@ -270,15 +309,15 @@ const resetForm = () => {
         <!-- Basic Info -->
         <Card>
           <h2 class="text-xl font-semibold text-neutral-900 mb-4">
-            Basic Information
+            {{ $t('styleCreate.basicInfo') }}
           </h2>
 
           <div class="space-y-4">
             <!-- Style Name -->
             <Input
               v-model="formData.name"
-              label="Style Name"
-              placeholder="e.g., Watercolor Dreams"
+              :label="$t('styleCreate.styleName')"
+              :placeholder="$t('styleCreate.styleNamePlaceholder')"
               required
               :error="errors.name"
             />
@@ -287,16 +326,16 @@ const resetForm = () => {
             <Input
               v-model="formData.description"
               type="textarea"
-              label="Description"
-              placeholder="Describe your art style..."
-              helper="Optional: Tell users about this style"
+              :label="$t('styleCreate.description')"
+              :placeholder="$t('styleCreate.descriptionPlaceholder')"
+              :helper="$t('styleCreate.descriptionHelper')"
             />
 
             <!-- Price -->
             <Input
               v-model.number="formData.price_per_generation"
               type="number"
-              label="Price per Generation (tokens)"
+              :label="$t('styleCreate.pricePerGeneration')"
               :min="1"
               required
               :error="errors.price"
@@ -307,10 +346,10 @@ const resetForm = () => {
         <!-- Training Images -->
         <Card>
           <h2 class="text-xl font-semibold text-neutral-900 mb-2">
-            Training Images
+            {{ $t('styleCreate.trainingImages') }}
           </h2>
           <p class="text-sm text-neutral-600 mb-4">
-            Upload 10-100 images that represent your style. Higher quality and more diverse images lead to better results.
+            {{ $t('styleCreate.trainingImagesDescription') }}
           </p>
 
           <!-- Upload Count Status -->
@@ -355,10 +394,10 @@ const resetForm = () => {
             </svg>
 
             <p class="text-lg font-medium text-neutral-900 mb-2">
-              Drop images here or click to browse
+              {{ $t('styleCreate.dropImagesHere') }}
             </p>
             <p class="text-sm text-neutral-600">
-              JPG or PNG, max 10MB each
+              {{ $t('styleCreate.fileFormats') }}
             </p>
 
             <Button
@@ -367,7 +406,7 @@ const resetForm = () => {
               class="mt-4"
               @click="$refs.fileInput.click()"
             >
-              Select Images
+              {{ $t('styleCreate.selectImages') }}
             </Button>
           </div>
 
@@ -376,74 +415,108 @@ const resetForm = () => {
             {{ errors.images }}
           </p>
 
-          <!-- Image Grid Preview -->
+          <!-- Image Horizontal Scroll Preview with Tags -->
           <div
             v-if="trainingImages.length > 0"
-            class="mt-6 grid grid-cols-4 sm:grid-cols-6 gap-3"
+            class="mt-6 overflow-x-auto pb-4"
           >
-            <div
-              v-for="(image, index) in trainingImages"
-              :key="index"
-              class="relative aspect-square bg-neutral-100 rounded-lg overflow-hidden group"
-            >
-              <img
-                :src="image.preview"
-                :alt="`Training image ${index + 1}`"
-                class="w-full h-full object-cover"
-              />
-              <button
-                type="button"
-                class="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                @click="removeImage(index)"
+            <div class="flex gap-4" style="min-width: max-content;">
+              <div
+                v-for="(image, index) in trainingImages"
+                :key="index"
+                class="w-80 flex-shrink-0 bg-white border border-neutral-200 rounded-lg p-3"
               >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+                <!-- Image Preview -->
+                <div class="relative aspect-square bg-neutral-100 rounded-lg overflow-hidden group mb-3">
+                  <img
+                    :src="image.preview"
+                    :alt="`Training image ${index + 1}`"
+                    class="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    class="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg"
+                    @click="removeImage(index)"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                  <div class="absolute bottom-2 left-2 px-2 py-1 bg-black bg-opacity-50 text-white text-xs rounded">
+                    #{{ index + 1 }}
+                  </div>
+                </div>
+
+                <!-- Tag Input -->
+                <div>
+                  <label class="block text-sm font-medium text-neutral-700 mb-2">
+                    {{ $t('styleCreate.tagsForTraining') }}
+                  </label>
+
+                  <!-- Tag Input Field -->
+                  <div>
+                    <div class="flex gap-2 mb-2">
+                      <input
+                        v-model="image.tagInput"
+                        type="text"
+                        :placeholder="$t('styleCreate.addTagPlaceholder')"
+                        :class="[
+                          'flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors',
+                          image.tagError
+                            ? 'border-red-500 focus:ring-red-500 bg-red-50'
+                            : 'border-neutral-300 focus:ring-primary-500'
+                        ]"
+                        @input="filterTagEnglishOnly($event, index)"
+                        @keydown.enter.prevent="addImageTag(index, image.tagInput); image.tagInput = ''"
+                      />
+                      <button
+                        type="button"
+                        class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+                        @click="addImageTag(index, image.tagInput); image.tagInput = ''"
+                      >
+                        {{ $t('styleCreate.addTagButton') }}
+                      </button>
+                    </div>
+                    <p v-if="image.tagError" class="text-xs text-red-600 mb-2">
+                      {{ $t('styleCreate.errors.tagEnglishOnly') }}
+                    </p>
+                  </div>
+
+                  <!-- Tag Chips Display -->
+                  <div v-if="image.tags?.length" class="flex flex-wrap gap-2 min-h-[32px]">
+                    <button
+                      v-for="(tag, tagIdx) in image.tags"
+                      :key="tagIdx"
+                      type="button"
+                      class="group px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-medium hover:bg-primary-200 transition-colors flex items-center gap-1"
+                      @click="removeImageTag(index, tagIdx)"
+                    >
+                      {{ tag }}
+                      <svg class="w-3 h-3 opacity-60 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <p v-else class="text-xs text-neutral-400 italic min-h-[32px] flex items-center">
+                    {{ $t('styleCreate.noTagsYet') }}
+                  </p>
+
+                  <p class="text-xs text-neutral-500 mt-2">
+                    {{ $t('styleCreate.tagExamples') }}
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-        </Card>
-
-        <!-- Tags -->
-        <Card>
-          <h2 class="text-xl font-semibold text-neutral-900 mb-4">
-            Tags
-          </h2>
-
-          <div class="flex gap-2 mb-3">
-            <Input
-              v-model="tagInput"
-              placeholder="Add tags (e.g., watercolor, portrait, vibrant)"
-              @keydown.enter.prevent="addTag"
-            />
-            <Button type="button" variant="outline" @click="addTag">
-              Add
-            </Button>
-          </div>
-
-          <div v-if="formData.tags.length > 0" class="flex flex-wrap gap-2">
-            <button
-              v-for="(tag, index) in formData.tags"
-              :key="index"
-              type="button"
-              class="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm flex items-center gap-1 hover:bg-primary-200 transition-colors"
-              @click="removeTag(index)"
-            >
-              {{ tag }}
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
         </Card>
 
         <!-- Signature (Optional) -->
         <Card>
           <h2 class="text-xl font-semibold text-neutral-900 mb-2">
-            Signature (Optional)
+            {{ $t('styleCreate.signature') }}
           </h2>
           <p class="text-sm text-neutral-600 mb-4">
-            Upload your signature to be embedded in generated images as a watermark
+            {{ $t('styleCreate.signatureDescription') }}
           </p>
 
           <div v-if="!signatureImage" class="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center bg-neutral-50">
@@ -460,10 +533,10 @@ const resetForm = () => {
               variant="outline"
               @click="$refs.signatureInput.click()"
             >
-              Upload Signature
+              {{ $t('styleCreate.uploadSignature') }}
             </Button>
             <p class="text-xs text-neutral-500 mt-2">
-              PNG format recommended for transparency
+              {{ $t('styleCreate.signatureFormatHelper') }}
             </p>
           </div>
 
@@ -479,7 +552,7 @@ const resetForm = () => {
               size="sm"
               @click="removeSignature"
             >
-              Remove
+              {{ $t('styleCreate.remove') }}
             </Button>
           </div>
         </Card>
@@ -491,7 +564,7 @@ const resetForm = () => {
 
         <!-- Upload Progress -->
         <div v-if="isSubmitting" class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p class="text-blue-800 mb-2">Uploading style model...</p>
+          <p class="text-blue-800 mb-2">{{ $t('styleCreate.uploadingStyleModel') }}</p>
           <div class="w-full bg-blue-200 rounded-full h-2">
             <div
               class="bg-blue-600 h-2 rounded-full transition-all duration-300"
@@ -510,7 +583,7 @@ const resetForm = () => {
             :loading="isSubmitting"
             fullWidth
           >
-            Create Style
+            {{ $t('styleCreate.createStyle') }}
           </Button>
           <Button
             type="button"
@@ -519,7 +592,7 @@ const resetForm = () => {
             @click="router.push('/marketplace')"
             :disabled="isSubmitting"
           >
-            Cancel
+            {{ $t('styleCreate.cancel') }}
           </Button>
         </div>
       </form>

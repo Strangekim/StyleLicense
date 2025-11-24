@@ -30,8 +30,8 @@ export const useNotificationStore = defineStore('notification', () => {
       unreadCount.value = data.unread_count || 0
       return data
     } catch (err) {
-      error.value = err.message || 'Failed to fetch notifications'
-      console.error('Failed to fetch notifications:', err)
+      console.error('Failed to fetch notifications from API:', err)
+      error.value = err.response?.data?.error?.message || 'Failed to load notifications'
       throw err
     } finally {
       loading.value = false

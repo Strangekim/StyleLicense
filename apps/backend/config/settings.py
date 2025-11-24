@@ -25,12 +25,15 @@ load_dotenv(BASE_DIR / ".env")
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-z-!d@sq*=t$!hw6uujp%9u$chzi81w%q@+-%vno6f-6fh^1o^5"
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-z-!d@sq*=t$!hw6uujp%9u$chzi81w%q@+-%vno6f-6fh^1o^5")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 
-ALLOWED_HOSTS = []
+# ALLOWED_HOSTS configuration
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]").split(",")
+if "*" in ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -212,6 +215,7 @@ ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
+SOCIALACCOUNT_LOGIN_ON_GET = True  # Skip the intermediate confirmation page
 
 # Google OAuth Provider Configuration
 SOCIALACCOUNT_PROVIDERS = {

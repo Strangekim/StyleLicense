@@ -7,15 +7,15 @@
           @click="handleCancel"
           class="text-gray-700 hover:text-gray-900 font-medium"
         >
-          Cancel
+          {{ $t('editProfile.cancel') }}
         </button>
-        <h1 class="text-lg font-semibold text-gray-900">Edit Profile</h1>
+        <h1 class="text-lg font-semibold text-gray-900">{{ $t('editProfile.title') }}</h1>
         <button
           @click="handleSave"
           :disabled="saving"
           class="text-blue-600 hover:text-blue-700 font-semibold disabled:opacity-50"
         >
-          {{ saving ? 'Saving...' : 'Done' }}
+          {{ saving ? $t('editProfile.saving') : $t('editProfile.done') }}
         </button>
       </div>
     </div>
@@ -47,7 +47,7 @@
 
           <!-- Change Photo Button -->
           <label class="text-blue-600 hover:text-blue-700 font-medium cursor-pointer">
-            Change Profile Photo
+            {{ $t('editProfile.changeProfilePhoto') }}
             <input
               type="file"
               accept="image/*"
@@ -63,59 +63,31 @@
         <!-- Username -->
         <div class="mb-4">
           <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
-            Username
+            {{ $t('editProfile.username') }}
           </label>
           <input
             id="username"
             v-model="form.username"
             type="text"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Enter username"
-          />
-        </div>
-
-        <!-- Display Name -->
-        <div class="mb-4">
-          <label for="displayName" class="block text-sm font-medium text-gray-700 mb-2">
-            Display Name
-          </label>
-          <input
-            id="displayName"
-            v-model="form.display_name"
-            type="text"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Enter display name"
-          />
-        </div>
-
-        <!-- Title -->
-        <div class="mb-4">
-          <label for="title" class="block text-sm font-medium text-gray-700 mb-2">
-            Title
-          </label>
-          <input
-            id="title"
-            v-model="form.title"
-            type="text"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="e.g., Digital designer @company"
+            :placeholder="$t('editProfile.usernamePlaceholder')"
           />
         </div>
 
         <!-- Bio -->
         <div class="mb-4">
           <label for="bio" class="block text-sm font-medium text-gray-700 mb-2">
-            Bio
+            {{ $t('editProfile.bio') }}
           </label>
           <textarea
             id="bio"
             v-model="form.bio"
             rows="3"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-            placeholder="Tell us about yourself"
+            :placeholder="$t('editProfile.bioPlaceholder')"
           ></textarea>
           <p class="mt-1 text-xs text-gray-500">
-            {{ form.bio.length }}/150 characters
+            {{ form.bio.length }}/150 {{ $t('editProfile.characters') }}
           </p>
         </div>
 
@@ -125,36 +97,36 @@
           @click="handleSwitchToProfessional"
           class="text-blue-600 hover:text-blue-700 font-medium text-sm"
         >
-          Switch to Professional Account
+          {{ $t('editProfile.switchToProfessional') }}
         </button>
       </div>
 
       <!-- Private Information -->
       <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Private Information</h2>
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">{{ $t('editProfile.privateInformation') }}</h2>
 
         <!-- Email -->
         <div class="mb-4">
           <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
-            Email
+            {{ $t('editProfile.email') }}
           </label>
           <input
             id="email"
             v-model="form.email"
             type="email"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="email@example.com"
+            :placeholder="$t('editProfile.emailPlaceholder')"
             disabled
           />
           <p class="mt-1 text-xs text-gray-500">
-            Email cannot be changed
+            {{ $t('editProfile.emailCannotBeChanged') }}
           </p>
         </div>
 
         <!-- Signature -->
         <div class="mb-4">
           <label for="signature" class="block text-sm font-medium text-gray-700 mb-2">
-            Signature
+            {{ $t('editProfile.signature') }}
           </label>
 
           <!-- Signature Display -->
@@ -177,13 +149,13 @@
               v-model="form.signature"
               type="text"
               class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Type your signature"
+              :placeholder="$t('editProfile.signaturePlaceholder')"
             />
             <label class="px-4 py-2 bg-gray-100 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-200 cursor-pointer flex items-center">
               <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              Upload
+              {{ $t('editProfile.upload') }}
               <input
                 type="file"
                 accept="image/*"
@@ -197,15 +169,15 @@
 
       <!-- Danger Zone -->
       <div class="bg-white rounded-lg shadow-sm p-6 mb-6 border-l-4 border-red-500">
-        <h2 class="text-lg font-semibold text-red-600 mb-4">Danger Zone</h2>
+        <h2 class="text-lg font-semibold text-red-600 mb-4">{{ $t('editProfile.dangerZone') }}</h2>
         <button
           @click="handleDeleteAccount"
           class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
         >
-          Delete Account
+          {{ $t('editProfile.deleteAccount') }}
         </button>
         <p class="mt-2 text-xs text-gray-600">
-          This action cannot be undone. All your data will be permanently deleted.
+          {{ $t('editProfile.deleteAccountWarning') }}
         </p>
       </div>
     </div>
@@ -215,9 +187,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const { t } = useI18n()
 const authStore = useAuthStore()
 
 // State
@@ -229,8 +203,6 @@ const previewSignature = ref(null)
 
 const form = ref({
   username: '',
-  display_name: '',
-  title: '',
   bio: '',
   email: '',
   avatar: null,
@@ -252,9 +224,7 @@ async function loadProfile() {
     // Mock data from auth store
     form.value = {
       username: authStore.user?.username || 'jacob_w',
-      display_name: 'Jacob West',
-      title: 'Digital goodies designer @pixsellz',
-      bio: 'Everything is designed.',
+      bio: authStore.user?.bio || 'Everything is designed.',
       email: authStore.user?.email || 'jacob.west@gmail.com',
       avatar: authStore.user?.avatar || null,
       signature: 'Vincent',
@@ -274,12 +244,12 @@ async function handleSave() {
 
   // Validate form
   if (!form.value.username.trim()) {
-    alert('Username is required')
+    alert(t('editProfile.errors.usernameRequired'))
     return
   }
 
   if (form.value.bio.length > 150) {
-    alert('Bio must be 150 characters or less')
+    alert(t('editProfile.errors.bioTooLong'))
     return
   }
 
@@ -294,8 +264,6 @@ async function handleSave() {
     //   formData.append('signature', signatureFile)
     // }
     // formData.append('username', form.value.username)
-    // formData.append('display_name', form.value.display_name)
-    // formData.append('title', form.value.title)
     // formData.append('bio', form.value.bio)
     // await updateUserProfile(formData)
 
@@ -309,7 +277,7 @@ async function handleSave() {
     router.push('/profile')
   } catch (error) {
     console.error('Failed to save profile:', error)
-    alert('Failed to save profile. Please try again.')
+    alert(t('editProfile.errors.saveFailed'))
   } finally {
     saving.value = false
   }
@@ -323,7 +291,7 @@ function handleCancel() {
     previewSignature.value !== null
 
   if (hasChanges) {
-    if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+    if (confirm(t('editProfile.confirmUnsavedChanges'))) {
       router.push('/profile')
     }
   } else {
@@ -335,7 +303,7 @@ function handlePhotoChange(event) {
   const file = event.target.files[0]
   if (file) {
     if (file.size > 5 * 1024 * 1024) { // 5MB limit
-      alert('File size must be less than 5MB')
+      alert(t('editProfile.errors.photoTooLarge'))
       return
     }
 
@@ -351,7 +319,7 @@ function handleSignatureChange(event) {
   const file = event.target.files[0]
   if (file) {
     if (file.size > 2 * 1024 * 1024) { // 2MB limit
-      alert('File size must be less than 2MB')
+      alert(t('editProfile.errors.signatureTooLarge'))
       return
     }
 
@@ -366,20 +334,20 @@ function handleSignatureChange(event) {
 
 function handleSwitchToProfessional() {
   // TODO: Implement professional account switch
-  if (confirm('Switch to a professional account? This will give you access to create and sell styles.')) {
+  if (confirm(t('editProfile.confirmSwitchToProfessional'))) {
     // Navigate to artist registration or update user role
     router.push('/styles/create')
   }
 }
 
 function handleDeleteAccount() {
-  if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-    if (confirm('This will permanently delete all your data. Type "DELETE" to confirm.')) {
+  if (confirm(t('editProfile.confirmDeleteAccount'))) {
+    if (confirm(t('editProfile.confirmDeleteAccountFinal'))) {
       // TODO: Implement account deletion
       // await deleteUserAccount()
       // authStore.logout()
       // router.push('/')
-      alert('Account deletion is not yet implemented')
+      alert(t('editProfile.deleteNotImplemented'))
     }
   }
 }

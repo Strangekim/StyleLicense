@@ -7,6 +7,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useModelsStore } from '@/stores/models'
 import { useGenerationStore } from '@/stores/generations'
 import { useTokenStore } from '@/stores/tokens'
@@ -19,6 +20,7 @@ import ImagePreview from '@/components/features/generation/ImagePreview.vue'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const modelsStore = useModelsStore()
 const generationStore = useGenerationStore()
 const tokenStore = useTokenStore()
@@ -37,6 +39,7 @@ const isGenerating = ref(false)
 const errors = ref({})
 const availableModels = ref([])
 const selectedModel = ref(null)
+const promptError = ref(false) // Track non-English input attempt
 
 // Aspect ratio options with token costs
 const aspectRatioOptions = [
@@ -96,20 +99,42 @@ watch(
   }
 )
 
+// Filter to allow only English letters and spaces
+const filterEnglishOnly = (event) => {
+  const input = event.target.value
+  const filtered = input.replace(/[^a-zA-Z\s]/g, '')
+
+  // Check if non-English characters were attempted
+  if (input !== filtered) {
+    promptError.value = true
+    formData.value.prompt = filtered
+    // Trigger input event to update cursor position
+    event.target.value = filtered
+  } else {
+    promptError.value = false
+  }
+}
+
 // Validate form
 const validateForm = () => {
   const newErrors = {}
 
   if (!formData.value.style_id) {
-    newErrors.style_id = 'Please select a style model'
+    newErrors.style_id = t('generation.errors.selectStyle')
   }
 
   if (!formData.value.prompt.trim()) {
-    newErrors.prompt = 'Please enter a prompt'
+    newErrors.prompt = t('generation.errors.enterPrompt')
   }
 
   if (formData.value.prompt.length > 500) {
-    newErrors.prompt = 'Prompt must be less than 500 characters'
+    newErrors.prompt = t('generation.errors.promptTooLong')
+  }
+
+  // Check if prompt contains only English letters and spaces
+  const englishOnlyRegex = /^[a-zA-Z\s]*$/
+  if (formData.value.prompt && !englishOnlyRegex.test(formData.value.prompt)) {
+    newErrors.prompt = t('generation.errors.englishOnly')
   }
 
   errors.value = newErrors
@@ -123,7 +148,7 @@ const handleGenerate = async () => {
   }
 
   if (hasInsufficientTokens.value) {
-    if (confirm('Insufficient tokens. Would you like to purchase more?')) {
+    if (confirm(t('generation.insufficientTokensConfirm'))) {
       router.push('/tokens')
     }
     return
@@ -149,13 +174,13 @@ const handleGenerate = async () => {
     tokenStore.updateBalance(-tokenCost.value)
 
     // Show success message
-    alert('Image generation started! Check the progress below.')
+    alert(t('generation.generationStarted'))
 
     // Clear prompt for next generation
     formData.value.prompt = ''
   } catch (error) {
     console.error('Generation failed:', error)
-    errors.value.submit = error.response?.data?.error?.message || 'Failed to start generation'
+    errors.value.submit = error.response?.data?.error?.message || t('generation.errors.generationFailed')
   } finally {
     isGenerating.value = false
   }
@@ -186,10 +211,10 @@ const viewHistory = () => {
       <!-- Page Header -->
       <div class="mb-8">
         <h1 class="text-3xl font-bold text-neutral-900 mb-2">
-          Generate AI Art
+          {{ $t('generation.title') }}
         </h1>
         <p class="text-neutral-600">
-          Create unique images using AI style models
+          {{ $t('generation.subtitle') }}
         </p>
       </div>
 
@@ -199,7 +224,7 @@ const viewHistory = () => {
           <!-- Style Selector -->
           <Card>
             <h2 class="text-xl font-semibold text-neutral-900 mb-4">
-              Select Style
+              {{ $t('generation.selectStyle') }}
             </h2>
 
             <div v-if="availableModels.length > 0">
@@ -208,7 +233,7 @@ const viewHistory = () => {
                 class="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 :class="{ 'border-red-500': errors.style_id }"
               >
-                <option :value="null" disabled>Choose a style model...</option>
+                <option :value="null" disabled>{{ $t('generation.chooseStyle') }}</option>
                 <option v-for="model in availableModels" :key="model.id" :value="model.id">
                   {{ model.name }} by {{ model.artist?.username }}
                 </option>
@@ -235,40 +260,46 @@ const viewHistory = () => {
             </div>
 
             <div v-else class="text-center py-8">
-              <p class="text-neutral-600">Loading available styles...</p>
+              <p class="text-neutral-600">{{ $t('generation.loadingStyles') }}</p>
             </div>
           </Card>
 
           <!-- Prompt Input -->
           <Card>
             <h2 class="text-xl font-semibold text-neutral-900 mb-4">
-              Prompt
+              {{ $t('generation.prompt') }}
             </h2>
 
             <Input
               v-model="formData.prompt"
               type="textarea"
-              placeholder="Describe what you want to generate... (e.g., a serene landscape with mountains, a portrait of a cat, vibrant abstract art)"
+              :placeholder="$t('generation.promptPlaceholder')"
               :rows="4"
               :error="errors.prompt"
+              :class="{ 'border-red-500 bg-red-50': promptError }"
+              @input="filterEnglishOnly"
             >
               <template #helper>
-                {{ formData.prompt.length }}/500 characters
+                {{ formData.prompt.length }}/500 {{ $t('generation.characters') }}
               </template>
             </Input>
+
+            <p v-if="promptError" class="text-xs text-red-600 mt-2">
+              {{ $t('generation.errors.englishOnly') }}
+            </p>
           </Card>
 
           <!-- Settings -->
           <Card>
             <h2 class="text-xl font-semibold text-neutral-900 mb-4">
-              Settings
+              {{ $t('generation.settings') }}
             </h2>
 
             <div class="space-y-4">
               <!-- Aspect Ratio -->
               <div>
                 <label class="block text-sm font-medium text-neutral-700 mb-2">
-                  Aspect Ratio
+                  {{ $t('generation.aspectRatio') }}
                 </label>
                 <div class="grid grid-cols-2 gap-3">
                   <button
@@ -283,7 +314,7 @@ const viewHistory = () => {
                     @click="formData.aspect_ratio = option.value"
                   >
                     <div>{{ option.label }}</div>
-                    <div class="text-xs mt-1">{{ option.cost }} tokens</div>
+                    <div class="text-xs mt-1">{{ option.cost }} {{ $t('generation.tokens') }}</div>
                   </button>
                 </div>
               </div>
@@ -291,13 +322,13 @@ const viewHistory = () => {
               <!-- Seed (Advanced) -->
               <details>
                 <summary class="cursor-pointer text-sm font-medium text-neutral-700 mb-2">
-                  Advanced: Seed (Optional)
+                  {{ $t('generation.advancedSeed') }}
                 </summary>
                 <Input
                   v-model.number="formData.seed"
                   type="number"
-                  placeholder="Leave empty for random"
-                  helper="Use the same seed to reproduce similar results"
+                  :placeholder="$t('generation.seedPlaceholder')"
+                  :helper="$t('generation.seedHelper')"
                 />
               </details>
             </div>
@@ -307,13 +338,13 @@ const viewHistory = () => {
           <Card>
             <div class="flex items-center justify-between mb-4">
               <div>
-                <p class="text-sm text-neutral-600">Cost:</p>
+                <p class="text-sm text-neutral-600">{{ $t('generation.cost') }}</p>
                 <p class="text-2xl font-bold text-primary-600">
-                  {{ tokenCost }} tokens
+                  {{ tokenCost }} {{ $t('generation.tokens') }}
                 </p>
               </div>
               <div class="text-right">
-                <p class="text-sm text-neutral-600">Your Balance:</p>
+                <p class="text-sm text-neutral-600">{{ $t('generation.yourBalance') }}</p>
                 <p
                   class="text-2xl font-bold"
                   :class="{
@@ -321,7 +352,7 @@ const viewHistory = () => {
                     'text-red-600': hasInsufficientTokens,
                   }"
                 >
-                  {{ tokenStore.balance }} tokens
+                  {{ tokenStore.balance }} {{ $t('generation.tokens') }}
                 </p>
               </div>
             </div>
@@ -334,12 +365,12 @@ const viewHistory = () => {
               :loading="isGenerating"
               @click="handleGenerate"
             >
-              {{ hasInsufficientTokens ? 'Insufficient Tokens' : 'Generate Image' }}
+              {{ hasInsufficientTokens ? $t('generation.insufficientTokens') : $t('generation.generate') }}
             </Button>
 
             <p v-if="hasInsufficientTokens" class="text-center text-sm text-red-600 mt-2">
               <router-link to="/tokens" class="underline hover:text-red-700">
-                Purchase more tokens
+                {{ $t('generation.purchaseMoreTokens') }}
               </router-link>
             </p>
 
@@ -353,10 +384,10 @@ const viewHistory = () => {
         <div class="space-y-6">
           <div class="flex items-center justify-between">
             <h2 class="text-xl font-semibold text-neutral-900">
-              Active Generations
+              {{ $t('generation.activeGenerations') }}
             </h2>
             <Button variant="ghost" size="sm" @click="viewHistory">
-              View History
+              {{ $t('generation.viewHistory') }}
             </Button>
           </div>
 
@@ -377,10 +408,10 @@ const viewHistory = () => {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <p class="text-neutral-600">
-                No active generations
+                {{ $t('generation.noActiveGenerations') }}
               </p>
               <p class="text-neutral-500 text-sm mt-1">
-                Start generating to see progress here
+                {{ $t('generation.startGenerating') }}
               </p>
             </div>
           </Card>
