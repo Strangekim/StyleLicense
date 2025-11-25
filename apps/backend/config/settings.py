@@ -194,14 +194,14 @@ USE_X_FORWARDED_HOST = True
 
 # Session Configuration
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SAMESITE = "None"  # Required for cross-origin OAuth
 SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds
-SESSION_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
+SESSION_COOKIE_SECURE = not DEBUG  # True in production with HTTPS (required for SameSite=None)
 SESSION_COOKIE_NAME = "sessionid"
 
 # CSRF Configuration
 CSRF_COOKIE_HTTPONLY = False  # Frontend needs to read this
-CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "None"  # Required for cross-origin requests
 CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:5173").split(
     ","
 )
