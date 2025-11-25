@@ -1,6 +1,7 @@
 """
 Authentication views for Google OAuth and session management.
 """
+import logging
 from django.contrib.auth import logout
 from django.http import JsonResponse
 from django.views import View
@@ -8,6 +9,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
 from app.services import TokenService
+
+logger = logging.getLogger(__name__)
 
 
 class GoogleCallbackView(View):
@@ -85,27 +88,43 @@ class MeView(View):
 
 def grant_welcome_bonus(sender, request, user, **kwargs):
     """
-    Signal handler to grant welcome bonus on first login.
-    This should be connected to allauth's user_signed_up signal.
+    Grant 100 token welcome bonus to new users.
+    Enhanced with error handling to not break OAuth flow.
     """
+    logger.info(f"[WelcomeBonus] Signal triggered for user {user.id} ({user.username})")
+
     try:
-        # Check if this is a new user (first login)
-        # We check if there are any transactions for this user
         from app.models import Transaction
 
-        has_transactions = Transaction.objects.filter(receiver=user).exists()
+        # Check if bonus already granted (idempotent)
+        existing_bonus = Transaction.objects.filter(
+            receiver=user,
+            transaction_type='purchase',
+            memo__icontains='Welcome bonus'
+        ).exists()
 
-        if not has_transactions:
-            # Grant welcome bonus
-            TokenService.add_tokens(
-                user_id=user.id,
-                amount=100,
-                reason="Welcome bonus for new user",
-                transaction_type="purchase",  # System grant
-            )
+        if existing_bonus:
+            logger.info(f"[WelcomeBonus] Already granted to user {user.id}")
+            return
+
+        # Grant 100 tokens
+        TokenService.add_tokens(
+            user_id=user.id,
+            amount=100,
+            reason="Welcome bonus for new user",
+            transaction_type="purchase",
+        )
+
+        logger.info(f"[WelcomeBonus] Successfully granted 100 tokens to user {user.id}")
+
     except Exception as e:
-        # Log error but don't fail the login
-        print(f"Error granting welcome bonus: {e}")
+        # CRITICAL: Don't fail OAuth flow if welcome bonus fails
+        # Just log the error and continue
+        logger.error(
+            f"[WelcomeBonus] Failed for user {user.id}: {e}",
+            exc_info=True
+        )
+        # OAuth login will still succeed even if this fails
 
 
 # Connect the welcome bonus signal
