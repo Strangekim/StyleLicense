@@ -222,6 +222,11 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
 SOCIALACCOUNT_LOGIN_ON_GET = True  # Skip the intermediate confirmation page
 
+# Redirect URLs after authentication
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+LOGIN_REDIRECT_URL = FRONTEND_URL + "/"
+ACCOUNT_LOGOUT_REDIRECT_URL = FRONTEND_URL + "/"
+
 # Google OAuth Provider Configuration
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
