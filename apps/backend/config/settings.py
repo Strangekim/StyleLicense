@@ -227,6 +227,9 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 LOGIN_REDIRECT_URL = FRONTEND_URL + "/"
 ACCOUNT_LOGOUT_REDIRECT_URL = FRONTEND_URL + "/"
 
+# Custom adapter for OAuth redirect to frontend
+SOCIALACCOUNT_ADAPTER = "app.adapters.socialaccount.CustomSocialAccountAdapter"
+
 # Google OAuth Provider Configuration
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
