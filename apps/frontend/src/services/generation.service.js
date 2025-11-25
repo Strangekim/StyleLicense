@@ -17,7 +17,7 @@ import apiClient from './api'
  * @returns {Promise<Object>} Generation result with generation_id and status
  */
 export async function generateImage(data) {
-  const response = await apiClient.post('/api/images/generate/', data)
+  const response = await apiClient.post('/api/generations/', data)
   return response.data
 }
 
@@ -28,7 +28,7 @@ export async function generateImage(data) {
  * @returns {Promise<Object>} Generation status (queued/processing/completed/failed) and image_url if completed
  */
 export async function getGenerationStatus(id) {
-  const response = await apiClient.get(`/api/images/${id}/status/`)
+  const response = await apiClient.get(`/api/generations/${id}/`)
   return response.data
 }
 
@@ -42,7 +42,7 @@ export async function getGenerationStatus(id) {
  * @returns {Promise<Object>} Paginated list of generations
  */
 export async function listGenerations(params = {}) {
-  const response = await apiClient.get('/api/images/', { params })
+  const response = await apiClient.get('/api/generations/', { params })
   return response.data
 }
 
@@ -53,7 +53,7 @@ export async function listGenerations(params = {}) {
  * @returns {Promise<Object>} Generation detail with image, metadata, and artist info
  */
 export async function getGenerationDetail(id) {
-  const response = await apiClient.get(`/api/images/${id}/`)
+  const response = await apiClient.get(`/api/generations/${id}/`)
   return response.data
 }
 

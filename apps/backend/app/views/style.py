@@ -2,10 +2,10 @@
 Style ViewSet for Style Model API.
 
 Endpoints:
-- GET /api/models/ - List styles with filtering and sorting
-- GET /api/models/:id/ - Retrieve style detail
-- POST /api/models/ - Create new style and start training
-- DELETE /api/models/:id/ - Delete style (owner only)
+- GET /api/styles/ - List styles with filtering and sorting
+- GET /api/styles/:id/ - Retrieve style detail
+- POST /api/styles/ - Create new style and start training
+- DELETE /api/styles/:id/ - Delete style (owner only)
 """
 from rest_framework import status
 from rest_framework.decorators import action
