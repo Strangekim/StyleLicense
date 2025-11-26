@@ -4,9 +4,11 @@ Authentication views for custom Google OAuth and session management.
 import logging
 import secrets
 import requests
+import time
 from urllib.parse import urlencode
 from django.conf import settings
 from django.contrib.auth import login, logout
+from django.core import signing
 from django.http import JsonResponse, HttpResponseRedirect
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -26,9 +28,13 @@ class GoogleLoginView(View):
 
     def get(self, request):
         """Redirect to Google OAuth authorization page."""
-        # Generate random state for CSRF protection
-        state = secrets.token_urlsafe(32)
-        request.session['oauth_state'] = state
+        # Generate signed state token for CSRF protection (no session needed)
+        random_value = secrets.token_urlsafe(16)
+        timestamp = int(time.time())
+        state_data = {'random': random_value, 'timestamp': timestamp}
+
+        # Sign the state using Django's signing module (max_age=600 = 10 minutes)
+        state = signing.dumps(state_data)
 
         # Build Google OAuth URL
         params = {
@@ -42,7 +48,7 @@ class GoogleLoginView(View):
 
         auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
 
-        logger.info(f"[OAuth] Redirecting to Google OAuth: state={state[:10]}...")
+        logger.info(f"[OAuth] Redirecting to Google OAuth: state={state[:20]}...")
         return HttpResponseRedirect(auth_url)
 
 
@@ -72,11 +78,24 @@ class GoogleCallbackView(View):
             logger.error("[OAuth] No authorization code received")
             return HttpResponseRedirect(f"{settings.FRONTEND_URL}/?error=no_code")
 
-        # Verify state to prevent CSRF
-        session_state = request.session.get('oauth_state')
-        if not session_state or session_state != state:
-            logger.error(f"[OAuth] State mismatch: session={session_state[:10] if session_state else 'None'}, received={state[:10] if state else 'None'}")
+        # Verify signed state token to prevent CSRF (no session needed)
+        if not state:
+            logger.error("[OAuth] No state parameter received")
+            return HttpResponseRedirect(f"{settings.FRONTEND_URL}/?error=no_state")
+
+        try:
+            # Verify signature and check max_age (10 minutes)
+            state_data = signing.loads(state, max_age=600)
+            logger.info(f"[OAuth] State verified successfully: {state_data.get('random', '')[:10]}...")
+        except signing.SignatureExpired:
+            logger.error("[OAuth] State token expired (>10 minutes old)")
+            return HttpResponseRedirect(f"{settings.FRONTEND_URL}/?error=state_expired")
+        except signing.BadSignature:
+            logger.error(f"[OAuth] Invalid state signature: {state[:20]}...")
             return HttpResponseRedirect(f"{settings.FRONTEND_URL}/?error=invalid_state")
+        except Exception as e:
+            logger.error(f"[OAuth] State verification error: {e}")
+            return HttpResponseRedirect(f"{settings.FRONTEND_URL}/?error=state_error")
 
         try:
             # Exchange authorization code for access token
