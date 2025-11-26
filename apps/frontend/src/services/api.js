@@ -1,7 +1,8 @@
 import axios from 'axios'
 
 // Get API base URL from environment variable
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+// Use ?? instead of || to allow empty string (for Firebase Hosting rewrite)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
 // Create Axios instance
 const apiClient = axios.create({
