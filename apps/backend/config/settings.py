@@ -202,6 +202,7 @@ SESSION_COOKIE_NAME = "sessionid"
 # CSRF Configuration
 CSRF_COOKIE_HTTPONLY = False  # Frontend needs to read this
 CSRF_COOKIE_SAMESITE = "None"  # Required for cross-origin requests
+CSRF_COOKIE_SECURE = not DEBUG  # True in production with HTTPS (required for SameSite=None)
 CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:5173").split(
     ","
 )
