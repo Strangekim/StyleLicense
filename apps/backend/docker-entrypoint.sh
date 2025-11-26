@@ -3,10 +3,6 @@ set -e
 
 echo "[Entrypoint] Starting StyleLicense Backend..."
 
-# Setup OAuth (cleanup duplicates and create SocialApp)
-echo "[Entrypoint] Setting up OAuth..."
-python manage.py cleanup_oauth || echo "[Entrypoint] Warning: OAuth setup failed, continuing..."
-
 # Start Gunicorn
 echo "[Entrypoint] Starting Gunicorn..."
 exec gunicorn config.wsgi:application \
