@@ -45,15 +45,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django.contrib.sites",  # Required for allauth
     # Third-party apps
     "rest_framework",
     "corsheaders",
-    # django-allauth
-    "allauth",
-    "allauth.account",
-    "allauth.socialaccount",
-    "allauth.socialaccount.providers.google",
     # Local apps
     "app.apps.AppConfig",
 ]
@@ -66,7 +60,6 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "app.middleware.WebhookAuthMiddleware",  # Webhook authentication for AI servers
-    "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -177,15 +170,10 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "app.utils.exception_handler.custom_exception_handler",
 }
 
-# Django Sites Framework
-SITE_ID = 1
-
 # Authentication Backends
 AUTHENTICATION_BACKENDS = [
     # Django default
     "django.contrib.auth.backends.ModelBackend",
-    # Allauth
-    "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
 # HTTPS/Proxy Configuration (for Cloud Run)
@@ -213,38 +201,13 @@ CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173"
 )
 CORS_ALLOW_CREDENTIALS = True  # Allow cookies for session authentication
 
-# django-allauth Configuration
-ACCOUNT_AUTHENTICATION_METHOD = "username"
-ACCOUNT_EMAIL_REQUIRED = False
-ACCOUNT_USERNAME_REQUIRED = True
-ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
-ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"  # Force HTTPS for OAuth callbacks
-SOCIALACCOUNT_AUTO_SIGNUP = True
-SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
-SOCIALACCOUNT_LOGIN_ON_GET = True  # Skip the intermediate confirmation page
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/auth/google/callback")
 
-# Redirect URLs after authentication
+# Frontend URL for post-login redirect
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
-LOGIN_REDIRECT_URL = FRONTEND_URL + "/"
-ACCOUNT_LOGOUT_REDIRECT_URL = FRONTEND_URL + "/"
-
-# Custom adapter for OAuth redirect to frontend
-SOCIALACCOUNT_ADAPTER = "app.adapters.socialaccount.CustomSocialAccountAdapter"
-
-# Google OAuth Provider Configuration
-SOCIALACCOUNT_PROVIDERS = {
-    "google": {
-        "SCOPE": [
-            "profile",
-            "email",
-        ],
-        "AUTH_PARAMS": {
-            "access_type": "online",
-        },
-        # APP configuration is managed via database (SocialApp model)
-        # See cleanup_oauth management command
-    }
-}
 
 # RabbitMQ Configuration
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
