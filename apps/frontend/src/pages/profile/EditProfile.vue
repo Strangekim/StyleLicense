@@ -201,6 +201,8 @@ const saving = ref(false)
 const isProfessional = ref(false)
 const previewAvatar = ref(null)
 const previewSignature = ref(null)
+const avatarFile = ref(null)
+const signatureFile = ref(null)
 
 const form = ref({
   username: '',
@@ -308,6 +310,10 @@ function handlePhotoChange(event) {
       return
     }
 
+    // Store the file for upload
+    avatarFile.value = file
+
+    // Create preview
     const reader = new FileReader()
     reader.onload = (e) => {
       previewAvatar.value = e.target.result
@@ -324,6 +330,10 @@ function handleSignatureChange(event) {
       return
     }
 
+    // Store the file for upload
+    signatureFile.value = file
+
+    // Create preview
     const reader = new FileReader()
     reader.onload = (e) => {
       previewSignature.value = e.target.result
