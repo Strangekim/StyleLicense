@@ -216,7 +216,7 @@
     "switchToProfessional": "프로페셔널 계정으로 전환",
     "privateInformation": "비공개 정보",
     "email": "이메일",
-    "emailPlaceholder": "email@example.com",
+    "emailPlaceholder": "email@@example.com",
     "emailCannotBeChanged": "이메일은 변경할 수 없습니다",
     "signature": "서명",
     "signaturePlaceholder": "서명 입력",

@@ -216,7 +216,7 @@
     "switchToProfessional": "Switch to Professional Account",
     "privateInformation": "Private Information",
     "email": "Email",
-    "emailPlaceholder": "email@example.com",
+    "emailPlaceholder": "email@@example.com",
     "emailCannotBeChanged": "Email cannot be changed",
     "signature": "Signature",
     "signaturePlaceholder": "Type your signature",
