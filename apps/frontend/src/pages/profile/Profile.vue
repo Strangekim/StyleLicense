@@ -56,7 +56,7 @@
             </div>
 
             <!-- Action Buttons -->
-            <div class="grid grid-cols-3 gap-3 mt-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
               <router-link
                 to="/styles/create"
                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-center"
@@ -75,6 +75,12 @@
               >
                 {{ $t('profile.editProfile') }}
               </router-link>
+              <button
+                @click="handleLogout"
+                class="px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                {{ $t('nav.logout') }}
+              </button>
             </div>
           </div>
 
@@ -390,6 +396,15 @@ async function fetchUserImages() {
     console.error('Failed to fetch user images:', error)
   } finally {
     loadingImages.value = false
+  }
+}
+
+async function handleLogout() {
+  try {
+    await authStore.logout()
+    // The logout function in auth store will redirect to /login
+  } catch (error) {
+    console.error('Logout failed:', error)
   }
 }
 

@@ -15,8 +15,10 @@
   "auth": {
     "loginWithGoogle": "Login with Google",
     "loggingIn": "Logging in...",
+    "processingLogin": "Processing login...",
     "loginSuccess": "Successfully logged in",
     "loginError": "Login failed",
+    "missingTokens": "Authentication tokens missing",
     "logoutSuccess": "Successfully logged out"
   },
   "common": {
