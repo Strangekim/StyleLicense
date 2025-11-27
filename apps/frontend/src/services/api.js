@@ -1,33 +1,29 @@
 import axios from 'axios'
+import { useAuthStore } from '@/stores/auth'
 
-// Get API base URL from environment variable
-// Use ?? instead of || to allow empty string (for Firebase Hosting rewrite)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+const API_BASE_URL = 'https://stylelicense-backend-606831968092.asia-northeast3.run.app'
 
 // Create Axios instance
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
-  withCredentials: true, // Include cookies for session-based auth
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
-// Request interceptor
+// Request interceptor for adding the auth header and logging
 apiClient.interceptors.request.use(
   (config) => {
-    // Get CSRF token from cookie if available
-    const csrfToken = getCookie('csrftoken')
-    if (csrfToken && ['post', 'put', 'patch', 'delete'].includes(config.method)) {
-      config.headers['X-CSRFToken'] = csrfToken
+    // Add the JWT access token to the Authorization header
+    const token = localStorage.getItem('accessToken')
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`
     }
 
-    // Log requests in development mode
     if (import.meta.env.DEV) {
-      console.log(`[API Request] ${config.method.toUpperCase()} ${config.url}`, config.data)
+      console.log(`[API Request] ${config.method.toUpperCase()} ${config.url}`)
     }
-
     return config
   },
   (error) => {
@@ -35,66 +31,66 @@ apiClient.interceptors.request.use(
   }
 )
 
-// Response interceptor
+// Flag to prevent multiple concurrent token refresh attempts
+let isRefreshing = false
+let failedQueue = []
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error)
+    } else {
+      prom.resolve(token)
+    }
+  })
+  failedQueue = []
+}
+
+// Response interceptor for handling token refresh
 apiClient.interceptors.response.use(
   (response) => {
-    // Log responses in development mode
-    if (import.meta.env.DEV) {
-      console.log(`[API Response] ${response.config.method.toUpperCase()} ${response.config.url}`, response.data)
-    }
-
-    // Extract data from response.data if present
     return response
   },
-  (error) => {
-    const { response } = error
+  async (error) => {
+    const originalRequest = error.config
+    const authStore = useAuthStore()
 
-    // Log errors in development mode
-    if (import.meta.env.DEV) {
-      console.error('[API Error]', error.response?.data || error.message)
-    }
+    // Check if the error is a 401 and it's not a request to the refresh token endpoint
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise(function(resolve, reject) {
+          failedQueue.push({ resolve, reject })
+        }).then(token => {
+          originalRequest.headers['Authorization'] = 'Bearer ' + token
+          return apiClient(originalRequest)
+        }).catch(err => {
+          return Promise.reject(err)
+        })
+      }
 
-    // Handle different error statuses
-    if (response) {
-      switch (response.status) {
-        case 401:
-          // Unauthorized - redirect to login only for protected resources
-          // Don't redirect for auth/me endpoint (checking if user is logged in is normal)
-          const isAuthCheckEndpoint = error.config?.url?.includes('/auth/me')
-          const isOnLoginPage = window.location.pathname.includes('/login')
-          const isOnPublicPage = ['/', '/community', '/marketplace', '/models'].some(
-            path => window.location.pathname.startsWith(path)
-          )
+      originalRequest._retry = true
+      isRefreshing = true
 
-          // Only redirect to login if:
-          // - Not checking auth status
-          // - Not already on login page
-          // - Not on a public page
-          if (!isAuthCheckEndpoint && !isOnLoginPage && !isOnPublicPage) {
-            window.location.href = '/login'
-          }
-          break
-        case 403:
-          // Forbidden - show permission denied message
-          console.error('Permission denied:', response.data?.error?.message)
-          break
-        case 500:
-          // Internal server error
-          console.error('Server error:', response.data?.error?.message)
-          break
+      try {
+        const newAccessToken = await authStore.attemptRefreshToken()
+        if (newAccessToken) {
+          originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`
+          processQueue(null, newAccessToken)
+          return apiClient(originalRequest)
+        }
+      } catch (refreshError) {
+        processQueue(refreshError, null)
+        console.error('Redirecting to login due to refresh token failure.')
+        authStore.logout()
+        return Promise.reject(refreshError)
+      } finally {
+        isRefreshing = false
       }
     }
 
+    // For other errors, just reject them
     return Promise.reject(error)
   }
 )
-
-// Helper function to get cookie value by name
-function getCookie(name) {
-  const value = `; ${document.cookie}`
-  const parts = value.split(`; ${name}=`)
-  if (parts.length === 2) return parts.pop().split(';').shift()
-  return null
-}
 
 export default apiClient

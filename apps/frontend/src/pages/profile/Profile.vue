@@ -289,21 +289,19 @@ onMounted(async () => {
 async function fetchProfile() {
   loading.value = true
   try {
-    // TODO: Replace with actual API call
-    // const response = await getUserProfile()
-    // profile.value = response.data
-
-    // Mock data from auth store
-    profile.value = {
-      id: authStore.user?.id || 1,
-      username: authStore.user?.username || 'JacobWest',
-      display_name: 'Jacob West',
-      title: 'Digital goodies designer @pixsellz',
-      bio: 'Everything is designed.',
-      avatar: authStore.user?.avatar || null,
-      generation_count: 24,
-      follower_count: 156,
-      following_count: 89,
+    // Use actual user data from auth store
+    if (authStore.user) {
+      profile.value = {
+        id: authStore.user.id,
+        username: authStore.user.username,
+        display_name: authStore.user.username,  // Can add display_name field to backend if needed
+        title: authStore.user.role === 'artist' ? 'Artist' : 'User',
+        bio: authStore.user.bio || '',
+        avatar: authStore.user.profile_image || null,
+        generation_count: 0,  // TODO: Add to backend API
+        follower_count: authStore.user.artist_profile?.follower_count || 0,
+        following_count: 0,  // TODO: Add to backend API
+      }
     }
   } catch (error) {
     console.error('Failed to fetch profile:', error)
