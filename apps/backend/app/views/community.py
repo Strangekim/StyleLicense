@@ -18,6 +18,8 @@ from app.serializers.community import (
     LikeToggleSerializer,
     FollowToggleSerializer,
     FollowingUserSerializer,
+    UserProfileSerializer,
+    UserUpdateSerializer,
 )
 
 
@@ -200,14 +202,73 @@ class UserViewSet(viewsets.GenericViewSet):
     """
     ViewSet for user-related actions.
 
+    retrieve: GET /api/users/:id - Get user profile
+    update: PATCH /api/users/me - Update own profile
     follow: POST /api/users/:id/follow - Toggle follow
     following: GET /api/users/following - List users current user follows
     """
 
-    serializer_class = FollowingUserSerializer
-    permission_classes = [IsAuthenticated]
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
     pagination_class = PageNumberPagination
     queryset = User.objects.all()
+
+    def get_serializer_class(self):
+        """Return appropriate serializer based on action."""
+        if self.action == "update":
+            return UserUpdateSerializer
+        elif self.action == "following":
+            return FollowingUserSerializer
+        return UserProfileSerializer
+
+    def retrieve(self, request, pk=None):
+        """
+        Get user profile.
+
+        GET /api/users/:id
+        """
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response(
+                {"success": False, "error": {"code": "NOT_FOUND", "message": "User not found"}},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = UserProfileSerializer(user)
+        return Response(
+            {"success": True, "data": serializer.data}, status=status.HTTP_200_OK
+        )
+
+    @action(detail=False, methods=["patch"], permission_classes=[IsAuthenticated])
+    def me(self, request):
+        """
+        Update current user's profile.
+
+        PATCH /api/users/me
+        """
+        serializer = UserUpdateSerializer(request.user, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            # Return full profile data after update
+            profile_serializer = UserProfileSerializer(request.user)
+            return Response(
+                {"success": True, "data": profile_serializer.data},
+                status=status.HTTP_200_OK,
+            )
+
+        return Response(
+            {
+                "success": False,
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Invalid data",
+                    "details": serializer.errors,
+                },
+            },
+            status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
 
     @action(detail=True, methods=["post"])
     def follow(self, request, pk=None):
