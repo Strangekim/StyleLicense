@@ -10,6 +10,10 @@ const i18n = createI18n({
     en,
     ko,
   },
+  // Disable strict message format checking
+  messageCompiler: undefined,
+  warnHtmlMessage: false,
+  escapeParameter: false,
 })
 
 export default i18n
