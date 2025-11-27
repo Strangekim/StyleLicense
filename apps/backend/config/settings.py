@@ -186,6 +186,8 @@ SESSION_COOKIE_SAMESITE = "None"  # None for cross-origin requests (Firebase Hos
 SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds
 SESSION_COOKIE_SECURE = not DEBUG  # True in production with HTTPS (required for SameSite=None)
 SESSION_COOKIE_NAME = "sessionid"
+# Set cookie domain to Firebase Hosting domain for proper cross-origin cookie handling
+SESSION_COOKIE_DOMAIN = os.getenv("SESSION_COOKIE_DOMAIN", None)  # e.g., ".web.app" for all Firebase Hosting sites
 
 # CSRF Configuration
 CSRF_COOKIE_HTTPONLY = False  # Frontend needs to read this
