@@ -59,7 +59,7 @@
     "noTransactions": "아직 거래 내역이 없습니다",
     "purchased": "구매",
     "used": "사용",
-    "purchasingMessage": "{tokens}개 토큰을 ${price}에 구매합니다",
+    "purchasingMessage": "{tokens}개 토큰을 {price}에 구매합니다",
     "purchaseSuccess": "구매 성공!",
     "purchaseFailed": "구매 실패. 다시 시도해주세요.",
     "purchasedTokens": "{tokens}개 토큰 구매"

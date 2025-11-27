@@ -59,7 +59,7 @@
     "noTransactions": "No transactions yet",
     "purchased": "Purchased",
     "used": "Used",
-    "purchasingMessage": "Purchasing {tokens} tokens for ${price}",
+    "purchasingMessage": "Purchasing {tokens} tokens for {price}",
     "purchaseSuccess": "Purchase successful!",
     "purchaseFailed": "Purchase failed. Please try again.",
     "purchasedTokens": "Purchased {tokens} tokens"
