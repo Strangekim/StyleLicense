@@ -46,14 +46,10 @@ export async function updateUserProfile(data) {
 
 /**
  * Upgrade to artist account
- * @param {Object} data - Artist upgrade data
- * @param {string} data.artist_name - Artist name
- * @param {string} data.verified_email - Verified email
- * @param {File|string} data.signature_image - Signature image file or base64
  * @returns {Promise<Object>} - Upgraded artist data
  */
-export async function upgradeToArtist(data) {
-  const response = await api.post('/api/users/me/upgrade-to-artist', data)
+export async function upgradeToArtist() {
+  const response = await api.post('/api/users/upgrade-to-artist/')
   return response.data
 }
 

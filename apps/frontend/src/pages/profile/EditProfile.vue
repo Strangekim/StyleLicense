@@ -343,11 +343,30 @@ function handleSignatureChange(event) {
   }
 }
 
-function handleSwitchToProfessional() {
-  // TODO: Implement professional account switch
-  if (confirm(t('editProfile.confirmSwitchToProfessional'))) {
-    // Navigate to artist registration or update user role
-    router.push('/styles/create')
+async function handleSwitchToProfessional() {
+  if (!confirm(t('editProfile.confirmSwitchToProfessional'))) {
+    return
+  }
+
+  try {
+    // Call backend to upgrade to artist
+    const response = await upgradeToArtist()
+
+    if (response.success) {
+      // Update auth store with new user data
+      await authStore.initAuth()
+
+      // Show success message
+      alert(t('editProfile.upgradedToArtist') || 'Successfully upgraded to artist account!')
+
+      // Navigate to style creation page
+      router.push('/styles/create')
+    } else {
+      throw new Error(response.error?.message || 'Upgrade failed')
+    }
+  } catch (error) {
+    console.error('Failed to upgrade to artist:', error)
+    alert(t('editProfile.errors.upgradeFailed') || 'Failed to upgrade to artist account. Please try again.')
   }
 }
 

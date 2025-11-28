@@ -270,6 +270,44 @@ class UserViewSet(viewsets.GenericViewSet):
             status=status.HTTP_422_UNPROCESSABLE_ENTITY,
         )
 
+    @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated])
+    def upgrade_to_artist(self, request):
+        """
+        Upgrade current user to artist role.
+
+        POST /api/users/upgrade-to-artist
+        Response: {"success": true, "data": {...}}
+        """
+        user = request.user
+
+        # Check if already an artist
+        if user.role == "artist":
+            return Response(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "ALREADY_ARTIST",
+                        "message": "You are already an artist",
+                    },
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Upgrade to artist
+        user.role = "artist"
+        user.save(update_fields=["role"])
+
+        # Return updated profile
+        serializer = UserProfileSerializer(user)
+        return Response(
+            {
+                "success": True,
+                "data": serializer.data,
+                "message": "Successfully upgraded to artist account",
+            },
+            status=status.HTTP_200_OK,
+        )
+
     @action(detail=True, methods=["post"])
     def follow(self, request, pk=None):
         """
