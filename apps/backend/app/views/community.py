@@ -270,12 +270,12 @@ class UserViewSet(viewsets.GenericViewSet):
             status=status.HTTP_422_UNPROCESSABLE_ENTITY,
         )
 
-    @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=["post"], url_path="upgrade-to-artist", permission_classes=[IsAuthenticated])
     def upgrade_to_artist(self, request):
         """
         Upgrade current user to artist role.
 
-        POST /api/users/upgrade-to-artist
+        POST /api/users/upgrade-to-artist/
         Response: {"success": true, "data": {...}}
         """
         user = request.user
