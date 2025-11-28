@@ -7,6 +7,8 @@ Endpoints:
 - POST /api/styles/ - Create new style and start training
 - DELETE /api/styles/:id/ - Delete style (owner only)
 """
+import logging
+
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -22,6 +24,9 @@ from app.serializers import (
 from app.views.base import BaseViewSet
 from app.permissions import IsArtist, IsOwnerOrReadOnly
 from app.services.rabbitmq_service import get_rabbitmq_service
+
+
+logger = logging.getLogger(__name__)
 
 
 class StyleViewSet(BaseViewSet):
@@ -193,6 +198,9 @@ class StyleViewSet(BaseViewSet):
             image_paths.append(placeholder_url)
 
         # Send training task to RabbitMQ
+        task_id = None
+        warning_message = None
+
         try:
             rabbitmq_service = get_rabbitmq_service()
             task_id = rabbitmq_service.send_training_task(
@@ -203,33 +211,31 @@ class StyleViewSet(BaseViewSet):
             style.training_status = "training"
             style.save(update_fields=["training_status"])
 
-            # Return response with style data
-            response_serializer = StyleDetailSerializer(style)
-            return Response(
-                {
-                    "success": True,
-                    "data": response_serializer.data,
-                    "message": "Training task submitted successfully",
-                    "task_id": task_id,
-                },
-                status=status.HTTP_201_CREATED,
-            )
-
         except Exception as e:
-            # If RabbitMQ fails, mark style as failed
-            style.training_status = "failed"
+            # If RabbitMQ fails, keep style as pending
+            # This allows manual training trigger later
+            style.training_status = "pending"
             style.save(update_fields=["training_status"])
 
-            return Response(
-                {
-                    "success": False,
-                    "error": {
-                        "code": "RABBITMQ_ERROR",
-                        "message": f"Failed to submit training task: {str(e)}",
-                    },
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            warning_message = f"Style created but training task could not be submitted: {str(e)}"
+            logger.warning("RabbitMQ connection failed for style %d: %s", style.id, str(e))
+
+        # Return response with style data
+        response_serializer = StyleDetailSerializer(style)
+        response_data = {
+            "success": True,
+            "data": response_serializer.data,
+            "message": "Style created successfully",
+        }
+
+        if task_id:
+            response_data["task_id"] = task_id
+            response_data["message"] = "Training task submitted successfully"
+
+        if warning_message:
+            response_data["warning"] = warning_message
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
         """
