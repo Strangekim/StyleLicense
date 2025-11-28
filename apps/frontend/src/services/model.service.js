@@ -52,6 +52,9 @@ export async function createModel(data) {
   if (data.description) {
     formData.append('description', data.description)
   }
+  if (data.generation_cost_tokens !== undefined) {
+    formData.append('generation_cost_tokens', data.generation_cost_tokens)
+  }
 
   // Add training images
   if (data.training_images && data.training_images.length > 0) {
