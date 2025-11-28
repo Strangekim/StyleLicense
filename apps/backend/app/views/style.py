@@ -177,13 +177,21 @@ class StyleViewSet(BaseViewSet):
 
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
+
+            logger.info(f"[Style Create] Validation passed, saving style...")
         except Exception as e:
             logger.error(f"[Style Create] Validation error: {str(e)}", exc_info=True)
             raise
 
         # Save style (serializer handles artworks and tags creation)
-        self.perform_create(serializer)
-        style = serializer.instance
+        try:
+            logger.info(f"[Style Create] Calling perform_create with user: {request.user.id}")
+            self.perform_create(serializer)
+            style = serializer.instance
+            logger.info(f"[Style Create] Style created: id={style.id}, name={style.name}")
+        except Exception as e:
+            logger.error(f"[Style Create] Error during save: {str(e)}", exc_info=True)
+            raise
 
         # Get training images from request
         training_images = request.FILES.getlist("training_images")
