@@ -56,7 +56,9 @@ export async function createModel(data) {
   // Add training images
   if (data.training_images && data.training_images.length > 0) {
     data.training_images.forEach((image) => {
-      formData.append('training_images', image)
+      // Extract file from object {file: File, caption: string}
+      const file = image.file || image
+      formData.append('training_images', file)
     })
   }
 
