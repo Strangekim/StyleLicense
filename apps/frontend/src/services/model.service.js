@@ -62,9 +62,11 @@ export async function createModel(data) {
     })
   }
 
-  // Add tags as JSON string
+  // Add tags (each tag as separate field with same key)
   if (data.tags && data.tags.length > 0) {
-    formData.append('tags', JSON.stringify(data.tags))
+    data.tags.forEach((tag) => {
+      formData.append('tags', tag)
+    })
   }
 
   // Add signature if provided
