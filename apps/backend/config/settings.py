@@ -33,7 +33,7 @@ SECRET_KEY = "django-insecure-stylelicense-production-key-2025"
 DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 
 # ALLOWED_HOSTS configuration
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]").split(",")
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
 if "*" in ALLOWED_HOSTS:
     ALLOWED_HOSTS = ["*"]
 
