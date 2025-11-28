@@ -171,8 +171,15 @@ class StyleViewSet(BaseViewSet):
         - tags: array of strings
         - training_images: array of files (10-100 images)
         """
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            logger.info(f"[Style Create] Request data keys: {list(request.data.keys())}")
+            logger.info(f"[Style Create] Request FILES keys: {list(request.FILES.keys())}")
+
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+        except Exception as e:
+            logger.error(f"[Style Create] Validation error: {str(e)}", exc_info=True)
+            raise
 
         # Save style (serializer handles artworks and tags creation)
         self.perform_create(serializer)
