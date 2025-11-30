@@ -210,12 +210,21 @@ This document contains detailed subtasks for frontend development. For high-leve
   - [ ] Test logout clears user and redirects (requires backend running)
   - [ ] Test router guards protect routes (requires backend running)
 
+- [x] JWT Token Authentication Migration (Commit: 7445f4a)
+  - [x] Update GoogleCallback.vue to handle JWT tokens from URL params
+  - [x] Update useAuthStore to store access_token and refresh_token in localStorage
+  - [x] Update api.js to set Authorization: Bearer header from accessToken
+  - [x] Implement token refresh logic in useAuthStore (attemptRefreshToken)
+  - [x] Update Profile.vue to display real user data instead of mock data
+  - [x] Remove session-based authentication (replaced with JWT)
+
 **Implementation Reference**: [CODE_GUIDE.md#pinia-stores](CODE_GUIDE.md#pinia-stores)
 
 **Exit Criteria**:
 - ✅ User can login via Google OAuth (UI complete, requires backend)
-- ✅ Session persists after page refresh (fetchCurrentUser on router guard)
+- ✅ JWT tokens persist after page refresh (localStorage + token refresh)
 - ✅ Unauthenticated users redirected to /login
+- ✅ Profile page displays real user data (fixed)
 
 
 ## M3: Core Frontend

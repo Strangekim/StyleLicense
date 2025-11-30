@@ -18,7 +18,7 @@ import apiClient from './api'
  * @returns {Promise<Object>} Paginated list of models with next/previous cursors
  */
 export async function listModels(params = {}) {
-  const response = await apiClient.get('/api/models/', { params })
+  const response = await apiClient.get('/api/styles/', { params })
   return response.data
 }
 
@@ -29,7 +29,7 @@ export async function listModels(params = {}) {
  * @returns {Promise<Object>} Model detail with artist info, artworks, and tags
  */
 export async function getModelDetail(id) {
-  const response = await apiClient.get(`/api/models/${id}/`)
+  const response = await apiClient.get(`/api/styles/${id}/`)
   return response.data
 }
 
@@ -52,17 +52,24 @@ export async function createModel(data) {
   if (data.description) {
     formData.append('description', data.description)
   }
+  if (data.generation_cost_tokens !== undefined) {
+    formData.append('generation_cost_tokens', data.generation_cost_tokens)
+  }
 
   // Add training images
   if (data.training_images && data.training_images.length > 0) {
     data.training_images.forEach((image) => {
-      formData.append('training_images', image)
+      // Extract file from object {file: File, caption: string}
+      const file = image.file || image
+      formData.append('training_images', file)
     })
   }
 
-  // Add tags as JSON string
+  // Add tags (each tag as separate field with same key)
   if (data.tags && data.tags.length > 0) {
-    formData.append('tags', JSON.stringify(data.tags))
+    data.tags.forEach((tag) => {
+      formData.append('tags', tag)
+    })
   }
 
   // Add signature if provided
@@ -70,7 +77,7 @@ export async function createModel(data) {
     formData.append('signature', data.signature)
   }
 
-  const response = await apiClient.post('/api/models/', formData, {
+  const response = await apiClient.post('/api/styles/', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -86,7 +93,7 @@ export async function createModel(data) {
  * @returns {Promise<void>}
  */
 export async function deleteModel(id) {
-  const response = await apiClient.delete(`/api/models/${id}/`)
+  const response = await apiClient.delete(`/api/styles/${id}/`)
   return response.data
 }
 

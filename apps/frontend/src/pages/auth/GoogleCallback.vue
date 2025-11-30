@@ -13,33 +13,31 @@ const loading = ref(true)
 const error = ref(null)
 
 onMounted(async () => {
-  try {
-    // Backend has already handled OAuth callback and set session cookie
-    // Just fetch the current user to populate the store
-    const success = await authStore.fetchCurrentUser()
+  const { access_token, refresh_token } = route.query
 
-    if (success) {
-      // Get return URL from query params or default to home
-      const returnUrl = route.query.returnUrl || '/'
-
-      // Redirect to intended page
+  if (access_token && refresh_token) {
+    try {
+      // Handle the token login
+      await authStore.handleTokenLogin({ access: access_token, refresh: refresh_token })
+      
+      // Redirect to home or intended page
+      const returnUrl = localStorage.getItem('post_login_return_url') || '/'
+      localStorage.removeItem('post_login_return_url')
+      
       await router.push(returnUrl)
-    } else {
-      // Failed to fetch user, redirect to login
-      error.value = t('auth.loginError')
-      setTimeout(() => {
-        router.push('/login')
-      }, 2000)
-    }
-  } catch (err) {
-    console.error('OAuth callback error:', err)
-    error.value = err.message || t('auth.loginError')
 
-    // Redirect to login after showing error
-    setTimeout(() => {
-      router.push('/login')
-    }, 2000)
-  } finally {
+    } catch (err) {
+      console.error('Token login error:', err)
+      error.value = t('auth.loginError')
+      setTimeout(() => router.push('/login'), 3000)
+    } finally {
+      loading.value = false
+    }
+  } else {
+    // No tokens found in URL
+    console.error('No tokens provided in callback URL')
+    error.value = t('auth.missingTokens')
+    setTimeout(() => router.push('/login'), 3000)
     loading.value = false
   }
 })
@@ -50,7 +48,6 @@ onMounted(async () => {
     <div class="max-w-md w-full p-10 bg-white rounded-xl shadow-lg text-center">
       <!-- Loading State -->
       <div v-if="loading" class="space-y-4">
-        <!-- Spinner -->
         <div class="flex justify-center">
           <svg
             class="animate-spin h-12 w-12 text-blue-600"
@@ -58,14 +55,7 @@ onMounted(async () => {
             fill="none"
             viewBox="0 0 24 24"
           >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            />
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
             <path
               class="opacity-75"
               fill="currentColor"
@@ -73,24 +63,14 @@ onMounted(async () => {
             />
           </svg>
         </div>
-        <p class="text-gray-600">{{ t('auth.loggingIn') }}</p>
+        <p class="text-gray-600">{{ t('auth.processingLogin') }}</p>
       </div>
 
       <!-- Error State -->
       <div v-else-if="error" class="space-y-4">
         <div class="text-red-500">
-          <svg
-            class="mx-auto h-12 w-12"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
+          <svg class="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
         <p class="text-gray-900 font-medium">{{ error }}</p>
@@ -100,18 +80,8 @@ onMounted(async () => {
       <!-- Success State (brief) -->
       <div v-else class="space-y-4">
         <div class="text-green-500">
-          <svg
-            class="mx-auto h-12 w-12"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M5 13l4 4L19 7"
-            />
+          <svg class="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
         </div>
         <p class="text-gray-900 font-medium">{{ t('auth.loginSuccess') }}</p>

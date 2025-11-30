@@ -12,7 +12,8 @@ import apiClient from './api'
  * @returns {string} OAuth login URL
  */
 export function getGoogleLoginUrl() {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+  // Use ?? instead of || to allow empty string (for Firebase Hosting rewrite)
+  const baseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
   return `${baseUrl}/api/auth/google/login`
 }
 

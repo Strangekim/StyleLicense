@@ -136,12 +136,22 @@ This document contains detailed subtasks for backend development. For high-level
   - [x] Write test: TokenService.consume_tokens with insufficient balance raises error
   - [x] Write test: Welcome bonus only granted once
 
+- [x] JWT Token Authentication Migration (Commit: 7445f4a)
+  - [x] Install djangorestframework-simplejwt
+  - [x] Configure JWT settings in settings.py (ACCESS_TOKEN_LIFETIME, REFRESH_TOKEN_LIFETIME)
+  - [x] Fix JWT SIGNING_KEY to use SECRET_KEY instead of hardcoded value
+  - [x] Update GoogleCallbackView to return JWT tokens in redirect URL
+  - [x] Add /api/auth/token/refresh/ endpoint (djangorestframework-simplejwt TokenRefreshView)
+  - [x] Update MeView to use DRF APIView with IsAuthenticated permission
+  - [x] Remove session-based authentication (replaced with JWT)
+
 **Implementation Reference**: [CODE_GUIDE.md#authentication](CODE_GUIDE.md#authentication)
 
 **Exit Criteria**:
 - [x] User can authenticate via Google OAuth (implementation complete)
-- [x] Session persists across requests (implementation complete)
+- [x] JWT tokens persist across requests (JWT implementation complete)
 - [x] All auth tests pass (9/9 tests passing)
+- [x] MeView properly validates JWT tokens (fixed with APIView)
 
 
 ## M2: Core Backend

@@ -24,8 +24,8 @@ const routes = [
     meta: { requiresGuest: true }, // Only accessible when not authenticated
   },
   {
-    path: '/auth/google/callback',
-    name: 'GoogleCallback',
+    path: '/auth/callback',
+    name: 'AuthCallback',
     component: () => import('@/pages/auth/GoogleCallback.vue'),
   },
   // Marketplace routes (public)
@@ -109,50 +109,33 @@ const router = createRouter({
 })
 
 // Navigation guards
-router.beforeEach(async (to, from, next) => {
+router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
-
-  // Ensure localStorage is synced before any auth checks
-  authStore.syncFromLocalStorage()
-
-  // Only fetch user from API if the route requires authentication and user is still not loaded
-  const needsAuthCheck = to.meta.requiresAuth || to.meta.requiresArtist || to.meta.requiresGuest
-
-  if (needsAuthCheck && !authStore.user && !authStore.loading) {
-    try {
-      await authStore.fetchCurrentUser()
-    } catch (error) {
-      // User not authenticated, continue with navigation
-      console.log('User not authenticated')
-    }
-  }
 
   // Check if route requires authentication
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    // Redirect to login with return URL
-    next({
-      name: 'Login',
-      query: { returnUrl: to.fullPath },
-    })
+    // Save the intended destination to redirect after login
+    if (to.fullPath !== '/') {
+      localStorage.setItem('post_login_return_url', to.fullPath)
+    }
+    next({ name: 'Login' })
     return
   }
 
   // Check if route requires artist role
   if (to.meta.requiresArtist && !authStore.isArtist) {
-    // Redirect to home with error message
-    console.error('This page is only accessible to artists')
-    next({ name: 'Home' })
+    console.error('This page is only accessible to artists.')
+    next({ name: 'Home' }) // Or an 'Unauthorized' page
     return
   }
 
-  // Check if route requires guest (not authenticated)
+  // Check if a route is for guests only (like the login page)
   if (to.meta.requiresGuest && authStore.isAuthenticated) {
-    // Redirect authenticated users away from login page
     next({ name: 'Home' })
     return
   }
 
-  // Allow navigation
+  // Otherwise, allow navigation
   next()
 })
 

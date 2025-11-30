@@ -56,7 +56,7 @@
             </div>
 
             <!-- Action Buttons -->
-            <div class="grid grid-cols-3 gap-3 mt-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
               <router-link
                 to="/styles/create"
                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-center"
@@ -75,6 +75,12 @@
               >
                 {{ $t('profile.editProfile') }}
               </router-link>
+              <button
+                @click="handleLogout"
+                class="px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                {{ $t('nav.logout') }}
+              </button>
             </div>
           </div>
 
@@ -263,6 +269,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import { getUserProfile, getUserGenerations } from '@/services/user.service'
 
 const router = useRouter()
 const { t, locale } = useI18n()
@@ -289,24 +296,39 @@ onMounted(async () => {
 async function fetchProfile() {
   loading.value = true
   try {
-    // TODO: Replace with actual API call
-    // const response = await getUserProfile()
-    // profile.value = response.data
+    if (authStore.user) {
+      // Fetch full profile data from backend API
+      const response = await getUserProfile(authStore.user.id)
+      const userData = response.data
 
-    // Mock data from auth store
-    profile.value = {
-      id: authStore.user?.id || 1,
-      username: authStore.user?.username || 'JacobWest',
-      display_name: 'Jacob West',
-      title: 'Digital goodies designer @pixsellz',
-      bio: 'Everything is designed.',
-      avatar: authStore.user?.avatar || null,
-      generation_count: 24,
-      follower_count: 156,
-      following_count: 89,
+      profile.value = {
+        id: userData.id,
+        username: userData.username,
+        display_name: userData.username,
+        title: userData.role === 'artist' ? 'Artist' : 'User',
+        bio: userData.bio || '',
+        avatar: userData.profile_image || null,
+        generation_count: userData.stats?.total_generations || 0,
+        follower_count: userData.artist?.follower_count || 0,
+        following_count: userData.stats?.following_count || 0,
+      }
     }
   } catch (error) {
     console.error('Failed to fetch profile:', error)
+    // Fallback to auth store data if API fails
+    if (authStore.user) {
+      profile.value = {
+        id: authStore.user.id,
+        username: authStore.user.username,
+        display_name: authStore.user.username,
+        title: authStore.user.role === 'artist' ? 'Artist' : 'User',
+        bio: authStore.user.bio || '',
+        avatar: authStore.user.profile_image || null,
+        generation_count: 0,
+        follower_count: authStore.user.artist_profile?.follower_count || 0,
+        following_count: 0,
+      }
+    }
   } finally {
     loading.value = false
   }
@@ -315,83 +337,31 @@ async function fetchProfile() {
 async function fetchUserImages() {
   loadingImages.value = true
   try {
-    // TODO: Replace with actual API call
-    // const response = await getUserGenerations()
-    // images.value = response.data
+    const response = await getUserGenerations('me', {
+      limit: 50,
+      // Fetch all statuses to show processing images too
+    })
 
-    // Mock data
-    images.value = [
-      {
-        id: 1,
-        result_url: 'https://picsum.photos/400/400?random=1',
-        description: 'Beautiful landscape',
-        status: 'completed',
-        visibility: 'public',
-        like_count: 12,
-        comment_count: 3,
-        is_liked_by_current_user: false,
-        created_at: new Date(Date.now() - 3600000).toISOString(),
-      },
-      {
-        id: 2,
-        result_url: null,
-        description: 'Processing image',
-        status: 'processing',
-        visibility: 'public',
-        like_count: 0,
-        comment_count: 0,
-        is_liked_by_current_user: false,
-        created_at: new Date(Date.now() - 300000).toISOString(),
-      },
-      {
-        id: 3,
-        result_url: 'https://picsum.photos/400/400?random=3',
-        description: 'Abstract art',
-        status: 'completed',
-        visibility: 'public',
-        like_count: 45,
-        comment_count: 8,
-        is_liked_by_current_user: true,
-        created_at: new Date(Date.now() - 7200000).toISOString(),
-      },
-      {
-        id: 4,
-        result_url: 'https://picsum.photos/400/400?random=4',
-        description: 'Private work',
-        status: 'completed',
-        visibility: 'private',
-        like_count: 0,
-        comment_count: 0,
-        is_liked_by_current_user: false,
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-      },
-      {
-        id: 5,
-        result_url: 'https://picsum.photos/400/400?random=5',
-        description: 'Colorful design',
-        status: 'completed',
-        visibility: 'public',
-        like_count: 23,
-        comment_count: 5,
-        is_liked_by_current_user: false,
-        created_at: new Date(Date.now() - 172800000).toISOString(),
-      },
-      {
-        id: 6,
-        result_url: 'https://picsum.photos/400/400?random=6',
-        description: 'Minimalist style',
-        status: 'completed',
-        visibility: 'public',
-        like_count: 67,
-        comment_count: 12,
-        is_liked_by_current_user: true,
-        created_at: new Date(Date.now() - 259200000).toISOString(),
-      },
-    ]
+    // Map backend response to frontend format
+    if (response.success && response.data) {
+      images.value = response.data.generations || response.data.results || []
+    } else {
+      images.value = []
+    }
   } catch (error) {
     console.error('Failed to fetch user images:', error)
+    images.value = []
   } finally {
     loadingImages.value = false
+  }
+}
+
+async function handleLogout() {
+  try {
+    await authStore.logout()
+    // The logout function in auth store will redirect to /login
+  } catch (error) {
+    console.error('Logout failed:', error)
   }
 }
 

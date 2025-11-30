@@ -285,7 +285,7 @@ async function handlePurchase() {
     // window.location.href = response.data.checkout_url
 
     // Mock: Simulate purchase
-    alert(t('tokens.purchasingMessage', { tokens: selectedPackage.value.tokens, price: selectedPackage.value.price }))
+    alert(t('tokens.purchasingMessage', { tokens: selectedPackage.value.tokens, price: `$${selectedPackage.value.price}` }))
 
     // In production, this would redirect to Stripe checkout
     // For now, just simulate success

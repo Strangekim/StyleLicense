@@ -7,7 +7,7 @@ Handles image generation requests and status polling.
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import permissions
 from django.db import transaction
 
 from app.models.generation import Generation
@@ -19,7 +19,7 @@ from app.services.rabbitmq_service import get_rabbitmq_service
 class GenerationViewSet(viewsets.ViewSet):
     """ViewSet for image generation"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     # Cost calculation based on aspect ratio
     # TODO: Move to settings or database configuration
@@ -242,3 +242,65 @@ class GenerationViewSet(viewsets.ViewSet):
             response_data["refunded"] = True  # Tokens are refunded in webhook
 
         return Response({"success": True, "data": response_data})
+
+    @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated])
+    def me(self, request):
+        """
+        Get current user's generations.
+
+        GET /api/generations/me?limit=50&status=completed&visibility=public
+        """
+        user = request.user
+        limit = int(request.query_params.get("limit", 50))
+        status_filter = request.query_params.get("status")
+        visibility_filter = request.query_params.get("visibility")
+
+        # Build queryset
+        queryset = Generation.objects.filter(user=user).order_by("-created_at")
+
+        # Apply filters
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        if visibility_filter:
+            if visibility_filter == "public":
+                queryset = queryset.filter(is_public=True)
+            elif visibility_filter == "private":
+                queryset = queryset.filter(is_public=False)
+
+        # Limit results
+        generations = queryset[:limit]
+
+        # Serialize
+        results = []
+        for gen in generations:
+            gen_data = {
+                "id": gen.id,
+                "status": gen.status,
+                "created_at": gen.created_at.isoformat(),
+                "visibility": "public" if gen.is_public else "private",
+            }
+
+            # Add result data if completed
+            if gen.status == "completed":
+                gen_data.update(
+                    {
+                        "result_url": gen.result_url,
+                        "description": gen.description,
+                        "like_count": gen.like_count,
+                        "comment_count": gen.comment_count,
+                        "is_liked_by_current_user": False,  # TODO: Implement
+                    }
+                )
+
+            results.append(gen_data)
+
+        return Response(
+            {
+                "success": True,
+                "data": {
+                    "generations": results,
+                    "count": len(results),
+                },
+            }
+        )

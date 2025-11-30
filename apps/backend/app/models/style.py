@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from datetime import date
 
 
 class Style(models.Model):
@@ -46,7 +47,7 @@ class Style(models.Model):
     license_type = models.CharField(
         max_length=30, choices=LICENSE_TYPE_CHOICES, default="personal"
     )
-    valid_from = models.DateField(default=timezone.now)
+    valid_from = models.DateField(default=date.today)
     valid_to = models.DateField(null=True, blank=True)
 
     # Pricing

@@ -11,7 +11,7 @@ import api from './api'
  * @returns {Promise<Object>} - Notification list with unread_count
  */
 export async function getNotifications(params = {}) {
-  const response = await api.get('/notifications/', { params })
+  const response = await api.get('/api/notifications/', { params })
   return response.data
 }
 
@@ -21,7 +21,7 @@ export async function getNotifications(params = {}) {
  * @returns {Promise<Object>} - Updated notification
  */
 export async function markAsRead(notificationId) {
-  const response = await api.patch(`/notifications/${notificationId}/read/`)
+  const response = await api.patch(`/api/notifications/${notificationId}/read/`)
   return response.data
 }
 
@@ -30,6 +30,6 @@ export async function markAsRead(notificationId) {
  * @returns {Promise<Object>} - Response with updated count
  */
 export async function markAllAsRead() {
-  const response = await api.post('/notifications/mark-all-read/')
+  const response = await api.post('/api/notifications/mark-all-read/')
   return response.data
 }

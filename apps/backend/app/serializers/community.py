@@ -190,3 +190,86 @@ class FollowingUserSerializer(serializers.ModelSerializer):
     def get_is_following(self, obj):
         """Always true in following list."""
         return True
+
+
+class ArtistSerializer(serializers.Serializer):
+    """Serializer for artist profile info within user profile."""
+
+    id = serializers.IntegerField()
+    artist_name = serializers.CharField(source="username")
+    follower_count = serializers.IntegerField()
+
+
+class UserStatsSerializer(serializers.Serializer):
+    """Serializer for user statistics."""
+
+    total_generations = serializers.IntegerField()
+    public_generations = serializers.IntegerField()
+    following_count = serializers.IntegerField()
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    """
+    Detailed user profile serializer.
+    Used for GET /api/users/:id
+    """
+
+    artist = serializers.SerializerMethodField()
+    stats = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "username",
+            "email",
+            "profile_image",
+            "bio",
+            "role",
+            "created_at",
+            "artist",
+            "stats",
+        ]
+        read_only_fields = ["id", "email", "role", "created_at"]
+
+    def get_artist(self, obj):
+        """Return artist info if user is an artist."""
+        if obj.role != "artist":
+            return None
+
+        from app.models import Follow
+
+        follower_count = Follow.objects.filter(following=obj).count()
+
+        return {
+            "id": obj.id,
+            "artist_name": obj.username,
+            "follower_count": follower_count,
+        }
+
+    def get_stats(self, obj):
+        """Return user statistics."""
+        from app.models import Generation, Follow
+
+        total_generations = Generation.objects.filter(user=obj).count()
+        public_generations = Generation.objects.filter(
+            user=obj, is_public=True, status="completed"
+        ).count()
+        following_count = Follow.objects.filter(follower=obj).count()
+
+        return {
+            "total_generations": total_generations,
+            "public_generations": public_generations,
+            "following_count": following_count,
+        }
+
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating user profile.
+    Used for PATCH /api/users/me
+    """
+
+    class Meta:
+        model = User
+        fields = ["username", "bio", "profile_image"]
