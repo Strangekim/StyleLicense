@@ -15,8 +15,10 @@
   "auth": {
     "loginWithGoogle": "Login with Google",
     "loggingIn": "Logging in...",
+    "processingLogin": "Processing login...",
     "loginSuccess": "Successfully logged in",
     "loginError": "Login failed",
+    "missingTokens": "Authentication tokens missing",
     "logoutSuccess": "Successfully logged out"
   },
   "common": {
@@ -57,7 +59,7 @@
     "noTransactions": "No transactions yet",
     "purchased": "Purchased",
     "used": "Used",
-    "purchasingMessage": "Purchasing {tokens} tokens for ${price}",
+    "purchasingMessage": "Purchasing {tokens} tokens for {price}",
     "purchaseSuccess": "Purchase successful!",
     "purchaseFailed": "Purchase failed. Please try again.",
     "purchasedTokens": "Purchased {tokens} tokens"
@@ -214,7 +216,6 @@
     "switchToProfessional": "Switch to Professional Account",
     "privateInformation": "Private Information",
     "email": "Email",
-    "emailPlaceholder": "email@example.com",
     "emailCannotBeChanged": "Email cannot be changed",
     "signature": "Signature",
     "signaturePlaceholder": "Type your signature",
@@ -232,7 +233,7 @@
     "confirmUnsavedChanges": "You have unsaved changes. Are you sure you want to leave?",
     "confirmSwitchToProfessional": "Switch to a professional account? This will give you access to create and sell styles.",
     "confirmDeleteAccount": "Are you sure you want to delete your account? This action cannot be undone.",
-    "confirmDeleteAccountFinal": "This will permanently delete all your data. Type \"DELETE\" to confirm.",
+    "confirmDeleteAccountFinal": "This will permanently delete all your data. Type 'DELETE' to confirm.",
     "deleteNotImplemented": "Account deletion is not yet implemented"
   },
   "communityDetail": {

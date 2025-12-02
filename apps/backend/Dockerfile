@@ -33,6 +33,10 @@ RUN mkdir -p /app/staticfiles
 # Collect static files (will be overridden by volume in development)
 RUN python manage.py collectstatic --noinput || true
 
+# Copy and set permissions for entrypoint script
+COPY docker-entrypoint.sh /app/
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Create a non-root user
 RUN useradd -m -u 1000 django && \
     chown -R django:django /app
@@ -47,4 +51,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8000/api/health', timeout=5)" || exit 1
 
 # Default command (can be overridden in docker-compose)
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-"]
+CMD ["/app/docker-entrypoint.sh"]

@@ -24,6 +24,7 @@ export async function logout() {
  * @returns {string} Google OAuth URL
  */
 export function getGoogleOAuthUrl() {
-  const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+  // Use ?? instead of || to allow empty string (for Firebase Hosting rewrite)
+  const baseURL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
   return `${baseURL}/api/auth/google/login`
 }

@@ -115,7 +115,7 @@
             v-model="form.email"
             type="email"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            :placeholder="$t('editProfile.emailPlaceholder')"
+            placeholder="email@example.com"
             disabled
           />
           <p class="mt-1 text-xs text-gray-500">
@@ -189,6 +189,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { updateUserProfile, upgradeToArtist } from '@/services/user.service'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -200,6 +201,8 @@ const saving = ref(false)
 const isProfessional = ref(false)
 const previewAvatar = ref(null)
 const previewSignature = ref(null)
+const avatarFile = ref(null)
+const signatureFile = ref(null)
 
 const form = ref({
   username: '',
@@ -217,21 +220,19 @@ onMounted(async () => {
 async function loadProfile() {
   loading.value = true
   try {
-    // TODO: Replace with actual API call
-    // const response = await getUserProfile()
-    // form.value = response.data
+    // Load profile data from auth store
+    if (authStore.user) {
+      form.value = {
+        username: authStore.user.username || '',
+        bio: authStore.user.bio || '',
+        email: authStore.user.email || '',
+        avatar: authStore.user.profile_image || null,
+        signature: authStore.user.artist_profile?.signature_text || '',
+      }
 
-    // Mock data from auth store
-    form.value = {
-      username: authStore.user?.username || 'jacob_w',
-      bio: authStore.user?.bio || 'Everything is designed.',
-      email: authStore.user?.email || 'jacob.west@gmail.com',
-      avatar: authStore.user?.avatar || null,
-      signature: 'Vincent',
+      // Check if user is professional (artist)
+      isProfessional.value = authStore.user.role === 'artist'
     }
-
-    // Check if user is professional
-    isProfessional.value = authStore.user?.role === 'artist'
   } catch (error) {
     console.error('Failed to load profile:', error)
   } finally {
@@ -255,26 +256,28 @@ async function handleSave() {
 
   saving.value = true
   try {
-    // TODO: Replace with actual API call
-    // const formData = new FormData()
-    // if (previewAvatar.value) {
-    //   formData.append('avatar', avatarFile)
-    // }
-    // if (previewSignature.value) {
-    //   formData.append('signature', signatureFile)
-    // }
-    // formData.append('username', form.value.username)
-    // formData.append('bio', form.value.bio)
-    // await updateUserProfile(formData)
-
-    // Mock: Update auth store
-    if (authStore.user) {
-      authStore.user.username = form.value.username
-      authStore.user.avatar = previewAvatar.value || form.value.avatar
+    const updateData = {
+      username: form.value.username,
+      bio: form.value.bio,
     }
 
-    // Navigate back to profile
-    router.push('/profile')
+    // Add profile image if changed
+    if (avatarFile.value) {
+      updateData.profile_image = avatarFile.value
+    }
+
+    // Call backend API to update profile
+    const response = await updateUserProfile(updateData)
+
+    if (response.success) {
+      // Update auth store with new data
+      await authStore.initAuth() // Refresh user data from backend
+
+      // Navigate back to profile
+      router.push('/profile')
+    } else {
+      throw new Error(response.error?.message || 'Update failed')
+    }
   } catch (error) {
     console.error('Failed to save profile:', error)
     alert(t('editProfile.errors.saveFailed'))
@@ -307,6 +310,10 @@ function handlePhotoChange(event) {
       return
     }
 
+    // Store the file for upload
+    avatarFile.value = file
+
+    // Create preview
     const reader = new FileReader()
     reader.onload = (e) => {
       previewAvatar.value = e.target.result
@@ -323,6 +330,10 @@ function handleSignatureChange(event) {
       return
     }
 
+    // Store the file for upload
+    signatureFile.value = file
+
+    // Create preview
     const reader = new FileReader()
     reader.onload = (e) => {
       previewSignature.value = e.target.result
@@ -332,11 +343,30 @@ function handleSignatureChange(event) {
   }
 }
 
-function handleSwitchToProfessional() {
-  // TODO: Implement professional account switch
-  if (confirm(t('editProfile.confirmSwitchToProfessional'))) {
-    // Navigate to artist registration or update user role
-    router.push('/styles/create')
+async function handleSwitchToProfessional() {
+  if (!confirm(t('editProfile.confirmSwitchToProfessional'))) {
+    return
+  }
+
+  try {
+    // Call backend to upgrade to artist
+    const response = await upgradeToArtist()
+
+    if (response.success) {
+      // Update auth store with new user data
+      await authStore.initAuth()
+
+      // Show success message
+      alert(t('editProfile.upgradedToArtist') || 'Successfully upgraded to artist account!')
+
+      // Navigate to style creation page
+      router.push('/styles/create')
+    } else {
+      throw new Error(response.error?.message || 'Upgrade failed')
+    }
+  } catch (error) {
+    console.error('Failed to upgrade to artist:', error)
+    alert(t('editProfile.errors.upgradeFailed') || 'Failed to upgrade to artist account. Please try again.')
   }
 }
 

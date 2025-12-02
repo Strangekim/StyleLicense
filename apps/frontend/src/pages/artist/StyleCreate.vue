@@ -243,7 +243,7 @@ const handleSubmit = async () => {
     const data = {
       name: formData.value.name,
       description: formData.value.description,
-      price_per_generation: formData.value.price_per_generation,
+      generation_cost_tokens: formData.value.price_per_generation, // Backend expects generation_cost_tokens
       training_images: trainingImages.value.map((img) => ({
         file: img.file,
         caption: img.tags?.join(', ') || '', // Convert tags array to comma-separated caption

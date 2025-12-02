@@ -15,8 +15,10 @@
   "auth": {
     "loginWithGoogle": "Google로 로그인",
     "loggingIn": "로그인 중...",
+    "processingLogin": "로그인 처리 중...",
     "loginSuccess": "로그인 성공",
     "loginError": "로그인 실패",
+    "missingTokens": "인증 토큰이 없습니다",
     "logoutSuccess": "로그아웃 되었습니다"
   },
   "common": {
@@ -57,7 +59,7 @@
     "noTransactions": "아직 거래 내역이 없습니다",
     "purchased": "구매",
     "used": "사용",
-    "purchasingMessage": "{tokens}개 토큰을 ${price}에 구매합니다",
+    "purchasingMessage": "{tokens}개 토큰을 {price}에 구매합니다",
     "purchaseSuccess": "구매 성공!",
     "purchaseFailed": "구매 실패. 다시 시도해주세요.",
     "purchasedTokens": "{tokens}개 토큰 구매"
@@ -214,7 +216,6 @@
     "switchToProfessional": "프로페셔널 계정으로 전환",
     "privateInformation": "비공개 정보",
     "email": "이메일",
-    "emailPlaceholder": "email@example.com",
     "emailCannotBeChanged": "이메일은 변경할 수 없습니다",
     "signature": "서명",
     "signaturePlaceholder": "서명 입력",
@@ -232,7 +233,7 @@
     "confirmUnsavedChanges": "저장하지 않은 변경사항이 있습니다. 나가시겠습니까?",
     "confirmSwitchToProfessional": "프로페셔널 계정으로 전환하시겠습니까? 스타일을 생성하고 판매할 수 있습니다.",
     "confirmDeleteAccount": "계정을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.",
-    "confirmDeleteAccountFinal": "모든 데이터가 영구적으로 삭제됩니다. 확인하려면 \"DELETE\"를 입력하세요.",
+    "confirmDeleteAccountFinal": "모든 데이터가 영구적으로 삭제됩니다. 확인하려면 'DELETE'를 입력하세요.",
     "deleteNotImplemented": "계정 삭제는 아직 구현되지 않았습니다"
   },
   "communityDetail": {
