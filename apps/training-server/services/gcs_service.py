@@ -17,27 +17,31 @@ class GCSService:
 
     def __init__(self):
         """Initialize GCS client"""
-        # Only import and initialize GCS client if credentials are available
+        # Try to initialize GCS client with credentials file or Application Default Credentials
         self.client = None
         self.bucket = None
 
-        if Config.GOOGLE_APPLICATION_CREDENTIALS and os.path.exists(
-            Config.GOOGLE_APPLICATION_CREDENTIALS
-        ):
-            try:
-                from google.cloud import storage
+        try:
+            from google.cloud import storage
 
+            # If credentials file is specified and exists, use it
+            if Config.GOOGLE_APPLICATION_CREDENTIALS and os.path.exists(
+                Config.GOOGLE_APPLICATION_CREDENTIALS
+            ):
+                logger.info(f"Using credentials file: {Config.GOOGLE_APPLICATION_CREDENTIALS}")
                 self.client = storage.Client(project=Config.GCS_PROJECT_ID)
-                self.bucket = self.client.bucket(Config.GCS_BUCKET_NAME)
-                logger.info(
-                    f"GCS client initialized for bucket: {Config.GCS_BUCKET_NAME}"
-                )
-            except Exception as e:
-                logger.warning(f"Failed to initialize GCS client: {e}")
-        else:
-            logger.warning(
-                "GCS credentials not found. GCS functionality will be disabled."
+            else:
+                # Otherwise, try Application Default Credentials (works on GCE VMs)
+                logger.info("Attempting to use Application Default Credentials")
+                self.client = storage.Client(project=Config.GCS_PROJECT_ID)
+
+            self.bucket = self.client.bucket(Config.GCS_BUCKET_NAME)
+            logger.info(
+                f"GCS client initialized for bucket: {Config.GCS_BUCKET_NAME}"
             )
+        except Exception as e:
+            logger.warning(f"Failed to initialize GCS client: {e}")
+            logger.warning("GCS functionality will be disabled.")
 
     def download_image(self, gcs_path: str, local_path: str) -> bool:
         """
