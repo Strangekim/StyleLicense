@@ -79,8 +79,11 @@ class TestRabbitMQService(unittest.TestCase):
         assert message['type'] == 'model_training'
         assert 'data' in message
         assert message['data']['style_id'] == 123
-        assert message['data']['image_paths'] == image_paths
-        assert message['data']['num_epochs'] == 200
+        assert message['data']['images'] == image_paths  # Changed from 'image_paths'
+        assert 'parameters' in message['data']  # New structure
+        assert message['data']['parameters']['epochs'] == 200
+        assert message['data']['parameters']['learning_rate'] == 0.0001
+        assert message['data']['parameters']['batch_size'] == 4
         assert 'webhook_url' in message
 
     @patch('app.services.rabbitmq_service.pika.BlockingConnection')
