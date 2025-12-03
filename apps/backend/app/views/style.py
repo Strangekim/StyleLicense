@@ -14,6 +14,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.db.models import Q, Prefetch
+from django.conf import settings
 
 from app.models import Style, Artwork, StyleTag
 from app.serializers import (
@@ -196,21 +197,39 @@ class StyleViewSet(BaseViewSet):
         # Get training images from request
         training_images = request.FILES.getlist("training_images")
 
-        # TODO: Upload images to S3 and update Artwork records
-        # For now, we'll create placeholder image URLs
-        # In production, you would:
-        # 1. Upload each image to S3
-        # 2. Get S3 URL
-        # 3. Update Artwork.image_url
+        # Upload images to GCS and update Artwork records
+        from app.services.gcs_service import get_gcs_service
+
         image_paths = []
         artworks = style.artworks.all()
+        gcs_service = get_gcs_service()
+
         for idx, (artwork, image_file) in enumerate(zip(artworks, training_images)):
-            # Placeholder: In production, upload to S3 here
-            placeholder_url = f"/media/training/{style.id}/image_{idx}.jpg"
-            artwork.image_url = placeholder_url
-            artwork.is_valid = True
-            artwork.save(update_fields=["image_url", "is_valid"])
-            image_paths.append(placeholder_url)
+            try:
+                # Upload to GCS
+                gcs_uri = gcs_service.upload_training_image(
+                    style_id=style.id,
+                    image_file=image_file.file,
+                    image_index=idx,
+                    filename=image_file.name
+                )
+
+                # Update artwork with GCS URL
+                artwork.image_url = gcs_uri
+                artwork.is_valid = True
+                artwork.save(update_fields=["image_url", "is_valid"])
+                image_paths.append(gcs_uri)
+
+                logger.info(f"[Style Create] Uploaded image {idx} to GCS: {gcs_uri}")
+
+            except Exception as e:
+                logger.error(f"[Style Create] Failed to upload image {idx}: {e}")
+                # Use placeholder if GCS upload fails
+                placeholder_url = f"gs://{settings.GCS_BUCKET_NAME}/training/{style.id}/image_{idx}.jpg"
+                artwork.image_url = placeholder_url
+                artwork.is_valid = False
+                artwork.save(update_fields=["image_url", "is_valid"])
+                image_paths.append(placeholder_url)
 
         # Send training task to RabbitMQ
         task_id = None
