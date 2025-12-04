@@ -4,7 +4,7 @@
       <!-- Logo -->
       <router-link to="/" class="flex items-center">
         <img
-          src="@/assets/images/main_typo_transverse.png"
+          src="@/assets/images/main_typo.png"
           alt="Style License"
           class="h-10"
         />
