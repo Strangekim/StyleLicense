@@ -130,6 +130,8 @@ class RabbitMQService:
         style_id: int,
         image_paths: List[str],
         num_epochs: int = 200,
+        learning_rate: float = 0.0001,
+        batch_size: int = 1,
         webhook_url: Optional[str] = None
     ) -> str:
         """
@@ -137,8 +139,10 @@ class RabbitMQService:
 
         Args:
             style_id: ID of the style model to train
-            image_paths: List of image file paths or URLs
+            image_paths: List of image file paths or URLs (GCS URIs)
             num_epochs: Number of training epochs
+            learning_rate: Learning rate for training
+            batch_size: Batch size for training
             webhook_url: Optional callback URL for status updates
 
         Returns:
@@ -155,8 +159,12 @@ class RabbitMQService:
             "type": "model_training",
             "data": {
                 "style_id": style_id,
-                "image_paths": image_paths,
-                "num_epochs": num_epochs,
+                "images": image_paths,  # Changed from 'image_paths' to 'images'
+                "parameters": {
+                    "epochs": num_epochs,
+                    "learning_rate": learning_rate,
+                    "batch_size": batch_size,
+                }
             },
             "webhook_url": webhook_url,
         }
