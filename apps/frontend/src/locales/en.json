@@ -163,6 +163,10 @@
   "styleCreate": {
     "title": "Create New Style",
     "subtitle": "Upload your artwork to train a custom AI style model",
+    "checkingTrainingStatus": "Checking training status...",
+    "trainingInProgress": "Training in Progress",
+    "trainingDescription": "Please wait while your style model is being trained. We'll notify you when it's complete.",
+    "goToMarketplace": "Go to Marketplace",
     "basicInfo": "Basic Information",
     "styleName": "Style Name",
     "styleNamePlaceholder": "e.g., Watercolor Dreams",
@@ -191,6 +195,12 @@
     "uploadingStyleModel": "Uploading style model...",
     "createStyle": "Create Style",
     "cancel": "Cancel",
+    "status": {
+      "pending": "Pending",
+      "training": "Training",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
     "errors": {
       "invalidImageType": "Only JPG and PNG images are allowed",
       "imageTooLarge": "Image size must be less than 10MB",

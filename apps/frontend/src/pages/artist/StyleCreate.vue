@@ -5,10 +5,11 @@
  * providing metadata, and submitting for training.
  */
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useModelsStore } from '@/stores/models'
+import { useAuthStore } from '@/stores/auth'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Input from '@/components/shared/Input.vue'
 import Button from '@/components/shared/Button.vue'
@@ -17,6 +18,41 @@ import Card from '@/components/shared/Card.vue'
 const router = useRouter()
 const { t } = useI18n()
 const modelsStore = useModelsStore()
+const authStore = useAuthStore()
+
+// Training status check
+const isCheckingTraining = ref(true)
+const trainingStyle = ref(null)
+
+// Check if user already has a training/pending style
+onMounted(async () => {
+  isCheckingTraining.value = true
+
+  if (!authStore.user || authStore.user.role !== 'artist') {
+    isCheckingTraining.value = false
+    return
+  }
+
+  try {
+    // Fetch artist's styles to check for training/pending status
+    const response = await modelsStore.fetchModels({
+      artist_id: authStore.user.id
+    })
+
+    // Find any style that is training or pending
+    const activeTraining = modelsStore.models.find(
+      (style) => style.training_status === 'training' || style.training_status === 'pending'
+    )
+
+    if (activeTraining) {
+      trainingStyle.value = activeTraining
+    }
+  } catch (err) {
+    console.error('Failed to check training status:', err)
+  } finally {
+    isCheckingTraining.value = false
+  }
+})
 
 // Form state
 const formData = ref({
@@ -304,8 +340,57 @@ const resetForm = () => {
         </p>
       </div>
 
-      <!-- Form -->
-      <form @submit.prevent="handleSubmit" class="space-y-8">
+      <!-- Loading State -->
+      <div v-if="isCheckingTraining" class="flex justify-center items-center py-20">
+        <div class="text-center">
+          <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
+          <p class="text-neutral-600">{{ $t('styleCreate.checkingTrainingStatus') }}</p>
+        </div>
+      </div>
+
+      <!-- Training in Progress UI -->
+      <div v-else-if="trainingStyle" class="max-w-2xl mx-auto">
+        <Card>
+          <div class="text-center py-8">
+            <!-- Training Icon -->
+            <div class="mb-6">
+              <div class="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-primary-600"></div>
+            </div>
+
+            <!-- Title -->
+            <h2 class="text-2xl font-bold text-neutral-900 mb-2">
+              {{ $t('styleCreate.trainingInProgress') }}
+            </h2>
+
+            <!-- Style Name -->
+            <p class="text-lg text-neutral-700 mb-4">
+              {{ trainingStyle.name }}
+            </p>
+
+            <!-- Status -->
+            <div class="inline-block px-4 py-2 bg-yellow-100 text-yellow-800 rounded-full font-medium mb-6">
+              {{ $t(`styleCreate.status.${trainingStyle.training_status}`) }}
+            </div>
+
+            <!-- Description -->
+            <p class="text-neutral-600 mb-8">
+              {{ $t('styleCreate.trainingDescription') }}
+            </p>
+
+            <!-- Action Button -->
+            <Button
+              variant="outline"
+              size="lg"
+              @click="router.push('/marketplace')"
+            >
+              {{ $t('styleCreate.goToMarketplace') }}
+            </Button>
+          </div>
+        </Card>
+      </div>
+
+      <!-- Form (only show if no training in progress) -->
+      <form v-if="!isCheckingTraining && !trainingStyle" @submit.prevent="handleSubmit" class="space-y-8">
         <!-- Basic Info -->
         <Card>
           <h2 class="text-xl font-semibold text-neutral-900 mb-4">
