@@ -87,7 +87,7 @@ class GCSService:
 
     def download_images(self, gcs_paths: List[str], local_dir: str) -> List[str]:
         """
-        Download multiple images from GCS
+        Download multiple images from GCS (and their caption files if available)
 
         Args:
             gcs_paths: List of GCS paths
@@ -107,6 +107,22 @@ class GCSService:
 
             if self.download_image(gcs_path, local_path):
                 local_paths.append(local_path)
+
+                # Also download caption file if it exists
+                caption_gcs_path = gcs_path.rsplit('.', 1)[0] + '.txt'
+                caption_local_path = local_path.rsplit('.', 1)[0] + '.txt'
+
+                try:
+                    blob_path = caption_gcs_path.replace(f"gs://{Config.GCS_BUCKET_NAME}/", "")
+                    blob_path = blob_path.replace("gs://", "").split("/", 1)[-1]
+
+                    if self.bucket:
+                        caption_blob = self.bucket.blob(blob_path)
+                        if caption_blob.exists():
+                            caption_blob.download_to_filename(caption_local_path)
+                            logger.info(f"Downloaded caption file: {caption_local_path}")
+                except Exception as e:
+                    logger.debug(f"No caption file for {gcs_path}: {e}")
             else:
                 logger.warning(f"Skipping failed download: {gcs_path}")
 

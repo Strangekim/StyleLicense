@@ -56,12 +56,15 @@ export async function createModel(data) {
     formData.append('generation_cost_tokens', data.generation_cost_tokens)
   }
 
-  // Add training images
+  // Add training images and captions
   if (data.training_images && data.training_images.length > 0) {
     data.training_images.forEach((image) => {
       // Extract file from object {file: File, caption: string}
       const file = image.file || image
+      const caption = image.caption || ''
+
       formData.append('training_images', file)
+      formData.append('captions', caption)
     })
   }
 

@@ -36,16 +36,17 @@ class GCSService:
             print("[WARNING] GCS functionality will be disabled")
 
     def upload_training_image(
-        self, style_id: int, image_file: BinaryIO, image_index: int, filename: str
+        self, style_id: int, image_file: BinaryIO, image_index: int, filename: str, caption: str = None
     ) -> str:
         """
-        Upload a training image to GCS
+        Upload a training image to GCS (and optionally its caption)
 
         Args:
             style_id: Style model ID
             image_file: File object to upload
             image_index: Index of the image (0-based)
             filename: Original filename
+            caption: Optional caption text for Stable Diffusion training
 
         Returns:
             GCS URI (gs://bucket/path)
@@ -72,6 +73,12 @@ class GCSService:
 
             # Upload file
             blob.upload_from_file(image_file, content_type=f"image/{ext}")
+
+            # Upload caption file if provided
+            if caption:
+                caption_blob_path = f"training/{style_id}/image_{image_index}.txt"
+                caption_blob = self.bucket.blob(caption_blob_path)
+                caption_blob.upload_from_string(caption, content_type="text/plain")
 
             # Return GCS URI
             gcs_uri = f"gs://{settings.GCS_BUCKET_NAME}/{blob_path}"

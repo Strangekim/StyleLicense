@@ -193,8 +193,9 @@ class StyleViewSet(BaseViewSet):
             logger.error(f"[Style Create] Error during save: {str(e)}", exc_info=True)
             raise
 
-        # Get training images from request
+        # Get training images and captions from request
         training_images = request.FILES.getlist("training_images")
+        captions = request.POST.getlist("captions")
 
         # Upload images to GCS and update Artwork records
         from app.services.gcs_service import get_gcs_service
@@ -205,18 +206,23 @@ class StyleViewSet(BaseViewSet):
 
         for idx, (artwork, image_file) in enumerate(zip(artworks, training_images)):
             try:
-                # Upload to GCS
+                # Get caption for this image (if available)
+                caption = captions[idx] if idx < len(captions) else None
+
+                # Upload to GCS (with caption)
                 gcs_uri = gcs_service.upload_training_image(
                     style_id=style.id,
                     image_file=image_file.file,
                     image_index=idx,
-                    filename=image_file.name
+                    filename=image_file.name,
+                    caption=caption
                 )
 
-                # Update artwork with GCS URI
+                # Update artwork with GCS URI and caption
                 artwork.image_url = gcs_uri
+                artwork.caption = caption
                 artwork.is_valid = True
-                artwork.save(update_fields=["image_url", "is_valid"])
+                artwork.save(update_fields=["image_url", "caption", "is_valid"])
                 image_paths.append(gcs_uri)
 
             except Exception as e:
