@@ -31,7 +31,7 @@ export async function updateUserProfile(data) {
     if (data.username) formData.append('username', data.username)
     if (data.bio) formData.append('bio', data.bio)
 
-    const response = await api.patch('/api/users/me', formData, {
+    const response = await api.patch('/api/users/me/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -39,7 +39,7 @@ export async function updateUserProfile(data) {
     return response.data
   } else {
     // Regular JSON update
-    const response = await api.patch('/api/users/me', data)
+    const response = await api.patch('/api/users/me/', data)
     return response.data
   }
 }
@@ -66,13 +66,13 @@ export async function upgradeToArtist() {
 export async function getUserGenerations(userId, params = {}) {
   // If requesting current user's generations
   if (userId === 'me' || !userId) {
-    const response = await api.get('/api/generations/me', { params })
+    const response = await api.get('/api/generations/me/', { params })
     return response.data
   }
 
   // For other users, use the feed endpoint with user filter
   // TODO: Backend needs to add user_id filter to feed endpoint
-  const response = await api.get('/api/generations/feed', {
+  const response = await api.get('/api/generations/feed/', {
     params: {
       ...params,
       user_id: userId,
