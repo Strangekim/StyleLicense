@@ -207,8 +207,8 @@ const handleGenerate = async () => {
 }
 
 const navigateToArtist = () => {
-  if (model.value?.artist?.id) {
-    router.push(`/artist/${model.value.artist.id}`)
+  if (model.value?.artist_id) {
+    router.push(`/artist/${model.value.artist_id}`)
   }
 }
 
@@ -321,11 +321,11 @@ onMounted(async () => {
         <button @click="navigateToArtist" class="flex items-center gap-1.5 hover:opacity-70 transition-opacity">
           <div class="w-6 h-6 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden">
             <span class="text-xs font-semibold text-neutral-700">
-              {{ model.artist?.username?.charAt(0).toUpperCase() || 'A' }}
+              {{ model.artist_username?.charAt(0).toUpperCase() || 'A' }}
             </span>
           </div>
           <span class="text-sm font-semibold text-neutral-900">
-            {{ model.artist?.username || 'Unknown Artist' }}
+            {{ model.artist_username || 'Unknown Artist' }}
           </span>
         </button>
       </div>

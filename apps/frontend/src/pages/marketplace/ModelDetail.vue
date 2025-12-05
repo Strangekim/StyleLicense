@@ -28,7 +28,7 @@ const selectedImage = ref(null) // For gallery lightbox (optional feature)
 
 // Computed
 const isOwner = computed(() => {
-  return authStore.user && model.value && model.value.artist?.id === authStore.user.id
+  return authStore.user && model.value && model.value.artist_id === authStore.user.id
 })
 
 const canGenerate = computed(() => {
@@ -208,12 +208,12 @@ const formatDate = (dateString) => {
             <Card padding="md">
               <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-semibold text-lg">
-                  {{ model.artist?.username?.charAt(0).toUpperCase() || 'A' }}
+                  {{ model.artist_username?.charAt(0).toUpperCase() || 'A' }}
                 </div>
                 <div class="flex-1">
                   <p class="text-sm text-neutral-600">Created by</p>
                   <p class="font-semibold text-neutral-900">
-                    {{ model.artist?.username || 'Unknown Artist' }}
+                    {{ model.artist_username || 'Unknown Artist' }}
                   </p>
                 </div>
                 <Button

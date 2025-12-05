@@ -87,7 +87,7 @@ const recentOrPopularModels = computed(() => {
     filtered = filtered.filter(model =>
       model.name?.toLowerCase().includes(query) ||
       model.description?.toLowerCase().includes(query) ||
-      model.artist?.username?.toLowerCase().includes(query)
+      model.artist_username?.toLowerCase().includes(query)
     )
   }
 
@@ -106,7 +106,7 @@ const followingModels = computed(() => {
   if (!authStore.isAuthenticated) return []
 
   let filtered = modelsStore.models.filter(model =>
-    followingArtists.value.has(model.artist?.id)
+    followingArtists.value.has(model.artist_id)
   )
 
   // Apply search filter
@@ -115,7 +115,7 @@ const followingModels = computed(() => {
     filtered = filtered.filter(model =>
       model.name?.toLowerCase().includes(query) ||
       model.description?.toLowerCase().includes(query) ||
-      model.artist?.username?.toLowerCase().includes(query)
+      model.artist_username?.toLowerCase().includes(query)
     )
   }
 
@@ -201,9 +201,9 @@ const followingModels = computed(() => {
               <!-- Artist Name -->
               <h3
                 class="font-semibold text-sm text-neutral-900 mb-1 cursor-pointer hover:underline truncate"
-                @click="handleArtistClick(model.artist?.id, $event)"
+                @click="handleArtistClick(model.artist_id, $event)"
               >
-                {{ model.artist?.username || $t('marketplace.unknownArtist') }}
+                {{ model.artist_username || $t('marketplace.unknownArtist') }}
               </h3>
 
               <!-- Description -->
@@ -213,8 +213,8 @@ const followingModels = computed(() => {
                   :class="expandedDescriptions.has(model.id) ? '' : 'line-clamp-2'"
                 >
                   {{ model.description || $t('marketplace.noDescription') }}
-                  <span v-if="model.artist?.username" class="text-primary-500">
-                    @{{ model.artist.username }}
+                  <span v-if="model.artist_username" class="text-primary-500">
+                    @{{ model.artist_username }}
                   </span>
                 </p>
                 <button
@@ -239,12 +239,12 @@ const followingModels = computed(() => {
                 <!-- Artist Avatar -->
                 <div class="w-5 h-5 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden flex-shrink-0">
                   <span class="text-xs font-semibold text-neutral-700">
-                    {{ model.artist?.username?.charAt(0).toUpperCase() || 'A' }}
+                    {{ model.artist_username?.charAt(0).toUpperCase() || 'A' }}
                   </span>
                 </div>
                 <!-- Artist Name -->
                 <span class="text-xs font-semibold text-neutral-900 truncate">
-                  {{ model.artist?.username || $t('marketplace.artist') }}
+                  {{ model.artist_username || $t('marketplace.artist') }}
                 </span>
               </div>
             </div>
@@ -311,9 +311,9 @@ const followingModels = computed(() => {
               <!-- Artist Name -->
               <h3
                 class="font-semibold text-sm text-neutral-900 mb-1 cursor-pointer hover:underline truncate"
-                @click="handleArtistClick(model.artist?.id, $event)"
+                @click="handleArtistClick(model.artist_id, $event)"
               >
-                {{ model.artist?.username || $t('marketplace.unknownArtist') }}
+                {{ model.artist_username || $t('marketplace.unknownArtist') }}
               </h3>
 
               <!-- Description -->
@@ -323,8 +323,8 @@ const followingModels = computed(() => {
                   :class="expandedDescriptions.has(model.id) ? '' : 'line-clamp-2'"
                 >
                   {{ model.description || $t('marketplace.noDescription') }}
-                  <span v-if="model.artist?.username" class="text-primary-500">
-                    @{{ model.artist.username }}
+                  <span v-if="model.artist_username" class="text-primary-500">
+                    @{{ model.artist_username }}
                   </span>
                 </p>
                 <button
@@ -349,12 +349,12 @@ const followingModels = computed(() => {
                 <!-- Artist Avatar -->
                 <div class="w-5 h-5 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden flex-shrink-0">
                   <span class="text-xs font-semibold text-neutral-700">
-                    {{ model.artist?.username?.charAt(0).toUpperCase() || 'A' }}
+                    {{ model.artist_username?.charAt(0).toUpperCase() || 'A' }}
                   </span>
                 </div>
                 <!-- Artist Name -->
                 <span class="text-xs font-semibold text-neutral-900 truncate">
-                  {{ model.artist?.username || $t('marketplace.artist') }}
+                  {{ model.artist_username || $t('marketplace.artist') }}
                 </span>
               </div>
             </div>
