@@ -5,7 +5,7 @@ Receives callbacks from AI servers (training-server, inference-server)
 for training and generation progress/completion updates.
 """
 
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
@@ -25,6 +25,7 @@ from app.services.token_service import TokenService
 
 @csrf_exempt
 @api_view(["PATCH"])
+@authentication_classes([])  # Skip JWT auth, use WebhookAuthMiddleware instead
 @permission_classes([AllowAny])  # Authenticated by WebhookAuthMiddleware
 def training_progress(request):
     """
@@ -56,6 +57,7 @@ def training_progress(request):
 
 @csrf_exempt
 @api_view(["POST"])
+@authentication_classes([])  # Skip JWT auth, use WebhookAuthMiddleware instead
 @permission_classes([AllowAny])
 def training_complete(request):
     """
@@ -98,7 +100,7 @@ def training_complete(request):
 
             # Create notification for artist
             Notification.objects.create(
-                recipient=style_model.user,
+                recipient=style_model.artist,  # Fixed: artist not user
                 actor=None,  # System notification
                 type="style_training_complete",
                 target_type="style",
@@ -118,6 +120,7 @@ def training_complete(request):
 
 @csrf_exempt
 @api_view(["POST"])
+@authentication_classes([])  # Skip JWT auth, use WebhookAuthMiddleware instead
 @permission_classes([AllowAny])
 def training_failed(request):
     """
@@ -146,7 +149,7 @@ def training_failed(request):
 
             # Create notification for artist
             Notification.objects.create(
-                recipient=style_model.user,
+                recipient=style_model.artist,  # Fixed: artist not user
                 actor=None,  # System notification
                 type="style_training_failed",
                 target_type="style",
@@ -171,6 +174,7 @@ def training_failed(request):
 
 @csrf_exempt
 @api_view(["PATCH"])
+@authentication_classes([])  # Skip JWT auth, use WebhookAuthMiddleware instead
 @permission_classes([AllowAny])
 def inference_progress(request):
     """
@@ -204,6 +208,7 @@ def inference_progress(request):
 
 @csrf_exempt
 @api_view(["POST"])
+@authentication_classes([])  # Skip JWT auth, use WebhookAuthMiddleware instead
 @permission_classes([AllowAny])
 def inference_complete(request):
     """
@@ -263,6 +268,7 @@ def inference_complete(request):
 
 @csrf_exempt
 @api_view(["POST"])
+@authentication_classes([])  # Skip JWT auth, use WebhookAuthMiddleware instead
 @permission_classes([AllowAny])
 def inference_failed(request):
     """
