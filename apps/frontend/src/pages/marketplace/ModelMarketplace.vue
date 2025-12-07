@@ -33,29 +33,31 @@ const toggleDescription = (modelId, event) => {
   expandedDescriptions.value = newSet
 }
 
-const getCurrentImageIndex = (modelId) => {
-  return currentImageIndexMap.value.get(modelId) || 0
+const getCurrentImageIndex = (section, modelId) => {
+  const key = `${section}-${modelId}`
+  return currentImageIndexMap.value.get(key) || 0
 }
 
-const setImageIndex = (modelId, index, event) => {
+const setImageIndex = (section, modelId, index, event) => {
   event.stopPropagation()
+  const key = `${section}-${modelId}`
   const newMap = new Map(currentImageIndexMap.value)
-  newMap.set(modelId, index)
+  newMap.set(key, index)
   currentImageIndexMap.value = newMap
 }
 
-const nextImage = (modelId, totalImages, event) => {
+const nextImage = (section, modelId, totalImages, event) => {
   event.stopPropagation()
-  const currentIndex = getCurrentImageIndex(modelId)
+  const currentIndex = getCurrentImageIndex(section, modelId)
   const newIndex = (currentIndex + 1) % totalImages
-  setImageIndex(modelId, newIndex, event)
+  setImageIndex(section, modelId, newIndex, event)
 }
 
-const prevImage = (modelId, totalImages, event) => {
+const prevImage = (section, modelId, totalImages, event) => {
   event.stopPropagation()
-  const currentIndex = getCurrentImageIndex(modelId)
+  const currentIndex = getCurrentImageIndex(section, modelId)
   const newIndex = (currentIndex - 1 + totalImages) % totalImages
-  setImageIndex(modelId, newIndex, event)
+  setImageIndex(section, modelId, newIndex, event)
 }
 
 onMounted(async () => {
@@ -241,7 +243,7 @@ const followingModels = computed(() => {
             <!-- Style Image with Carousel -->
             <div class="relative aspect-square bg-neutral-100">
               <img
-                :src="model.sample_images?.[getCurrentImageIndex(model.id)] || model.thumbnail_url"
+                :src="model.sample_images?.[getCurrentImageIndex('recent', model.id)] || model.thumbnail_url"
                 :alt="model.name"
                 class="w-full h-full object-cover"
               />
@@ -249,7 +251,7 @@ const followingModels = computed(() => {
               <!-- Previous Button -->
               <button
                 v-if="model.sample_images && model.sample_images.length > 1"
-                @click="prevImage(model.id, model.sample_images.length, $event)"
+                @click="prevImage('recent', model.id, model.sample_images.length, $event)"
                 class="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -260,7 +262,7 @@ const followingModels = computed(() => {
               <!-- Next Button -->
               <button
                 v-if="model.sample_images && model.sample_images.length > 1"
-                @click="nextImage(model.id, model.sample_images.length, $event)"
+                @click="nextImage('recent', model.id, model.sample_images.length, $event)"
                 class="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -273,9 +275,9 @@ const followingModels = computed(() => {
                 <button
                   v-for="(img, index) in model.sample_images"
                   :key="index"
-                  @click="setImageIndex(model.id, index, $event)"
+                  @click="setImageIndex('recent', model.id, index, $event)"
                   class="w-1.5 h-1.5 rounded-full transition-all"
-                  :class="getCurrentImageIndex(model.id) === index ? 'bg-white w-4' : 'bg-white/50'"
+                  :class="getCurrentImageIndex('recent', model.id) === index ? 'bg-white w-4' : 'bg-white/50'"
                 ></button>
               </div>
 
@@ -382,7 +384,7 @@ const followingModels = computed(() => {
             <!-- Style Image with Carousel -->
             <div class="relative aspect-square bg-neutral-100">
               <img
-                :src="model.sample_images?.[getCurrentImageIndex(model.id)] || model.thumbnail_url"
+                :src="model.sample_images?.[getCurrentImageIndex('following', model.id)] || model.thumbnail_url"
                 :alt="model.name"
                 class="w-full h-full object-cover"
               />
@@ -390,7 +392,7 @@ const followingModels = computed(() => {
               <!-- Previous Button -->
               <button
                 v-if="model.sample_images && model.sample_images.length > 1"
-                @click="prevImage(model.id, model.sample_images.length, $event)"
+                @click="prevImage('following', model.id, model.sample_images.length, $event)"
                 class="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -401,7 +403,7 @@ const followingModels = computed(() => {
               <!-- Next Button -->
               <button
                 v-if="model.sample_images && model.sample_images.length > 1"
-                @click="nextImage(model.id, model.sample_images.length, $event)"
+                @click="nextImage('following', model.id, model.sample_images.length, $event)"
                 class="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -414,9 +416,9 @@ const followingModels = computed(() => {
                 <button
                   v-for="(img, index) in model.sample_images"
                   :key="index"
-                  @click="setImageIndex(model.id, index, $event)"
+                  @click="setImageIndex('following', model.id, index, $event)"
                   class="w-1.5 h-1.5 rounded-full transition-all"
-                  :class="getCurrentImageIndex(model.id) === index ? 'bg-white w-4' : 'bg-white/50'"
+                  :class="getCurrentImageIndex('following', model.id) === index ? 'bg-white w-4' : 'bg-white/50'"
                 ></button>
               </div>
 
