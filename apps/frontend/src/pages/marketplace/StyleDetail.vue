@@ -73,6 +73,11 @@ const canGenerate = computed(() => {
   )
 })
 
+// Check if current user is the owner of this style
+const isOwnStyle = computed(() => {
+  return authStore.isAuthenticated && model.value?.artist_id === authStore.user?.id
+})
+
 // Format time ago
 const formatTimeAgo = (dateString) => {
   const date = new Date(dateString)
@@ -93,6 +98,12 @@ const toggleBookmark = async () => {
     return
   }
 
+  // Prevent following yourself
+  if (isOwnStyle.value) {
+    console.log('Cannot follow yourself')
+    return
+  }
+
   // Get artist ID from the model
   const artistId = model.value?.artist_id
   if (!artistId) {
@@ -106,7 +117,9 @@ const toggleBookmark = async () => {
     isBookmarked.value = response.is_following
   } catch (error) {
     console.error('Failed to toggle follow:', error)
-    // Revert optimistic update if needed
+    if (error.response?.status === 400) {
+      console.log('Cannot follow yourself or invalid request')
+    }
   }
 }
 
@@ -340,7 +353,7 @@ onMounted(async () => {
         <h1 class="text-xl font-bold text-neutral-900 flex-1 pr-4">
           {{ model.name }}
         </h1>
-        <button @click="toggleBookmark" class="p-1">
+        <button v-if="!isOwnStyle" @click="toggleBookmark" class="p-1">
           <svg
             class="w-6 h-6 text-neutral-900"
             :fill="isBookmarked ? 'currentColor' : 'none'"
