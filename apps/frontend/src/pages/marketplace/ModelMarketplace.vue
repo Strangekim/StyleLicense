@@ -19,6 +19,7 @@ const searchQuery = ref('')
 const sortBy = ref('recent')
 const followingArtists = ref(new Set()) // Track following status
 const expandedDescriptions = ref(new Set()) // Track expanded descriptions
+const currentImageIndexMap = ref(new Map()) // Track current image index for each model
 
 const toggleDescription = (modelId, event) => {
   event.stopPropagation()
@@ -29,6 +30,31 @@ const toggleDescription = (modelId, event) => {
     newSet.add(modelId)
   }
   expandedDescriptions.value = newSet
+}
+
+const getCurrentImageIndex = (modelId) => {
+  return currentImageIndexMap.value.get(modelId) || 0
+}
+
+const setImageIndex = (modelId, index, event) => {
+  event.stopPropagation()
+  const newMap = new Map(currentImageIndexMap.value)
+  newMap.set(modelId, index)
+  currentImageIndexMap.value = newMap
+}
+
+const nextImage = (modelId, totalImages, event) => {
+  event.stopPropagation()
+  const currentIndex = getCurrentImageIndex(modelId)
+  const newIndex = (currentIndex + 1) % totalImages
+  setImageIndex(modelId, newIndex, event)
+}
+
+const prevImage = (modelId, totalImages, event) => {
+  event.stopPropagation()
+  const currentIndex = getCurrentImageIndex(modelId)
+  const newIndex = (currentIndex - 1 + totalImages) % totalImages
+  setImageIndex(modelId, newIndex, event)
 }
 
 onMounted(async () => {
@@ -169,22 +195,47 @@ const followingModels = computed(() => {
             style="width: 45vw; max-width: 280px; min-width: 180px; flex-shrink: 0;"
             @click="handleCardClick(model.id)"
           >
-            <!-- Style Image with Carousel Dots -->
+            <!-- Style Image with Carousel -->
             <div class="relative aspect-square bg-neutral-100">
               <img
-                :src="model.thumbnail_url || model.sample_images?.[0]"
+                :src="model.sample_images?.[getCurrentImageIndex(model.id)] || model.thumbnail_url"
                 :alt="model.name"
                 class="w-full h-full object-cover"
               />
+
+              <!-- Previous Button -->
+              <button
+                v-if="model.sample_images && model.sample_images.length > 1"
+                @click="prevImage(model.id, model.sample_images.length, $event)"
+                class="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+              </button>
+
+              <!-- Next Button -->
+              <button
+                v-if="model.sample_images && model.sample_images.length > 1"
+                @click="nextImage(model.id, model.sample_images.length, $event)"
+                class="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+
               <!-- Carousel Dots -->
-              <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                <div
-                  v-for="i in (model.sample_images?.length || 1)"
-                  :key="i"
-                  class="w-1.5 h-1.5 rounded-full"
-                  :class="i === 1 ? 'bg-white' : 'bg-white/50'"
-                ></div>
+              <div v-if="model.sample_images && model.sample_images.length > 1" class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                <button
+                  v-for="(img, index) in model.sample_images"
+                  :key="index"
+                  @click="setImageIndex(model.id, index, $event)"
+                  class="w-1.5 h-1.5 rounded-full transition-all"
+                  :class="getCurrentImageIndex(model.id) === index ? 'bg-white w-4' : 'bg-white/50'"
+                ></button>
               </div>
+
               <!-- Bookmark Icon -->
               <button
                 class="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full"
@@ -279,22 +330,47 @@ const followingModels = computed(() => {
             style="width: 45vw; max-width: 280px; min-width: 180px; flex-shrink: 0;"
             @click="handleCardClick(model.id)"
           >
-            <!-- Style Image with Carousel Dots -->
+            <!-- Style Image with Carousel -->
             <div class="relative aspect-square bg-neutral-100">
               <img
-                :src="model.thumbnail_url || model.sample_images?.[0]"
+                :src="model.sample_images?.[getCurrentImageIndex(model.id)] || model.thumbnail_url"
                 :alt="model.name"
                 class="w-full h-full object-cover"
               />
+
+              <!-- Previous Button -->
+              <button
+                v-if="model.sample_images && model.sample_images.length > 1"
+                @click="prevImage(model.id, model.sample_images.length, $event)"
+                class="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+              </button>
+
+              <!-- Next Button -->
+              <button
+                v-if="model.sample_images && model.sample_images.length > 1"
+                @click="nextImage(model.id, model.sample_images.length, $event)"
+                class="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+
               <!-- Carousel Dots -->
-              <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                <div
-                  v-for="i in (model.sample_images?.length || 1)"
-                  :key="i"
-                  class="w-1.5 h-1.5 rounded-full"
-                  :class="i === 1 ? 'bg-white' : 'bg-white/50'"
-                ></div>
+              <div v-if="model.sample_images && model.sample_images.length > 1" class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                <button
+                  v-for="(img, index) in model.sample_images"
+                  :key="index"
+                  @click="setImageIndex(model.id, index, $event)"
+                  class="w-1.5 h-1.5 rounded-full transition-all"
+                  :class="getCurrentImageIndex(model.id) === index ? 'bg-white w-4' : 'bg-white/50'"
+                ></button>
               </div>
+
               <!-- Bookmark Icon -->
               <button
                 class="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full"

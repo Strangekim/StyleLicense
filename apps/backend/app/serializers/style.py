@@ -66,21 +66,25 @@ class StyleListSerializer(BaseSerializer):
 
     Includes minimal fields for performance:
     - id, name, artist info, thumbnail, price, usage_count
+    - description, sample_images for carousel
     """
 
     artist_username = serializers.CharField(source="artist.username", read_only=True)
     artist_id = serializers.IntegerField(source="artist.id", read_only=True)
     thumbnail_url = serializers.SerializerMethodField()
     tags = serializers.SerializerMethodField()
+    sample_images = serializers.SerializerMethodField()
 
     class Meta:
         model = Style
         fields = [
             "id",
             "name",
+            "description",
             "artist_id",
             "artist_username",
             "thumbnail_url",
+            "sample_images",
             "generation_cost_tokens",
             "usage_count",
             "training_status",
@@ -92,6 +96,11 @@ class StyleListSerializer(BaseSerializer):
     def get_thumbnail_url(self, obj):
         """Convert gs:// URI to public HTTPS URL for browser access."""
         return convert_gcs_to_public_url(obj.thumbnail_url)
+
+    def get_sample_images(self, obj):
+        """Get sample training images for carousel (max 5 images)."""
+        artworks = obj.artworks.filter(is_valid=True)[:5]
+        return [convert_gcs_to_public_url(artwork.image_url) for artwork in artworks]
 
     def get_tags(self, obj):
         """Get tag names associated with this style."""
