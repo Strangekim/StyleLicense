@@ -14,6 +14,7 @@ import { useTokenStore } from '@/stores/tokens'
 import { useAuthStore } from '@/stores/auth'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TagButton from '@/components/shared/TagButton.vue'
+import { toggleFollow, getFollowingList } from '@/services/user.service'
 
 const route = useRoute()
 const router = useRouter()
@@ -86,13 +87,27 @@ const formatTimeAgo = (dateString) => {
 }
 
 // Actions
-const toggleBookmark = () => {
+const toggleBookmark = async () => {
   if (!authStore.isAuthenticated) {
     router.push(`/login?returnUrl=/models/${modelId.value}`)
     return
   }
-  isBookmarked.value = !isBookmarked.value
-  // TODO: Call API to bookmark/unbookmark
+
+  // Get artist ID from the model
+  const artistId = model.value?.artist_id
+  if (!artistId) {
+    console.error('Artist ID not found')
+    return
+  }
+
+  try {
+    // Call follow API
+    const response = await toggleFollow(artistId)
+    isBookmarked.value = response.is_following
+  } catch (error) {
+    console.error('Failed to toggle follow:', error)
+    // Revert optimistic update if needed
+  }
 }
 
 // Filter to allow only English letters and spaces
@@ -222,6 +237,18 @@ onMounted(async () => {
     // Fetch user balance if authenticated
     if (authStore.isAuthenticated) {
       await tokenStore.fetchBalance()
+
+      // Check if current user is following the artist
+      try {
+        const followingData = await getFollowingList()
+        const followingIds = followingData.results?.map(user => user.id) || []
+        const artistId = modelsStore.currentModel?.artist_id
+        if (artistId) {
+          isBookmarked.value = followingIds.includes(artistId)
+        }
+      } catch (error) {
+        console.error('Failed to fetch following list:', error)
+      }
     }
   } catch (err) {
     console.error('Failed to fetch model detail:', err)

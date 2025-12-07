@@ -80,3 +80,22 @@ export async function getUserGenerations(userId, params = {}) {
   })
   return response.data
 }
+
+/**
+ * Toggle follow/unfollow on a user
+ * @param {number} userId - User ID to follow/unfollow
+ * @returns {Promise<Object>} - { is_following: boolean, follower_count: number }
+ */
+export async function toggleFollow(userId) {
+  const response = await api.post(`/api/users/${userId}/follow/`)
+  return response.data
+}
+
+/**
+ * Get list of users that current user is following
+ * @returns {Promise<Object>} - List of following users
+ */
+export async function getFollowingList() {
+  const response = await api.get('/api/users/following/')
+  return response.data
+}
