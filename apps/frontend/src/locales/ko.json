@@ -265,7 +265,6 @@
   },
   "styleDetail": {
     "trainingImage": "학습 이미지",
-    "subtitle": "새로운 아티스틱 스타일입니다",
     "styledBy": "스타일 제공",
     "exampleGenerateImage": "생성 이미지 예시",
     "warningTitle": "이런 태그는 작성하지 마세요",

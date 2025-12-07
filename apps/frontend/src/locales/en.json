@@ -265,7 +265,6 @@
   },
   "styleDetail": {
     "trainingImage": "Training Image",
-    "subtitle": "This is my new Artistic Style",
     "styledBy": "Styled by",
     "exampleGenerateImage": "Example Generate Image",
     "warningTitle": "Do not Write Like These Tag",

@@ -48,7 +48,9 @@ const aspectRatioOptions = [
 
 // Computed
 const sampleImages = computed(() => {
-  return model.value?.sample_images || []
+  // Backend returns artworks array with image_url field
+  const artworks = model.value?.artworks || []
+  return artworks.map(artwork => artwork.image_url).filter(url => url)
 })
 
 const currentImage = computed(() => {
@@ -295,11 +297,6 @@ onMounted(async () => {
           </svg>
         </button>
       </div>
-
-      <!-- Subtitle -->
-      <p class="text-sm text-neutral-600 py-1">
-        {{ $t('styleDetail.subtitle') }}
-      </p>
 
       <!-- Description -->
       <div v-if="model.description" class="py-2">
