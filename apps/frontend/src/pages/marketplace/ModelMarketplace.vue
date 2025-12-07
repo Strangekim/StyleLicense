@@ -11,6 +11,7 @@ import { useRouter } from 'vue-router'
 import { useModelsStore } from '@/stores/models'
 import { useAuthStore } from '@/stores/auth'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import { toggleFollow, getFollowingList } from '@/services/user.service'
 
 const router = useRouter()
 const modelsStore = useModelsStore()
@@ -60,6 +61,17 @@ const prevImage = (modelId, totalImages, event) => {
 onMounted(async () => {
   // Load initial models (only completed styles)
   await modelsStore.fetchModels({ training_status: 'completed', sort: '-created_at' })
+
+  // Load following artists list if authenticated
+  if (authStore.isAuthenticated) {
+    try {
+      const followingData = await getFollowingList()
+      const followingIds = followingData.results?.map(user => user.id) || []
+      followingArtists.value = new Set(followingIds)
+    } catch (error) {
+      console.error('Failed to fetch following list:', error)
+    }
+  }
 })
 
 const handleCardClick = (modelId) => {
@@ -71,7 +83,7 @@ const handleArtistClick = (artistId, event) => {
   router.push(`/artist/${artistId}`)
 }
 
-const toggleFollow = async (artistId, event) => {
+const handleToggleFollow = async (artistId, event) => {
   event.stopPropagation()
 
   if (!authStore.isAuthenticated) {
@@ -79,19 +91,24 @@ const toggleFollow = async (artistId, event) => {
     return
   }
 
-  // Create a new Set to trigger reactivity
-  const newSet = new Set(followingArtists.value)
-  if (newSet.has(artistId)) {
-    newSet.delete(artistId)
-    // TODO: Call API to unfollow
-  } else {
-    newSet.add(artistId)
-    // TODO: Call API to follow
+  try {
+    // Call follow API
+    const response = await toggleFollow(artistId)
+
+    // Update local state
+    const newSet = new Set(followingArtists.value)
+    if (response.is_following) {
+      newSet.add(artistId)
+    } else {
+      newSet.delete(artistId)
+    }
+    followingArtists.value = newSet
+  } catch (error) {
+    console.error('Failed to toggle follow:', error)
   }
-  followingArtists.value = newSet
 }
 
-const toggleBookmark = async (modelId, event) => {
+const toggleBookmark = async (model, event) => {
   event.stopPropagation()
 
   if (!authStore.isAuthenticated) {
@@ -99,8 +116,34 @@ const toggleBookmark = async (modelId, event) => {
     return
   }
 
-  // TODO: Call API to bookmark/unbookmark
-  console.log('Toggle bookmark for model:', modelId)
+  // Get artist ID from the model
+  const artistId = model.artist_id
+  if (!artistId) {
+    console.error('Artist ID not found')
+    return
+  }
+
+  // Don't allow following yourself
+  if (artistId === authStore.user?.id) {
+    console.log('Cannot follow yourself')
+    return
+  }
+
+  try {
+    // Call follow API
+    const response = await toggleFollow(artistId)
+
+    // Update local state
+    const newSet = new Set(followingArtists.value)
+    if (response.is_following) {
+      newSet.add(artistId)
+    } else {
+      newSet.delete(artistId)
+    }
+    followingArtists.value = newSet
+  } catch (error) {
+    console.error('Failed to toggle follow:', error)
+  }
 }
 
 // Filter and sort models for top section (recent/popular)
@@ -236,12 +279,18 @@ const followingModels = computed(() => {
                 ></button>
               </div>
 
-              <!-- Bookmark Icon -->
+              <!-- Bookmark Icon (Follow Artist) -->
               <button
-                class="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full"
-                @click="toggleBookmark(model.id, $event)"
+                v-if="authStore.user?.id !== model.artist_id"
+                class="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full hover:bg-white transition-colors"
+                @click="toggleBookmark(model, $event)"
               >
-                <svg class="w-4 h-4 text-neutral-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  class="w-4 h-4 text-neutral-900"
+                  :fill="followingArtists.has(model.artist_id) ? 'currentColor' : 'none'"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
                 </svg>
               </button>
@@ -371,12 +420,18 @@ const followingModels = computed(() => {
                 ></button>
               </div>
 
-              <!-- Bookmark Icon -->
+              <!-- Bookmark Icon (Follow Artist) -->
               <button
-                class="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full"
-                @click="toggleBookmark(model.id, $event)"
+                v-if="authStore.user?.id !== model.artist_id"
+                class="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full hover:bg-white transition-colors"
+                @click="toggleBookmark(model, $event)"
               >
-                <svg class="w-4 h-4 text-neutral-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  class="w-4 h-4 text-neutral-900"
+                  :fill="followingArtists.has(model.artist_id) ? 'currentColor' : 'none'"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
                 </svg>
               </button>
