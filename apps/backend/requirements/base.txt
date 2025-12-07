@@ -22,6 +22,9 @@ Pillow==10.2.0
 # CORS
 django-cors-headers==4.3.1
 
+# Rate Limiting (DDoS protection)
+django-ratelimit==4.1.0
+
 # Environment variables
 python-dotenv==1.0.0
 

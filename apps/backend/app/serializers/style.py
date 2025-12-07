@@ -6,23 +6,20 @@ Provides different serializers for different use cases:
 - StyleDetailSerializer: For detail view (all fields + nested data)
 - StyleCreateSerializer: For creating new styles (with validation)
 """
-from datetime import timedelta
 from rest_framework import serializers
-from google.cloud import storage
 from app.models import Style, Artwork, Tag, StyleTag
 from app.serializers.base import BaseSerializer
 
 
-def convert_gcs_to_signed_url(gcs_uri, expiration_hours=24):
+def convert_gcs_to_public_url(gcs_uri):
     """
-    Convert gs:// URI to signed URL for temporary public access.
+    Convert gs:// URI to public HTTPS URL.
 
     Args:
         gcs_uri: GCS URI in format gs://bucket-name/path/to/file
-        expiration_hours: URL expiration time in hours (default: 24)
 
     Returns:
-        Signed URL string or None if conversion fails
+        Public HTTPS URL string or None
     """
     if not gcs_uri:
         return None
@@ -31,32 +28,10 @@ def convert_gcs_to_signed_url(gcs_uri, expiration_hours=24):
     if gcs_uri.startswith('https://'):
         return gcs_uri
 
-    # Convert gs:// to signed URL
+    # Convert gs:// to public HTTPS URL
     if gcs_uri.startswith('gs://'):
-        try:
-            # Parse gs://bucket-name/path/to/file
-            parts = gcs_uri[5:].split('/', 1)  # Remove 'gs://' and split
-            if len(parts) != 2:
-                return None
-
-            bucket_name, blob_name = parts
-
-            # Generate signed URL
-            storage_client = storage.Client()
-            bucket = storage_client.bucket(bucket_name)
-            blob = bucket.blob(blob_name)
-
-            signed_url = blob.generate_signed_url(
-                version="v4",
-                expiration=timedelta(hours=expiration_hours),
-                method="GET"
-            )
-
-            return signed_url
-        except Exception as e:
-            # If signed URL generation fails, fallback to public URL
-            # This can happen if credentials are not available
-            return gcs_uri.replace('gs://', 'https://storage.googleapis.com/')
+        # gs://bucket-name/path -> https://storage.googleapis.com/bucket-name/path
+        return gcs_uri.replace('gs://', 'https://storage.googleapis.com/')
 
     return gcs_uri
 
@@ -72,8 +47,8 @@ class ArtworkSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "is_valid", "created_at"]
 
     def get_image_url(self, obj):
-        """Convert gs:// URI to signed URL for temporary browser access."""
-        return convert_gcs_to_signed_url(obj.image_url)
+        """Convert gs:// URI to public HTTPS URL for browser access."""
+        return convert_gcs_to_public_url(obj.image_url)
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -115,8 +90,8 @@ class StyleListSerializer(BaseSerializer):
         read_only_fields = fields
 
     def get_thumbnail_url(self, obj):
-        """Convert gs:// URI to signed URL for temporary browser access."""
-        return convert_gcs_to_signed_url(obj.thumbnail_url)
+        """Convert gs:// URI to public HTTPS URL for browser access."""
+        return convert_gcs_to_public_url(obj.thumbnail_url)
 
     def get_tags(self, obj):
         """Get tag names associated with this style."""
@@ -192,8 +167,8 @@ class StyleDetailSerializer(BaseSerializer):
         ]
 
     def get_thumbnail_url(self, obj):
-        """Convert gs:// URI to signed URL for temporary browser access."""
-        return convert_gcs_to_signed_url(obj.thumbnail_url)
+        """Convert gs:// URI to public HTTPS URL for browser access."""
+        return convert_gcs_to_public_url(obj.thumbnail_url)
 
     def get_tags(self, obj):
         """Get tags with full details."""

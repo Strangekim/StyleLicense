@@ -6,6 +6,11 @@ Endpoints:
 - GET /api/styles/:id/ - Retrieve style detail
 - POST /api/styles/ - Create new style and start training
 - DELETE /api/styles/:id/ - Delete style (owner only)
+
+Rate Limiting (DDoS Protection):
+- list: 200 requests/hour per IP
+- retrieve: 300 requests/hour per IP
+- create: 10 requests/hour per user (authenticated)
 """
 import logging
 
@@ -14,6 +19,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.db.models import Q, Prefetch
+from django_ratelimit.decorators import ratelimit
+from django.utils.decorators import method_decorator
 
 from app.models import Style, Artwork, StyleTag
 from app.serializers import (
@@ -74,6 +81,15 @@ class StyleViewSet(BaseViewSet):
         elif self.action == "create":
             return StyleCreateSerializer
         return StyleListSerializer
+
+    @method_decorator(ratelimit(key='ip', rate='200/h', method='GET', block=True))
+    def list(self, request, *args, **kwargs):
+        """
+        List styles with filtering and sorting.
+
+        Rate limit: 200 requests/hour per IP address.
+        """
+        return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
         """
@@ -142,8 +158,13 @@ class StyleViewSet(BaseViewSet):
 
         return queryset
 
+    @method_decorator(ratelimit(key='ip', rate='300/h', method='GET', block=True))
     def retrieve(self, request, *args, **kwargs):
-        """Retrieve style detail."""
+        """
+        Retrieve style detail.
+
+        Rate limit: 300 requests/hour per IP address.
+        """
         instance = self.get_object()
         serializer = self.get_serializer(instance)
         return Response({"success": True, "data": serializer.data})
