@@ -311,7 +311,8 @@ GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
 DEFAULT_FILE_STORAGE = 'storages.backends.gcs.GoogleCloudStorage'
 GS_BUCKET_NAME = GCS_BUCKET_NAME
 GS_FILE_OVERWRITE = False
-GS_DEFAULT_ACL = 'publicRead'  # Make uploaded files publicly accessible
+# Note: GS_DEFAULT_ACL is deprecated, use bucket-level IAM instead
+# Files will be publicly accessible via bucket configuration
 
 # --- DEBUG: Log the loaded SECRET_KEY hash ---
 import logging
