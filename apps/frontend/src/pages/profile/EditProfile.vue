@@ -279,8 +279,8 @@ async function loadProfile() {
       }
 
       // Load existing signature if artist
-      if (authStore.user.artist_profile?.signature_image_url) {
-        previewSignatureImage.value = authStore.user.artist_profile.signature_image_url
+      if (authStore.user.artist?.signature_image_url) {
+        previewSignatureImage.value = authStore.user.artist.signature_image_url
         signatureMode.value = 'image'
       }
 
