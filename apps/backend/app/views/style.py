@@ -408,6 +408,8 @@ class StyleViewSet(BaseViewSet):
 
         Endpoint: GET /api/styles/my-style/
         """
+        logger.info(f"[my_style] Request from user_id={request.user.id}, role={request.user.role}")
+
         try:
             style = Style.objects.select_related("artist").prefetch_related(
                 Prefetch(
@@ -417,10 +419,12 @@ class StyleViewSet(BaseViewSet):
                 Prefetch("artworks", queryset=Artwork.objects.filter(is_valid=True)),
             ).get(artist=request.user, is_active=True)
 
+            logger.info(f"[my_style] Found style: id={style.id}, name={style.name}")
             serializer = self.get_serializer(style)
             return Response({"success": True, "data": serializer.data})
 
         except Style.DoesNotExist:
+            logger.warning(f"[my_style] No active style found for user_id={request.user.id}")
             return Response(
                 {
                     "success": False,
