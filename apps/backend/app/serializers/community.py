@@ -304,22 +304,39 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             # Get or create artist profile
             artist_profile, created = Artist.objects.get_or_create(user=instance)
 
-            # Upload signature image to GCS and save URL
-            # TODO: Replace with actual GCS upload logic
-            # For now, save the file directly (this should be replaced with GCS upload)
-            from django.core.files.storage import default_storage
-            from django.core.files.base import ContentFile
-            import os
+            # Upload signature image to GCS using google-cloud-storage client
+            from google.cloud import storage
+            from django.conf import settings
+            import logging
 
-            # Generate filename
-            filename = f"signatures/user_{instance.id}_{signature_image.name}"
+            logger = logging.getLogger(__name__)
 
-            # Save to storage (will use GCS if configured)
-            path = default_storage.save(filename, ContentFile(signature_image.read()))
-            signature_url = default_storage.url(path)
+            try:
+                # Initialize GCS client
+                storage_client = storage.Client()
+                bucket = storage_client.bucket(settings.GCS_BUCKET_NAME)
 
-            # Update artist profile
-            artist_profile.signature_image_url = signature_url
-            artist_profile.save()
+                # Generate filename
+                filename = f"signatures/user_{instance.id}_{signature_image.name}"
+
+                # Create blob and upload
+                blob = bucket.blob(filename)
+                blob.upload_from_file(signature_image, content_type=signature_image.content_type)
+
+                # Make the blob publicly accessible
+                blob.make_public()
+
+                # Get public URL
+                signature_url = blob.public_url
+
+                logger.info(f"[Signature] Uploaded signature for user {instance.id}: {signature_url}")
+
+                # Update artist profile
+                artist_profile.signature_image_url = signature_url
+                artist_profile.save()
+
+            except Exception as e:
+                logger.error(f"[Signature] Failed to upload signature for user {instance.id}: {e}", exc_info=True)
+                raise serializers.ValidationError(f"Failed to upload signature: {str(e)}")
 
         return instance
