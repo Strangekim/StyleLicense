@@ -398,7 +398,7 @@ class StyleViewSet(BaseViewSet):
             }
         )
 
-    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated, IsArtist])
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated, IsArtist], url_path='my-style')
     def my_style(self, request):
         """
         Get the current artist's active style.
