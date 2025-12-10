@@ -308,6 +308,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             from google.cloud import storage
             from django.conf import settings
             import logging
+            from urllib.parse import urlparse
 
             logger = logging.getLogger(__name__)
 
@@ -315,6 +316,26 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 # Initialize GCS client
                 storage_client = storage.Client()
                 bucket = storage_client.bucket(settings.GCS_BUCKET_NAME)
+
+                # Delete old signature if exists
+                old_signature_url = artist_profile.signature_image_url
+                if old_signature_url:
+                    try:
+                        # Extract blob name from URL
+                        # URL format: https://storage.googleapis.com/bucket-name/path/to/file
+                        parsed_url = urlparse(old_signature_url)
+                        if 'storage.googleapis.com' in parsed_url.netloc:
+                            # Get path after bucket name
+                            path_parts = parsed_url.path.strip('/').split('/', 1)
+                            if len(path_parts) > 1:
+                                old_blob_name = path_parts[1]
+                                old_blob = bucket.blob(old_blob_name)
+                                if old_blob.exists():
+                                    old_blob.delete()
+                                    logger.info(f"[Signature] Deleted old signature: {old_blob_name}")
+                    except Exception as delete_error:
+                        logger.warning(f"[Signature] Failed to delete old signature: {delete_error}")
+                        # Don't fail the upload if deletion fails
 
                 # Generate filename
                 filename = f"signatures/user_{instance.id}_{signature_image.name}"

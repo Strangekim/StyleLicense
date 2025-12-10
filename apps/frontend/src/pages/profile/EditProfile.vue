@@ -372,7 +372,15 @@ async function handleSave() {
     }
   } catch (error) {
     console.error('Failed to save profile:', error)
-    alert(t('editProfile.errors.saveFailed'))
+    console.error('[DEBUG] Error response:', error.response?.data)
+    console.error('[DEBUG] Error status:', error.response?.status)
+
+    // Show more detailed error message if available
+    const errorMessage = error.response?.data?.signature_image?.[0] ||
+                        error.response?.data?.error?.message ||
+                        error.response?.data?.message ||
+                        t('editProfile.errors.saveFailed')
+    alert(errorMessage)
   } finally {
     saving.value = false
   }
@@ -382,8 +390,10 @@ function handleCancel() {
   // Check if there are unsaved changes
   const hasChanges =
     form.value.username !== authStore.user?.username ||
+    form.value.bio !== authStore.user?.bio ||
     previewAvatar.value !== null ||
-    previewSignature.value !== null
+    signatureDrawingData.value !== null ||
+    signatureImageFile.value !== null
 
   if (hasChanges) {
     if (confirm(t('editProfile.confirmUnsavedChanges'))) {
