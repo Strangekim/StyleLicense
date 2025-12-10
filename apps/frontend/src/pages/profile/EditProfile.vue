@@ -269,6 +269,9 @@ onMounted(async () => {
 async function loadProfile() {
   loading.value = true
   try {
+    console.log('[DEBUG] Loading profile...')
+    console.log('[DEBUG] Auth user:', authStore.user)
+
     // Load profile data from auth store
     if (authStore.user) {
       form.value = {
@@ -278,14 +281,22 @@ async function loadProfile() {
         avatar: authStore.user.profile_image || null,
       }
 
+      console.log('[DEBUG] User role:', authStore.user.role)
+      console.log('[DEBUG] Artist object:', authStore.user.artist)
+      console.log('[DEBUG] Signature URL from artist:', authStore.user.artist?.signature_image_url)
+
       // Load existing signature if artist
       if (authStore.user.artist?.signature_image_url) {
+        console.log('[DEBUG] Loading existing signature:', authStore.user.artist.signature_image_url)
         previewSignatureImage.value = authStore.user.artist.signature_image_url
         signatureMode.value = 'image'
+      } else {
+        console.log('[DEBUG] No existing signature found')
       }
 
       // Check if user is professional (artist)
       isProfessional.value = authStore.user.role === 'artist'
+      console.log('[DEBUG] Is professional:', isProfessional.value)
     }
   } catch (error) {
     console.error('Failed to load profile:', error)
@@ -321,21 +332,38 @@ async function handleSave() {
     }
 
     // Add signature if provided
+    console.log('[DEBUG] Signature mode:', signatureMode.value)
+    console.log('[DEBUG] Canvas data:', signatureDrawingData.value ? 'exists' : 'null')
+    console.log('[DEBUG] Image file:', signatureImageFile.value ? 'exists' : 'null')
+    console.log('[DEBUG] Preview image:', previewSignatureImage.value ? 'exists' : 'null')
+
     if (signatureMode.value === 'canvas' && signatureDrawingData.value) {
+      console.log('[DEBUG] Adding canvas signature to update')
       // Convert canvas data URL to blob
       const blob = await fetch(signatureDrawingData.value).then(r => r.blob())
       const file = new File([blob], 'signature_canvas.png', { type: 'image/png' })
       updateData.signature_image = file
     } else if (signatureMode.value === 'image' && signatureImageFile.value) {
+      console.log('[DEBUG] Adding image signature to update')
       updateData.signature_image = signatureImageFile.value
+    } else {
+      console.log('[DEBUG] No new signature to upload')
     }
+
+    console.log('[DEBUG] Update data keys:', Object.keys(updateData))
 
     // Call backend API to update profile
     const response = await updateUserProfile(updateData)
+    console.log('[DEBUG] Backend response:', response)
 
     if (response.success) {
+      console.log('[DEBUG] Profile update successful, refreshing auth...')
       // Update auth store with new data
       await authStore.initAuth() // Refresh user data from backend
+
+      console.log('[DEBUG] Auth refreshed. User data:', authStore.user)
+      console.log('[DEBUG] Artist data:', authStore.user?.artist)
+      console.log('[DEBUG] Signature URL:', authStore.user?.artist?.signature_image_url)
 
       // Navigate back to profile
       router.push('/profile')
