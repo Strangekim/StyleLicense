@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
+    "storages",  # Django Storages for GCS
     # Local apps
     "app.apps.AppConfig",
 ]
@@ -305,6 +306,12 @@ LOGGING = {
 # Google Cloud Storage Configuration
 GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "stylelicense-media")
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
+
+# Use Google Cloud Storage as default file storage
+DEFAULT_FILE_STORAGE = 'storages.backends.gcs.GoogleCloudStorage'
+GS_BUCKET_NAME = GCS_BUCKET_NAME
+GS_FILE_OVERWRITE = False
+GS_DEFAULT_ACL = 'publicRead'  # Make uploaded files publicly accessible
 
 # --- DEBUG: Log the loaded SECRET_KEY hash ---
 import logging
