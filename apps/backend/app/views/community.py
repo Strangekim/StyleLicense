@@ -277,6 +277,8 @@ class UserViewSet(viewsets.GenericViewSet):
 
         POST /api/users/upgrade-to-artist/
         Response: {"success": true, "data": {...}}
+
+        IMPORTANT: User MUST have a signature before upgrading to artist.
         """
         user = request.user
 
@@ -288,6 +290,32 @@ class UserViewSet(viewsets.GenericViewSet):
                     "error": {
                         "code": "ALREADY_ARTIST",
                         "message": "You are already an artist",
+                    },
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # CRITICAL: Validate that user has provided a signature
+        try:
+            artist_profile = Artist.objects.get(user=user)
+            if not artist_profile.signature_image_url:
+                return Response(
+                    {
+                        "success": False,
+                        "error": {
+                            "code": "SIGNATURE_REQUIRED",
+                            "message": "You must provide a signature before upgrading to artist account",
+                        },
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        except Artist.DoesNotExist:
+            return Response(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "SIGNATURE_REQUIRED",
+                        "message": "You must provide a signature before upgrading to artist account",
                     },
                 },
                 status=status.HTTP_400_BAD_REQUEST,

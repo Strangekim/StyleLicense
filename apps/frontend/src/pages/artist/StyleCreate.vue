@@ -63,7 +63,6 @@ const formData = ref({
 
 // Image upload state
 const trainingImages = ref([])
-const signatureImage = ref(null)
 const isDragging = ref(false)
 
 // Submission state
@@ -165,32 +164,6 @@ const removeImage = (index) => {
   trainingImages.value.splice(index, 1)
 }
 
-// Handle signature upload
-const handleSignatureUpload = (event) => {
-  const file = event.target.files[0]
-  if (!file) return
-
-  const error = validateImageFile(file)
-  if (error) {
-    alert(error)
-    return
-  }
-
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    signatureImage.value = {
-      file: file,
-      preview: e.target.result,
-    }
-  }
-  reader.readAsDataURL(file)
-}
-
-// Remove signature
-const removeSignature = () => {
-  signatureImage.value = null
-}
-
 // Update tags for a training image
 const updateImageTags = (index, tags) => {
   if (trainingImages.value[index]) {
@@ -286,11 +259,6 @@ const handleSubmit = async () => {
       })),
     }
 
-    // Add signature if provided
-    if (signatureImage.value) {
-      data.signature_image = signatureImage.value.file
-    }
-
     // Simulate upload progress (real progress tracking would need backend support)
     const progressInterval = setInterval(() => {
       uploadProgress.value = Math.min(uploadProgress.value + 10, 90)
@@ -322,7 +290,6 @@ const resetForm = () => {
     price_per_generation: 10,
   }
   trainingImages.value = []
-  signatureImage.value = null
   errors.value = {}
 }
 </script>
@@ -592,53 +559,6 @@ const resetForm = () => {
                 </div>
               </div>
             </div>
-          </div>
-        </Card>
-
-        <!-- Signature (Optional) -->
-        <Card>
-          <h2 class="text-xl font-semibold text-neutral-900 mb-2">
-            {{ $t('styleCreate.signature') }}
-          </h2>
-          <p class="text-sm text-neutral-600 mb-4">
-            {{ $t('styleCreate.signatureDescription') }}
-          </p>
-
-          <div v-if="!signatureImage" class="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center bg-neutral-50">
-            <input
-              ref="signatureInput"
-              type="file"
-              accept="image/png"
-              class="hidden"
-              @change="handleSignatureUpload"
-            />
-
-            <Button
-              type="button"
-              variant="outline"
-              @click="$refs.signatureInput.click()"
-            >
-              {{ $t('styleCreate.uploadSignature') }}
-            </Button>
-            <p class="text-xs text-neutral-500 mt-2">
-              {{ $t('styleCreate.signatureFormatHelper') }}
-            </p>
-          </div>
-
-          <div v-else class="flex items-center gap-4">
-            <img
-              :src="signatureImage.preview"
-              alt="Signature preview"
-              class="h-16 border border-neutral-200 rounded"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              @click="removeSignature"
-            >
-              {{ $t('styleCreate.remove') }}
-            </Button>
           </div>
         </Card>
 

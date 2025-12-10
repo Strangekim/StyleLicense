@@ -115,6 +115,17 @@ class GenerationViewSet(viewsets.ViewSet):
                     },
                 )
 
+                # Get artist signature path
+                signature_path = None
+                try:
+                    if hasattr(style.artist, 'artist_profile') and style.artist.artist_profile:
+                        signature_path = style.artist.artist_profile.signature_image_url
+                except Exception as e:
+                    # Log error but don't fail generation
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to get signature for style {style.id}: {e}")
+
                 # Send to RabbitMQ
                 rabbitmq = get_rabbitmq_service()
                 task_id = rabbitmq.send_generation_task(
@@ -124,6 +135,7 @@ class GenerationViewSet(viewsets.ViewSet):
                     prompt=" ".join(prompt_tags),
                     aspect_ratio=aspect_ratio,
                     seed=seed,
+                    signature_path=signature_path,
                 )
 
                 # Store task_id in metadata

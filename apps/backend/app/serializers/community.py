@@ -237,14 +237,24 @@ class UserProfileSerializer(serializers.ModelSerializer):
         if obj.role != "artist":
             return None
 
-        from app.models import Follow
+        from app.models import Follow, Artist
 
         follower_count = Follow.objects.filter(following=obj).count()
+
+        # Get artist profile for signature
+        artist_profile = None
+        signature_image_url = None
+        try:
+            artist_profile = Artist.objects.get(user=obj)
+            signature_image_url = artist_profile.signature_image_url
+        except Artist.DoesNotExist:
+            pass
 
         return {
             "id": obj.id,
             "artist_name": obj.username,
             "follower_count": follower_count,
+            "signature_image_url": signature_image_url,
         }
 
     def get_stats(self, obj):
@@ -268,8 +278,48 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for updating user profile.
     Used for PATCH /api/users/me
+    Supports signature_image upload (stored in Artist profile if user is an artist)
     """
+
+    signature_image = serializers.ImageField(write_only=True, required=False)
 
     class Meta:
         model = User
-        fields = ["username", "bio", "profile_image"]
+        fields = ["username", "bio", "profile_image", "signature_image"]
+
+    def update(self, instance, validated_data):
+        """Update user profile and handle signature_image for artists."""
+        from app.models import Artist
+
+        # Extract signature_image if provided
+        signature_image = validated_data.pop("signature_image", None)
+
+        # Update user fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # If signature_image provided, save to Artist profile
+        if signature_image:
+            # Get or create artist profile
+            artist_profile, created = Artist.objects.get_or_create(user=instance)
+
+            # Upload signature image to GCS and save URL
+            # TODO: Replace with actual GCS upload logic
+            # For now, save the file directly (this should be replaced with GCS upload)
+            from django.core.files.storage import default_storage
+            from django.core.files.base import ContentFile
+            import os
+
+            # Generate filename
+            filename = f"signatures/user_{instance.id}_{signature_image.name}"
+
+            # Save to storage (will use GCS if configured)
+            path = default_storage.save(filename, ContentFile(signature_image.read()))
+            signature_url = default_storage.url(path)
+
+            # Update artist profile
+            artist_profile.signature_image_url = signature_url
+            artist_profile.save()
+
+        return instance

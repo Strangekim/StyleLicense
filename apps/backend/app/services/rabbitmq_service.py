@@ -180,6 +180,8 @@ class RabbitMQService:
         prompt: str,
         aspect_ratio: str = "1:1",
         seed: Optional[int] = None,
+        signature_path: Optional[str] = None,
+        signature_config: Optional[Dict[str, Any]] = None,
         webhook_url: Optional[str] = None
     ) -> str:
         """
@@ -192,6 +194,8 @@ class RabbitMQService:
             prompt: Generation prompt
             aspect_ratio: Image aspect ratio (1:1, 2:2, or 1:2)
             seed: Random seed for reproducibility
+            signature_path: Path to artist signature image (GCS URL)
+            signature_config: Signature configuration (position, size, opacity)
             webhook_url: Optional callback URL for status updates
 
         Returns:
@@ -203,6 +207,14 @@ class RabbitMQService:
         if webhook_url is None:
             webhook_url = f"{settings.API_BASE_URL}/api/webhooks/generation/{generation_id}/status"
 
+        # Default signature config
+        if signature_config is None:
+            signature_config = {
+                "position": "bottom-right",
+                "size": "medium",
+                "opacity": 0.7
+            }
+
         message = {
             "task_id": task_id,
             "type": "image_generation",
@@ -213,6 +225,8 @@ class RabbitMQService:
                 "prompt": prompt,
                 "aspect_ratio": aspect_ratio,
                 "seed": seed,
+                "signature_path": signature_path or "",
+                "signature_config": signature_config,
             },
             "webhook_url": webhook_url,
         }
