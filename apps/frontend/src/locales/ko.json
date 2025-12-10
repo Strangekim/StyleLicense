@@ -228,7 +228,12 @@
     "email": "이메일",
     "emailCannotBeChanged": "이메일은 변경할 수 없습니다",
     "signature": "서명",
+    "signatureRequiredForArtist": "작가 계정으로 전환하려면 서명이 필요합니다",
     "signaturePlaceholder": "서명 입력",
+    "drawSignature": "그리기",
+    "uploadSignature": "업로드",
+    "uploadSignatureImage": "서명 이미지 업로드",
+    "clearSignature": "지우기",
     "upload": "업로드",
     "dangerZone": "위험 구역",
     "deleteAccount": "계정 삭제",
@@ -238,7 +243,8 @@
       "bioTooLong": "소개는 150자 이내로 작성해주세요",
       "saveFailed": "프로필 저장에 실패했습니다. 다시 시도해주세요.",
       "photoTooLarge": "파일 크기는 5MB 이하여야 합니다",
-      "signatureTooLarge": "파일 크기는 2MB 이하여야 합니다"
+      "signatureTooLarge": "파일 크기는 2MB 이하여야 합니다",
+      "signatureRequired": "작가 계정으로 전환하기 전에 서명을 제공해주세요."
     },
     "confirmUnsavedChanges": "저장하지 않은 변경사항이 있습니다. 나가시겠습니까?",
     "confirmSwitchToProfessional": "프로페셔널 계정으로 전환하시겠습니까? 스타일을 생성하고 판매할 수 있습니다.",
@@ -280,5 +286,9 @@
     "hoursAgo": "{count}시간 전",
     "daysAgo": "{count}일 전",
     "weeksAgo": "{count}주 전"
+  },
+  "signatureCanvas": {
+    "clear": "지우기",
+    "drawYourSignature": "위에 서명을 그려주세요"
   }
 }

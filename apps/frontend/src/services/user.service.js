@@ -24,10 +24,17 @@ export async function getUserProfile(userId) {
  * @returns {Promise<Object>} - Updated profile data
  */
 export async function updateUserProfile(data) {
-  // Handle file upload separately if profile_image is a File
-  if (data.profile_image instanceof File) {
+  // Handle file upload if profile_image or signature_image is a File
+  const hasFileUpload = data.profile_image instanceof File || data.signature_image instanceof File
+
+  if (hasFileUpload) {
     const formData = new FormData()
-    formData.append('profile_image', data.profile_image)
+    if (data.profile_image instanceof File) {
+      formData.append('profile_image', data.profile_image)
+    }
+    if (data.signature_image instanceof File) {
+      formData.append('signature_image', data.signature_image)
+    }
     if (data.username) formData.append('username', data.username)
     if (data.bio) formData.append('bio', data.bio)
 

@@ -228,7 +228,12 @@
     "email": "Email",
     "emailCannotBeChanged": "Email cannot be changed",
     "signature": "Signature",
+    "signatureRequiredForArtist": "Signature is required to upgrade to artist account",
     "signaturePlaceholder": "Type your signature",
+    "drawSignature": "Draw",
+    "uploadSignature": "Upload",
+    "uploadSignatureImage": "Upload Signature Image",
+    "clearSignature": "Clear",
     "upload": "Upload",
     "dangerZone": "Danger Zone",
     "deleteAccount": "Delete Account",
@@ -238,7 +243,8 @@
       "bioTooLong": "Bio must be 150 characters or less",
       "saveFailed": "Failed to save profile. Please try again.",
       "photoTooLarge": "File size must be less than 5MB",
-      "signatureTooLarge": "File size must be less than 2MB"
+      "signatureTooLarge": "File size must be less than 2MB",
+      "signatureRequired": "Please provide your signature before upgrading to artist account."
     },
     "confirmUnsavedChanges": "You have unsaved changes. Are you sure you want to leave?",
     "confirmSwitchToProfessional": "Switch to a professional account? This will give you access to create and sell styles.",
@@ -280,5 +286,9 @@
     "hoursAgo": "{count} hours ago",
     "daysAgo": "{count} days ago",
     "weeksAgo": "{count} weeks ago"
+  },
+  "signatureCanvas": {
+    "clear": "Clear",
+    "drawYourSignature": "Draw your signature above"
   }
 }

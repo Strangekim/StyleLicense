@@ -82,11 +82,22 @@ onMounted(() => {
   }
 })
 
+function getCanvasCoordinates(event) {
+  const rect = canvasRef.value.getBoundingClientRect()
+  const scaleX = canvasRef.value.width / rect.width
+  const scaleY = canvasRef.value.height / rect.height
+
+  return {
+    x: (event.clientX - rect.left) * scaleX,
+    y: (event.clientY - rect.top) * scaleY
+  }
+}
+
 function startDrawing(event) {
   isDrawing.value = true
-  const rect = canvasRef.value.getBoundingClientRect()
-  lastX.value = event.clientX - rect.left
-  lastY.value = event.clientY - rect.top
+  const coords = getCanvasCoordinates(event)
+  lastX.value = coords.x
+  lastY.value = coords.y
 
   // Start new path
   context.value.beginPath()
@@ -96,15 +107,12 @@ function startDrawing(event) {
 function draw(event) {
   if (!isDrawing.value) return
 
-  const rect = canvasRef.value.getBoundingClientRect()
-  const currentX = event.clientX - rect.left
-  const currentY = event.clientY - rect.top
-
-  context.value.lineTo(currentX, currentY)
+  const coords = getCanvasCoordinates(event)
+  context.value.lineTo(coords.x, coords.y)
   context.value.stroke()
 
-  lastX.value = currentX
-  lastY.value = currentY
+  lastX.value = coords.x
+  lastY.value = coords.y
   isEmpty.value = false
 }
 
@@ -115,13 +123,24 @@ function stopDrawing() {
   }
 }
 
+function getTouchCanvasCoordinates(touch) {
+  const rect = canvasRef.value.getBoundingClientRect()
+  const scaleX = canvasRef.value.width / rect.width
+  const scaleY = canvasRef.value.height / rect.height
+
+  return {
+    x: (touch.clientX - rect.left) * scaleX,
+    y: (touch.clientY - rect.top) * scaleY
+  }
+}
+
 function handleTouchStart(event) {
   const touch = event.touches[0]
-  const rect = canvasRef.value.getBoundingClientRect()
+  const coords = getTouchCanvasCoordinates(touch)
 
   isDrawing.value = true
-  lastX.value = touch.clientX - rect.left
-  lastY.value = touch.clientY - rect.top
+  lastX.value = coords.x
+  lastY.value = coords.y
 
   context.value.beginPath()
   context.value.moveTo(lastX.value, lastY.value)
@@ -131,15 +150,13 @@ function handleTouchMove(event) {
   if (!isDrawing.value) return
 
   const touch = event.touches[0]
-  const rect = canvasRef.value.getBoundingClientRect()
-  const currentX = touch.clientX - rect.left
-  const currentY = touch.clientY - rect.top
+  const coords = getTouchCanvasCoordinates(touch)
 
-  context.value.lineTo(currentX, currentY)
+  context.value.lineTo(coords.x, coords.y)
   context.value.stroke()
 
-  lastX.value = currentX
-  lastY.value = currentY
+  lastX.value = coords.x
+  lastY.value = coords.y
   isEmpty.value = false
 }
 
@@ -191,11 +208,14 @@ defineExpose({
 <style scoped>
 .signature-canvas-container {
   width: 100%;
+  max-width: 400px;
 }
 
 canvas {
   display: block;
   width: 100%;
   height: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
 }
 </style>
