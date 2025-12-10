@@ -163,7 +163,10 @@
   "styleCreate": {
     "title": "새 스타일 만들기",
     "subtitle": "작품을 업로드하여 맞춤형 AI 스타일 모델을 학습하세요",
+    "editTitle": "스타일 편집",
+    "editSubtitle": "스타일 이름과 설명을 수정하세요 (MVP: 학습 이미지 수정 불가)",
     "checkingTrainingStatus": "학습 상태 확인 중...",
+    "checkingExistingStyle": "기존 스타일 확인 중...",
     "trainingInProgress": "학습이 진행 중입니다",
     "trainingDescription": "스타일 모델 학습이 완료될 때까지 기다려주세요. 완료되면 알림을 보내드립니다.",
     "goToMarketplace": "마켓플레이스로 이동",
@@ -194,6 +197,8 @@
     "remove": "제거",
     "uploadingStyleModel": "스타일 모델 업로드 중...",
     "createStyle": "스타일 만들기",
+    "updateStyle": "스타일 수정",
+    "updateSuccess": "스타일이 성공적으로 수정되었습니다!",
     "cancel": "취소",
     "status": {
       "pending": "대기 중",
@@ -209,6 +214,7 @@
       "maximumImagesExceeded": "최대 100개의 학습 이미지만 허용됩니다",
       "minimumPrice": "가격은 최소 1 토큰이어야 합니다",
       "createFailed": "스타일 생성에 실패했습니다",
+      "updateFailed": "스타일 수정에 실패했습니다",
       "tagEnglishOnly": "태그는 영어와 공백만 입력 가능합니다"
     }
   },

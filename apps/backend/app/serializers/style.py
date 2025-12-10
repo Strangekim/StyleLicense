@@ -326,14 +326,20 @@ class StyleCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         """Cross-field validation."""
-        # Check artist uniqueness (artist + name must be unique)
         request = self.context.get("request")
         if request and hasattr(request, "user"):
             artist = request.user
-            name = attrs.get("name")
-            if Style.objects.filter(artist=artist, name=name).exists():
+
+            # MVP Limitation: 1 artist can only have 1 active style
+            existing_style = Style.objects.filter(artist=artist, is_active=True).first()
+            if existing_style:
                 raise serializers.ValidationError(
-                    {"name": f"You already have a style named '{name}'"}
+                    {
+                        "non_field_errors": [
+                            f"MVP 단계에서는 작가당 1개의 스타일만 생성할 수 있습니다. "
+                            f"기존 스타일 '{existing_style.name}'을 수정하거나 삭제 후 다시 시도해주세요."
+                        ]
+                    }
                 )
 
         return attrs
@@ -365,3 +371,34 @@ class StyleCreateSerializer(serializers.ModelSerializer):
             tag.save(update_fields=["usage_count"])
 
         return style
+
+
+class StyleUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating existing Style.
+
+    MVP Limitation: Only name and description can be updated.
+    Training images, tags, and other settings are immutable after creation.
+    """
+
+    class Meta:
+        model = Style
+        fields = ["id", "name", "description", "updated_at"]
+        read_only_fields = ["id", "updated_at"]
+
+    def validate_name(self, value):
+        """Validate style name."""
+        if len(value) < 3:
+            raise serializers.ValidationError("Style name must be at least 3 characters")
+        if len(value) > 100:
+            raise serializers.ValidationError(
+                "Style name cannot exceed 100 characters"
+            )
+        return value
+
+    def update(self, instance, validated_data):
+        """Update only name and description."""
+        instance.name = validated_data.get("name", instance.name)
+        instance.description = validated_data.get("description", instance.description)
+        instance.save()
+        return instance

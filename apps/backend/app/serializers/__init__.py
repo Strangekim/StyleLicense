@@ -4,6 +4,7 @@ from .style import (
     StyleListSerializer,
     StyleDetailSerializer,
     StyleCreateSerializer,
+    StyleUpdateSerializer,
     ArtworkSerializer,
     TagSerializer,
 )
@@ -31,6 +32,7 @@ __all__ = [
     "StyleListSerializer",
     "StyleDetailSerializer",
     "StyleCreateSerializer",
+    "StyleUpdateSerializer",
     "ArtworkSerializer",
     "TagSerializer",
     "TokenBalanceSerializer",

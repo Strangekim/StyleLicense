@@ -27,6 +27,7 @@ from app.serializers import (
     StyleListSerializer,
     StyleDetailSerializer,
     StyleCreateSerializer,
+    StyleUpdateSerializer,
 )
 from app.views.base import BaseViewSet
 from app.permissions import IsArtist, IsOwnerOrReadOnly
@@ -76,10 +77,12 @@ class StyleViewSet(BaseViewSet):
         """Use different serializers by action."""
         if self.action == "list":
             return StyleListSerializer
-        elif self.action == "retrieve":
+        elif self.action == "retrieve" or self.action == "my_style":
             return StyleDetailSerializer
         elif self.action == "create":
             return StyleCreateSerializer
+        elif self.action in ["update", "partial_update"]:
+            return StyleUpdateSerializer
         return StyleListSerializer
 
     @method_decorator(ratelimit(key='ip', rate='200/h', method='GET', block=True))
@@ -322,3 +325,109 @@ class StyleViewSet(BaseViewSet):
             {"success": True, "message": "Style deleted successfully"},
             status=status.HTTP_204_NO_CONTENT,
         )
+
+    def update(self, request, *args, **kwargs):
+        """
+        Update style (PUT).
+
+        MVP Limitation: Only name and description can be updated.
+        Only owner can update their style.
+        """
+        instance = self.get_object()
+
+        # Check if user is owner
+        if instance.artist != request.user:
+            return Response(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "PERMISSION_DENIED",
+                        "message": "You can only update your own styles",
+                    },
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # Return updated style with full details
+        response_serializer = StyleDetailSerializer(instance)
+        return Response(
+            {
+                "success": True,
+                "data": response_serializer.data,
+                "message": "Style updated successfully",
+            }
+        )
+
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Partially update style (PATCH).
+
+        MVP Limitation: Only name and description can be updated.
+        Only owner can update their style.
+        """
+        instance = self.get_object()
+
+        # Check if user is owner
+        if instance.artist != request.user:
+            return Response(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "PERMISSION_DENIED",
+                        "message": "You can only update your own styles",
+                    },
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # Return updated style with full details
+        response_serializer = StyleDetailSerializer(instance)
+        return Response(
+            {
+                "success": True,
+                "data": response_serializer.data,
+                "message": "Style updated successfully",
+            }
+        )
+
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated, IsArtist])
+    def my_style(self, request):
+        """
+        Get the current artist's active style.
+
+        MVP Limitation: Artists can only have 1 active style.
+        Returns 404 if no style exists.
+
+        Endpoint: GET /api/styles/my-style/
+        """
+        try:
+            style = Style.objects.select_related("artist").prefetch_related(
+                Prefetch(
+                    "style_tags",
+                    queryset=StyleTag.objects.select_related("tag").order_by("sequence"),
+                ),
+                Prefetch("artworks", queryset=Artwork.objects.filter(is_valid=True)),
+            ).get(artist=request.user, is_active=True)
+
+            serializer = self.get_serializer(style)
+            return Response({"success": True, "data": serializer.data})
+
+        except Style.DoesNotExist:
+            return Response(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "STYLE_NOT_FOUND",
+                        "message": "You don't have an active style yet",
+                    },
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )

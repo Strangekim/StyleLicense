@@ -163,7 +163,10 @@
   "styleCreate": {
     "title": "Create New Style",
     "subtitle": "Upload your artwork to train a custom AI style model",
+    "editTitle": "Edit Style",
+    "editSubtitle": "Update style name and description (MVP: Cannot modify training images)",
     "checkingTrainingStatus": "Checking training status...",
+    "checkingExistingStyle": "Checking existing style...",
     "trainingInProgress": "Training in Progress",
     "trainingDescription": "Please wait while your style model is being trained. We'll notify you when it's complete.",
     "goToMarketplace": "Go to Marketplace",
@@ -194,6 +197,8 @@
     "remove": "Remove",
     "uploadingStyleModel": "Uploading style model...",
     "createStyle": "Create Style",
+    "updateStyle": "Update Style",
+    "updateSuccess": "Style updated successfully!",
     "cancel": "Cancel",
     "status": {
       "pending": "Pending",
@@ -209,6 +214,7 @@
       "maximumImagesExceeded": "Maximum 100 training images allowed",
       "minimumPrice": "Price must be at least 1 token",
       "createFailed": "Failed to create style",
+      "updateFailed": "Failed to update style",
       "tagEnglishOnly": "Tags can only contain English letters and spaces"
     }
   },

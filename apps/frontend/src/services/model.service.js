@@ -90,6 +90,37 @@ export async function createModel(data) {
 }
 
 /**
+ * Get current artist's active style (MVP: 1 style per artist)
+ *
+ * @returns {Promise<Object>} Artist's style or null if none exists
+ */
+export async function getMyStyle() {
+  try {
+    const response = await apiClient.get('/api/styles/my-style/')
+    return response.data
+  } catch (error) {
+    if (error.response?.status === 404) {
+      return null // No style exists
+    }
+    throw error
+  }
+}
+
+/**
+ * Update existing style model (owner only, MVP: name and description only)
+ *
+ * @param {number} id - Model ID
+ * @param {Object} data - Update data
+ * @param {string} data.name - Model name (optional)
+ * @param {string} data.description - Model description (optional)
+ * @returns {Promise<Object>} Updated model
+ */
+export async function updateModel(id, data) {
+  const response = await apiClient.patch(`/api/styles/${id}/`, data)
+  return response.data
+}
+
+/**
  * Delete style model (owner only, soft delete)
  *
  * @param {number} id - Model ID
@@ -103,6 +134,8 @@ export async function deleteModel(id) {
 export default {
   listModels,
   getModelDetail,
+  getMyStyle,
   createModel,
+  updateModel,
   deleteModel,
 }

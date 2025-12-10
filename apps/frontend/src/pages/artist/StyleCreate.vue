@@ -10,6 +10,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useModelsStore } from '@/stores/models'
 import { useAuthStore } from '@/stores/auth'
+import { getMyStyle, updateModel } from '@/services/model.service'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Input from '@/components/shared/Input.vue'
 import Button from '@/components/shared/Button.vue'
@@ -20,39 +21,42 @@ const { t } = useI18n()
 const modelsStore = useModelsStore()
 const authStore = useAuthStore()
 
-// Training status check
-const isCheckingTraining = ref(true)
-const trainingStyle = ref(null)
+// Loading state
+const isCheckingExistingStyle = ref(true)
 
-// Check if user already has a training/pending style
+// Existing style (for edit mode)
+const existingStyle = ref(null)
+
+// Check if user already has an active style (MVP: 1 style per artist)
 onMounted(async () => {
-  isCheckingTraining.value = true
+  isCheckingExistingStyle.value = true
 
   if (!authStore.user || authStore.user.role !== 'artist') {
-    isCheckingTraining.value = false
+    isCheckingExistingStyle.value = false
     return
   }
 
   try {
-    // Fetch artist's styles to check for training/pending status
-    const response = await modelsStore.fetchModels({
-      artist_id: authStore.user.id
-    })
+    // Get artist's existing style
+    const response = await getMyStyle()
 
-    // Find any style that is training or pending
-    const activeTraining = modelsStore.models.find(
-      (style) => style.training_status === 'training' || style.training_status === 'pending'
-    )
+    if (response && response.data) {
+      existingStyle.value = response.data
 
-    if (activeTraining) {
-      trainingStyle.value = activeTraining
+      // Load existing data into form for editing
+      formData.value.name = existingStyle.value.name || ''
+      formData.value.description = existingStyle.value.description || ''
+      formData.value.price_per_generation = existingStyle.value.generation_cost_tokens || 10
     }
   } catch (err) {
-    console.error('Failed to check training status:', err)
+    console.error('Failed to check existing style:', err)
   } finally {
-    isCheckingTraining.value = false
+    isCheckingExistingStyle.value = false
   }
 })
+
+// Computed: Edit mode if existing style exists
+const isEditMode = computed(() => !!existingStyle.value)
 
 // Form state
 const formData = ref({
@@ -74,6 +78,12 @@ const errors = ref({})
 
 // Computed
 const isValid = computed(() => {
+  // Edit mode: only name is required
+  if (isEditMode.value) {
+    return formData.value.name.trim() && Object.keys(errors.value).length === 0
+  }
+
+  // Create mode: name + training images required
   return (
     formData.value.name.trim() &&
     trainingImages.value.length >= 10 &&
@@ -224,10 +234,13 @@ const validateForm = () => {
     newErrors.name = t('styleCreate.errors.styleNameRequired')
   }
 
-  if (trainingImages.value.length < 10) {
-    newErrors.images = t('styleCreate.errors.minimumImagesRequired')
-  } else if (trainingImages.value.length > 100) {
-    newErrors.images = t('styleCreate.errors.maximumImagesExceeded')
+  // Only validate images in create mode
+  if (!isEditMode.value) {
+    if (trainingImages.value.length < 10) {
+      newErrors.images = t('styleCreate.errors.minimumImagesRequired')
+    } else if (trainingImages.value.length > 100) {
+      newErrors.images = t('styleCreate.errors.maximumImagesExceeded')
+    }
   }
 
   if (formData.value.price_per_generation < 1) {
@@ -248,35 +261,54 @@ const handleSubmit = async () => {
   uploadProgress.value = 0
 
   try {
-    // Prepare data with captions (convert tags to caption string)
-    const data = {
-      name: formData.value.name,
-      description: formData.value.description,
-      generation_cost_tokens: formData.value.price_per_generation, // Backend expects generation_cost_tokens
-      training_images: trainingImages.value.map((img) => ({
-        file: img.file,
-        caption: img.tags?.join(', ') || '', // Convert tags array to comma-separated caption
-      })),
-    }
+    if (isEditMode.value) {
+      // Edit mode: Update existing style (name and description only)
+      const data = {
+        name: formData.value.name,
+        description: formData.value.description,
+      }
 
-    // Simulate upload progress (real progress tracking would need backend support)
-    const progressInterval = setInterval(() => {
-      uploadProgress.value = Math.min(uploadProgress.value + 10, 90)
-    }, 500)
+      await updateModel(existingStyle.value.id, data)
 
-    // Create model
-    await modelsStore.createModel(data)
+      // Show success message
+      alert(t('styleCreate.updateSuccess'))
 
-    clearInterval(progressInterval)
-    uploadProgress.value = 100
-
-    // Redirect to marketplace after success
-    setTimeout(() => {
+      // Redirect to marketplace after success
       router.push('/marketplace')
-    }, 500)
+    } else {
+      // Create mode: Create new style with training images
+      const data = {
+        name: formData.value.name,
+        description: formData.value.description,
+        generation_cost_tokens: formData.value.price_per_generation,
+        training_images: trainingImages.value.map((img) => ({
+          file: img.file,
+          caption: img.tags?.join(', ') || '',
+        })),
+      }
+
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        uploadProgress.value = Math.min(uploadProgress.value + 10, 90)
+      }, 500)
+
+      // Create model
+      await modelsStore.createModel(data)
+
+      clearInterval(progressInterval)
+      uploadProgress.value = 100
+
+      // Redirect to marketplace after success
+      setTimeout(() => {
+        router.push('/marketplace')
+      }, 500)
+    }
   } catch (err) {
-    console.error('Failed to create style:', err)
-    errors.value.submit = err.response?.data?.error?.message || t('styleCreate.errors.createFailed')
+    console.error('Failed to save style:', err)
+    const errorMessage = isEditMode.value
+      ? t('styleCreate.errors.updateFailed')
+      : t('styleCreate.errors.createFailed')
+    errors.value.submit = err.response?.data?.error?.message || errorMessage
   } finally {
     isSubmitting.value = false
   }
@@ -300,64 +332,23 @@ const resetForm = () => {
       <!-- Page Header -->
       <div class="mb-8">
         <h1 class="text-3xl font-bold text-neutral-900 mb-2">
-          {{ $t('styleCreate.title') }}
+          {{ isEditMode ? $t('styleCreate.editTitle') : $t('styleCreate.title') }}
         </h1>
         <p class="text-neutral-600">
-          {{ $t('styleCreate.subtitle') }}
+          {{ isEditMode ? $t('styleCreate.editSubtitle') : $t('styleCreate.subtitle') }}
         </p>
       </div>
 
       <!-- Loading State -->
-      <div v-if="isCheckingTraining" class="flex justify-center items-center py-20">
+      <div v-if="isCheckingExistingStyle" class="flex justify-center items-center py-20">
         <div class="text-center">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
-          <p class="text-neutral-600">{{ $t('styleCreate.checkingTrainingStatus') }}</p>
+          <p class="text-neutral-600">{{ $t('styleCreate.checkingExistingStyle') }}</p>
         </div>
       </div>
 
-      <!-- Training in Progress UI -->
-      <div v-else-if="trainingStyle" class="max-w-2xl mx-auto">
-        <Card>
-          <div class="text-center py-8">
-            <!-- Training Icon -->
-            <div class="mb-6">
-              <div class="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-primary-600"></div>
-            </div>
-
-            <!-- Title -->
-            <h2 class="text-2xl font-bold text-neutral-900 mb-2">
-              {{ $t('styleCreate.trainingInProgress') }}
-            </h2>
-
-            <!-- Style Name -->
-            <p class="text-lg text-neutral-700 mb-4">
-              {{ trainingStyle.name }}
-            </p>
-
-            <!-- Status -->
-            <div class="inline-block px-4 py-2 bg-yellow-100 text-yellow-800 rounded-full font-medium mb-6">
-              {{ $t(`styleCreate.status.${trainingStyle.training_status}`) }}
-            </div>
-
-            <!-- Description -->
-            <p class="text-neutral-600 mb-8">
-              {{ $t('styleCreate.trainingDescription') }}
-            </p>
-
-            <!-- Action Button -->
-            <Button
-              variant="outline"
-              size="lg"
-              @click="router.push('/marketplace')"
-            >
-              {{ $t('styleCreate.goToMarketplace') }}
-            </Button>
-          </div>
-        </Card>
-      </div>
-
-      <!-- Form (only show if no training in progress) -->
-      <form v-if="!isCheckingTraining && !trainingStyle" @submit.prevent="handleSubmit" class="space-y-8">
+      <!-- Form -->
+      <form v-if="!isCheckingExistingStyle" @submit.prevent="handleSubmit" class="space-y-8">
         <!-- Basic Info -->
         <Card>
           <h2 class="text-xl font-semibold text-neutral-900 mb-4">
@@ -395,8 +386,8 @@ const resetForm = () => {
           </div>
         </Card>
 
-        <!-- Training Images -->
-        <Card>
+        <!-- Training Images (Create Mode Only) -->
+        <Card v-if="!isEditMode">
           <h2 class="text-xl font-semibold text-neutral-900 mb-2">
             {{ $t('styleCreate.trainingImages') }}
           </h2>
@@ -588,7 +579,7 @@ const resetForm = () => {
             :loading="isSubmitting"
             fullWidth
           >
-            {{ $t('styleCreate.createStyle') }}
+            {{ isEditMode ? $t('styleCreate.updateStyle') : $t('styleCreate.createStyle') }}
           </Button>
           <Button
             type="button"
