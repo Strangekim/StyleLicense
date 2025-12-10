@@ -323,10 +323,8 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 blob = bucket.blob(filename)
                 blob.upload_from_file(signature_image, content_type=signature_image.content_type)
 
-                # Make the blob publicly accessible
-                blob.make_public()
-
-                # Get public URL
+                # Get public URL (bucket must have public access configured)
+                # Note: blob.make_public() cannot be used with Uniform Bucket-Level Access
                 signature_url = blob.public_url
 
                 logger.info(f"[Signature] Uploaded signature for user {instance.id}: {signature_url}")
