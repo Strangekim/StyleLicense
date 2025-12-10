@@ -228,13 +228,27 @@ class MeView(APIView):
         logger.info(f"[Auth] MeView authenticated user: {request.user.username} (IsAuthenticated: {request.user.is_authenticated})")
 
         user = request.user
-        artist_profile = None
-        if hasattr(user, "artist_profile"):
-            artist_profile = {
-                "artist_name": user.artist_profile.artist_name,
-                "signature_image_url": user.artist_profile.signature_image_url,
-                "earned_token_balance": user.artist_profile.earned_token_balance,
-                "follower_count": user.artist_profile.follower_count,
+        artist = None
+
+        # Get artist info if user is an artist (same logic as UserProfileSerializer)
+        if user.role == "artist":
+            from app.models import Artist, Follow
+
+            follower_count = Follow.objects.filter(following=user).count()
+
+            # Get artist profile for signature
+            signature_image_url = None
+            try:
+                artist_profile = Artist.objects.get(user=user)
+                signature_image_url = artist_profile.signature_image_url
+            except Artist.DoesNotExist:
+                logger.warning(f"[Auth] User {user.id} is an artist but has no Artist profile")
+
+            artist = {
+                "id": user.id,
+                "artist_name": user.username,
+                "follower_count": follower_count,
+                "signature_image_url": signature_image_url,
             }
 
         return Response({
@@ -248,5 +262,5 @@ class MeView(APIView):
             "bio": user.bio,
             "is_active": user.is_active,
             "created_at": user.created_at.isoformat(),
-            "artist_profile": artist_profile,
+            "artist": artist,  # Changed from artist_profile to artist for consistency
         }, status=200)
