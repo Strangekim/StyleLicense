@@ -357,7 +357,7 @@ onMounted(async () => {
     <!-- Content Section -->
     <div class="px-4">
       <!-- Tags (horizontal scroll) - Read-only display -->
-      <div v-if="allTags.length > 0" class="overflow-x-auto py-3 -mx-4 px-4">
+      <div v-if="allTags.length > 0" class="overflow-x-auto py-3 -mx-4 px-4 hide-scrollbar">
         <div class="flex gap-2 min-w-max">
           <TagButton
             v-for="tag in allTags"
@@ -455,7 +455,7 @@ onMounted(async () => {
         </div>
 
         <!-- User Tags (editable) - Horizontal scroll -->
-        <div class="mb-4 overflow-x-auto -mx-4 px-4">
+        <div class="mb-4 overflow-x-auto -mx-4 px-4 hide-scrollbar">
           <div class="flex gap-2 min-w-max">
             <button
               v-for="(tag, index) in allTags"
@@ -573,3 +573,15 @@ onMounted(async () => {
     </button>
   </div>
 </template>
+
+<style scoped>
+/* Hide scrollbar for horizontal scroll containers */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+</style>
