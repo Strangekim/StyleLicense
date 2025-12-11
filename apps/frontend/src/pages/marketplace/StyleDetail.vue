@@ -58,10 +58,25 @@ const currentImage = computed(() => {
   return sampleImages.value[currentImageIndex.value] || null
 })
 
-// All tags to display: default tag (style name) + user tags
+// All tags to display: backend tags + user-added tags
 const allTags = computed(() => {
-  const defaultTag = model.value?.name || 'STYLE'
-  return [defaultTag, ...userTags.value]
+  // Get tags from backend (now includes style name and caption tags)
+  const backendTags = model.value?.tags || []
+
+  // Extract tag names (tags can be objects with {id, name, sequence} or just strings)
+  const backendTagNames = backendTags.map(tag =>
+    typeof tag === 'string' ? tag : tag.name
+  )
+
+  // Combine backend tags with user-added tags (avoid duplicates)
+  const allTagNames = [...backendTagNames]
+  userTags.value.forEach(userTag => {
+    if (!allTagNames.includes(userTag)) {
+      allTagNames.push(userTag)
+    }
+  })
+
+  return allTagNames
 })
 
 const canGenerate = computed(() => {
@@ -175,9 +190,14 @@ const addNewTag = () => {
 }
 
 const removeTag = (index) => {
-  // Can't remove the first tag (style name)
-  if (index === 0) return
-  userTags.value.splice(index - 1, 1) // -1 because first tag is default
+  const backendTagsCount = model.value?.tags?.length || 0
+
+  // Can't remove backend tags (including style name and caption tags)
+  if (index < backendTagsCount) return
+
+  // Remove user-added tags only
+  const userTagIndex = index - backendTagsCount
+  userTags.value.splice(userTagIndex, 1)
 }
 
 const handleGenerate = async () => {
