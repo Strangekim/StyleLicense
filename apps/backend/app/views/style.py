@@ -228,6 +228,9 @@ class StyleViewSet(BaseViewSet):
         image_paths = []
         artworks = style.artworks.all()
 
+        # Collect all caption words for tag extraction
+        all_caption_words = []
+
         for idx, (artwork, image_file) in enumerate(zip(artworks, training_images)):
             try:
                 # Get caption for this image (if available)
@@ -249,11 +252,52 @@ class StyleViewSet(BaseViewSet):
                 artwork.save(update_fields=["image_url", "caption", "is_valid"])
                 image_paths.append(gcs_uri)
 
+                # Extract words from caption for tags
+                if caption:
+                    # Split by comma and strip whitespace
+                    words = [word.strip().lower() for word in caption.split(',')]
+                    all_caption_words.extend([w for w in words if w])
+
             except Exception as e:
                 logger.error(f"Failed to upload image {idx} for style {style.id}: {e}")
                 # Mark as invalid if upload fails
                 artwork.is_valid = False
                 artwork.save(update_fields=["is_valid"])
+
+        # Create tags from captions and style name
+        from app.models import Tag, StyleTag
+
+        # Collect all unique tag names
+        tag_names_set = set()
+
+        # 1. Add style name as a tag
+        tag_names_set.add(style.name.strip().lower())
+
+        # 2. Add all caption words as tags
+        tag_names_set.update(all_caption_words)
+
+        # Convert to list and sort for consistent ordering
+        unique_tag_names = sorted(list(tag_names_set))
+
+        # Get current sequence number (in case serializer already created some tags)
+        existing_tags_count = style.style_tags.count()
+        sequence_start = existing_tags_count
+
+        # Create or get tags and associate with style
+        logger.info(f"[Style Create] Creating {len(unique_tag_names)} tags for style {style.id}")
+        for idx, tag_name in enumerate(unique_tag_names):
+            if not tag_name or len(tag_name) > 100:
+                continue
+
+            tag, created = Tag.objects.get_or_create(name=tag_name)
+
+            # Check if this tag is already associated with this style
+            if not StyleTag.objects.filter(style=style, tag=tag).exists():
+                StyleTag.objects.create(style=style, tag=tag, sequence=sequence_start + idx)
+                # Increment usage count
+                tag.usage_count += 1
+                tag.save(update_fields=["usage_count"])
+                logger.info(f"[Style Create] Added tag '{tag_name}' (created={created})")
 
         # Send training task to RabbitMQ
         task_id = None
