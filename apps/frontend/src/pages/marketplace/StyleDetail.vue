@@ -58,8 +58,18 @@ const currentImage = computed(() => {
   return sampleImages.value[currentImageIndex.value] || null
 })
 
-// All tags to display: style name (default) + user-added tags (for generation prompt)
-const allTags = computed(() => {
+// Training image tags: all backend caption tags (read-only)
+const trainingTags = computed(() => {
+  const backendTags = model.value?.tags || []
+
+  // Extract tag names (tags can be objects with {id, name, sequence} or just strings)
+  return backendTags.map(tag =>
+    typeof tag === 'string' ? tag : tag.name
+  )
+})
+
+// Generation tags: style name (default) + user-added tags (for generation prompt)
+const generationTags = computed(() => {
   // Only use style name as the default tag (not other backend tags)
   const defaultTag = model.value?.name?.toLowerCase() || 'style'
 
@@ -77,7 +87,7 @@ const allTags = computed(() => {
 const canGenerate = computed(() => {
   return (
     model.value?.training_status === 'completed' &&
-    allTags.value.length > 0 &&
+    generationTags.value.length > 0 &&
     !isGenerating.value &&
     authStore.isAuthenticated
   )
@@ -221,7 +231,7 @@ const handleGenerate = async () => {
 
   try {
     // Combine all tags as the prompt
-    const combinedPrompt = allTags.value.join(', ')
+    const combinedPrompt = generationTags.value.join(', ')
 
     // Generate random seed
     const randomSeed = Math.floor(Math.random() * 2147483647)
@@ -352,10 +362,10 @@ onMounted(async () => {
     <!-- Content Section -->
     <div class="px-4">
       <!-- Tags (horizontal scroll) - Read-only display -->
-      <div v-if="allTags.length > 0" class="overflow-x-auto py-3 -mx-4 px-4 hide-scrollbar">
+      <div v-if="trainingTags.length > 0" class="overflow-x-auto py-3 -mx-4 px-4 hide-scrollbar">
         <div class="flex gap-2 min-w-max">
           <TagButton
-            v-for="tag in allTags"
+            v-for="tag in trainingTags"
             :key="tag"
             :label="tag.toUpperCase()"
             icon="🎨"
@@ -459,7 +469,7 @@ onMounted(async () => {
         <div class="mb-4 overflow-x-auto -mx-4 px-4 hide-scrollbar">
           <div class="flex gap-2 min-w-max">
             <button
-              v-for="(tag, index) in allTags"
+              v-for="(tag, index) in generationTags"
               :key="`tag-${index}`"
               @click="removeTag(index)"
               class="inline-flex items-center px-3 py-1.5 rounded-full border-2 text-xs font-medium transition-colors whitespace-nowrap"
