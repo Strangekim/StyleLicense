@@ -373,14 +373,18 @@ async function handleSave() {
   } catch (error) {
     console.error('Failed to save profile:', error)
     console.error('[DEBUG] Error response:', error.response?.data)
+    console.error('[DEBUG] Error details:', error.response?.data?.error?.details)
     console.error('[DEBUG] Error status:', error.response?.status)
 
     // Show more detailed error message if available
+    const details = error.response?.data?.error?.details
+    const detailsStr = details ? JSON.stringify(details, null, 2) : ''
     const errorMessage = error.response?.data?.signature_image?.[0] ||
+                        error.response?.data?.profile_image?.[0] ||
                         error.response?.data?.error?.message ||
                         error.response?.data?.message ||
                         t('editProfile.errors.saveFailed')
-    alert(errorMessage)
+    alert(`${errorMessage}\n\nDetails: ${detailsStr}`)
   } finally {
     saving.value = false
   }

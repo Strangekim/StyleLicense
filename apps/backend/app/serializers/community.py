@@ -281,6 +281,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     Supports signature_image upload (stored in Artist profile if user is an artist)
     """
 
+    profile_image = serializers.ImageField(write_only=True, required=False)
     signature_image = serializers.ImageField(write_only=True, required=False)
 
     class Meta:
@@ -288,29 +289,70 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         fields = ["username", "bio", "profile_image", "signature_image"]
 
     def update(self, instance, validated_data):
-        """Update user profile and handle signature_image for artists."""
+        """Update user profile and handle profile_image and signature_image uploads."""
         from app.models import Artist
+        from google.cloud import storage
+        from django.conf import settings
+        import logging
+        from urllib.parse import urlparse
 
-        # Extract signature_image if provided
+        logger = logging.getLogger(__name__)
+
+        # Extract image files if provided
+        profile_image = validated_data.pop("profile_image", None)
         signature_image = validated_data.pop("signature_image", None)
 
-        # Update user fields
+        # Update user fields (text fields only)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
+
+        # Upload profile_image to GCS if provided
+        if profile_image:
+            try:
+                # Initialize GCS client
+                storage_client = storage.Client()
+                bucket = storage_client.bucket(settings.GCS_BUCKET_NAME)
+
+                # Delete old profile image if exists
+                old_profile_image = instance.profile_image
+                if old_profile_image:
+                    try:
+                        parsed_url = urlparse(old_profile_image)
+                        if 'storage.googleapis.com' in parsed_url.netloc:
+                            path_parts = parsed_url.path.strip('/').split('/', 1)
+                            if len(path_parts) > 1:
+                                old_blob_name = path_parts[1]
+                                old_blob = bucket.blob(old_blob_name)
+                                if old_blob.exists():
+                                    old_blob.delete()
+                                    logger.info(f"[ProfileImage] Deleted old profile image: {old_blob_name}")
+                    except Exception as delete_error:
+                        logger.warning(f"[ProfileImage] Failed to delete old profile image: {delete_error}")
+
+                # Generate filename for profile image
+                filename = f"profiles/user_{instance.id}_{profile_image.name}"
+
+                # Create blob and upload
+                blob = bucket.blob(filename)
+                blob.upload_from_file(profile_image, content_type=profile_image.content_type)
+
+                # Get public URL
+                profile_image_url = blob.public_url
+                logger.info(f"[ProfileImage] Uploaded profile image for user {instance.id}: {profile_image_url}")
+
+                # Update user profile_image field
+                instance.profile_image = profile_image_url
+                instance.save(update_fields=["profile_image"])
+
+            except Exception as e:
+                logger.error(f"[ProfileImage] Failed to upload profile image for user {instance.id}: {e}", exc_info=True)
+                raise serializers.ValidationError(f"Failed to upload profile image: {str(e)}")
 
         # If signature_image provided, save to Artist profile
         if signature_image:
             # Get or create artist profile
             artist_profile, created = Artist.objects.get_or_create(user=instance)
-
-            # Upload signature image to GCS using google-cloud-storage client
-            from google.cloud import storage
-            from django.conf import settings
-            import logging
-            from urllib.parse import urlparse
-
-            logger = logging.getLogger(__name__)
 
             try:
                 # Initialize GCS client
