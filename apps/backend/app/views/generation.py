@@ -210,7 +210,7 @@ class GenerationViewSet(viewsets.ViewSet):
             "id": generation.id,
             "user_id": generation.user.id,
             "status": generation.status,
-            "consumed_tokens": generation.cost,
+            "consumed_tokens": generation.consumed_tokens,
             "created_at": generation.created_at.isoformat(),
             "updated_at": generation.updated_at.isoformat(),
         }
