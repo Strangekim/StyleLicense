@@ -58,20 +58,15 @@ const currentImage = computed(() => {
   return sampleImages.value[currentImageIndex.value] || null
 })
 
-// All tags to display: backend tags + user-added tags
+// All tags to display: style name (default) + user-added tags (for generation prompt)
 const allTags = computed(() => {
-  // Get tags from backend (now includes style name and caption tags)
-  const backendTags = model.value?.tags || []
+  // Only use style name as the default tag (not other backend tags)
+  const defaultTag = model.value?.name?.toLowerCase() || 'style'
 
-  // Extract tag names (tags can be objects with {id, name, sequence} or just strings)
-  const backendTagNames = backendTags.map(tag =>
-    typeof tag === 'string' ? tag : tag.name
-  )
-
-  // Combine backend tags with user-added tags (avoid duplicates)
-  const allTagNames = [...backendTagNames]
+  // Combine default tag with user-added tags (avoid duplicates)
+  const allTagNames = [defaultTag]
   userTags.value.forEach(userTag => {
-    if (!allTagNames.includes(userTag)) {
+    if (userTag.toLowerCase() !== defaultTag) {
       allTagNames.push(userTag)
     }
   })
@@ -190,14 +185,14 @@ const addNewTag = () => {
 }
 
 const removeTag = (index) => {
-  const backendTagsCount = model.value?.tags?.length || 0
+  // Can't remove the first tag (style name)
+  if (index === 0) return
 
-  // Can't remove backend tags (including style name and caption tags)
-  if (index < backendTagsCount) return
-
-  // Remove user-added tags only
-  const userTagIndex = index - backendTagsCount
-  userTags.value.splice(userTagIndex, 1)
+  // Remove from userTags (index - 1 because first tag is style name)
+  const userTagIndex = index - 1
+  if (userTagIndex >= 0 && userTagIndex < userTags.value.length) {
+    userTags.value.splice(userTagIndex, 1)
+  }
 }
 
 const handleGenerate = async () => {
