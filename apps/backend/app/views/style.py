@@ -479,3 +479,80 @@ class StyleViewSet(BaseViewSet):
                 },
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated, IsOwnerOrReadOnly], url_path='regenerate-tags')
+    def regenerate_tags(self, request, pk=None):
+        """
+        Regenerate tags for a style based on its name and captions.
+
+        This is a temporary endpoint for fixing existing styles.
+        Only the owner can regenerate tags.
+
+        Endpoint: POST /api/styles/:id/regenerate-tags/
+        """
+        style = self.get_object()
+
+        # Check ownership
+        if style.artist != request.user:
+            return Response(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "PERMISSION_DENIED",
+                        "message": "You can only regenerate tags for your own styles",
+                    },
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        logger.info(f"[Regenerate Tags] Starting for style {style.id}: {style.name}")
+
+        # Collect caption words
+        all_caption_words = []
+        artworks = style.artworks.filter(is_valid=True)
+
+        for artwork in artworks:
+            if artwork.caption:
+                words = [word.strip().lower() for word in artwork.caption.split(',')]
+                all_caption_words.extend([w for w in words if w])
+
+        # Collect unique tag names
+        tag_names_set = set()
+        tag_names_set.add(style.name.strip().lower())
+        tag_names_set.update(all_caption_words)
+
+        unique_tag_names = sorted(list(tag_names_set))
+
+        # Get existing tags count
+        existing_count = style.style_tags.count()
+        sequence_start = existing_count
+
+        # Create tags
+        tags_created = 0
+        for idx, tag_name in enumerate(unique_tag_names):
+            if not tag_name or len(tag_name) > 100:
+                continue
+
+            tag, _ = Tag.objects.get_or_create(name=tag_name)
+
+            if not StyleTag.objects.filter(style=style, tag=tag).exists():
+                StyleTag.objects.create(style=style, tag=tag, sequence=sequence_start + idx)
+                tag.usage_count += 1
+                tag.save(update_fields=['usage_count'])
+                tags_created += 1
+                logger.info(f"[Regenerate Tags] Added tag '{tag_name}'")
+
+        logger.info(f"[Regenerate Tags] Created {tags_created} new tags for style {style.id}")
+
+        return Response(
+            {
+                "success": True,
+                "data": {
+                    "style_id": style.id,
+                    "style_name": style.name,
+                    "tags_created": tags_created,
+                    "total_tags": style.style_tags.count(),
+                },
+                "message": f"Successfully regenerated tags: {tags_created} new tags created",
+            }
+        )
