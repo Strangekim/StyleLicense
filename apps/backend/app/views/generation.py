@@ -132,7 +132,7 @@ class GenerationViewSet(viewsets.ViewSet):
                     generation_id=generation.id,
                     style_id=style.id,
                     lora_path=style.model_path,
-                    prompt=" ".join(prompt_tags),
+                    prompt=", ".join(prompt_tags),
                     aspect_ratio=aspect_ratio,
                     seed=seed,
                     signature_path=signature_path,
