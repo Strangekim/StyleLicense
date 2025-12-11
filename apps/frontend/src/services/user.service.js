@@ -35,8 +35,9 @@ export async function updateUserProfile(data) {
     if (data.signature_image instanceof File) {
       formData.append('signature_image', data.signature_image)
     }
-    // Add username and bio even if empty string (backend needs them for validation)
-    if (data.username !== undefined) formData.append('username', data.username)
+    // Only add username if it has a value (blank username causes validation error)
+    if (data.username) formData.append('username', data.username)
+    // Bio can be empty string (blank=True in model)
     if (data.bio !== undefined) formData.append('bio', data.bio)
 
     const response = await api.patch('/api/users/me/', formData, {
