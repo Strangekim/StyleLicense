@@ -454,19 +454,33 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- User Tags (editable) -->
-        <div class="mb-4">
-          <div class="flex flex-wrap gap-2">
+        <!-- User Tags (editable) - Horizontal scroll -->
+        <div class="mb-4 overflow-x-auto -mx-4 px-4">
+          <div class="flex gap-2 min-w-max">
             <button
               v-for="(tag, index) in allTags"
               :key="`tag-${index}`"
               @click="removeTag(index)"
-              class="px-3 py-1.5 rounded-full border-2 text-xs font-medium transition-colors"
+              class="inline-flex items-center px-3 py-1.5 rounded-full border-2 text-xs font-medium transition-colors whitespace-nowrap"
               :class="index === 0
                 ? 'bg-white border-neutral-300 text-neutral-700 cursor-default'
                 : 'bg-white border-neutral-300 text-neutral-700 hover:border-red-300 hover:bg-red-50'"
             >
-              <span class="mr-1">🎨</span>
+              <svg class="w-4 h-4 mr-1.5" viewBox="0 0 20 20">
+                <defs>
+                  <linearGradient id="tagGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#fb923c;stop-opacity:1" />
+                    <stop offset="50%" style="stop-color:#facc15;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#4ade80;stop-opacity:1" />
+                  </linearGradient>
+                </defs>
+                <path
+                  fill="url(#tagGradient)"
+                  fill-rule="evenodd"
+                  d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z"
+                  clip-rule="evenodd"
+                />
+              </svg>
               {{ tag.toUpperCase() }}
             </button>
           </div>
