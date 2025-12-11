@@ -404,7 +404,13 @@ onMounted(async () => {
         </span>
         <button @click="navigateToArtist" class="flex items-center gap-1.5 hover:opacity-70 transition-opacity">
           <div class="w-6 h-6 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden">
-            <span class="text-xs font-semibold text-neutral-700">
+            <img
+              v-if="model.artist_profile_image"
+              :src="model.artist_profile_image"
+              alt="Artist profile"
+              class="w-full h-full object-cover"
+            />
+            <span v-else class="text-xs font-semibold text-neutral-700">
               {{ model.artist_username?.charAt(0).toUpperCase() || 'A' }}
             </span>
           </div>

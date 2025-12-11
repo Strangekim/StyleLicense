@@ -40,8 +40,8 @@
       >
         <div class="w-7 h-7 rounded-full bg-gray-300 mb-0.5 overflow-hidden">
           <img
-            v-if="user?.avatar"
-            :src="user.avatar"
+            v-if="user?.profile_image"
+            :src="user.profile_image"
             alt="Profile"
             class="w-full h-full object-cover"
           />
