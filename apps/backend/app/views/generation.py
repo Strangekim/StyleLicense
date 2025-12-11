@@ -107,11 +107,11 @@ class GenerationViewSet(viewsets.ViewSet):
                     style=style,
                     description=description,
                     aspect_ratio=aspect_ratio,
-                    cost=cost,
+                    seed=seed,
+                    consumed_tokens=cost,
                     status="queued",
-                    metadata={
+                    generation_progress={
                         "prompt_tags": prompt_tags,
-                        "seed": seed,
                     },
                 )
 
@@ -138,9 +138,11 @@ class GenerationViewSet(viewsets.ViewSet):
                     signature_path=signature_path,
                 )
 
-                # Store task_id in metadata
-                generation.metadata["task_id"] = task_id
-                generation.save(update_fields=["metadata"])
+                # Store task_id in generation_progress
+                if not generation.generation_progress:
+                    generation.generation_progress = {}
+                generation.generation_progress["task_id"] = task_id
+                generation.save(update_fields=["generation_progress"])
 
         except ValueError as e:
             # Insufficient tokens or other validation error
@@ -150,6 +152,11 @@ class GenerationViewSet(viewsets.ViewSet):
             )
 
         except Exception as e:
+            import logging
+            import traceback
+            logger = logging.getLogger(__name__)
+            logger.error(f"[Generation] Failed to create generation: {str(e)}")
+            logger.error(f"[Generation] Traceback: {traceback.format_exc()}")
             return Response(
                 {"error": f"Failed to create generation: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -239,8 +246,8 @@ class GenerationViewSet(viewsets.ViewSet):
                     "is_public": generation.is_public,
                     "like_count": generation.like_count,
                     "comment_count": generation.comment_count,
-                    "tags": generation.metadata.get("prompt_tags", [])
-                    if generation.metadata
+                    "tags": generation.generation_progress.get("prompt_tags", [])
+                    if generation.generation_progress
                     else [],
                 }
             )
@@ -248,8 +255,8 @@ class GenerationViewSet(viewsets.ViewSet):
         # Add error info if failed
         if generation.status == "failed":
             error_message = None
-            if generation.metadata:
-                error_message = generation.metadata.get("error_message")
+            if generation.generation_progress:
+                error_message = generation.generation_progress.get("error_message")
             response_data["error_message"] = error_message
             response_data["refunded"] = True  # Tokens are refunded in webhook
 
