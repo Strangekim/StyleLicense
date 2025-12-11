@@ -230,15 +230,13 @@ const handleGenerate = async () => {
   isGenerating.value = true
 
   try {
-    // Combine all tags as the prompt
-    const combinedPrompt = generationTags.value.join(', ')
-
     // Generate random seed
     const randomSeed = Math.floor(Math.random() * 2147483647)
 
     const data = {
       style_id: modelId.value,
-      prompt: combinedPrompt,
+      prompt_tags: generationTags.value,
+      description: '',
       aspect_ratio: selectedAspectRatio.value,
       seed: randomSeed,
     }
