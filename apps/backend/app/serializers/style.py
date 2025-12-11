@@ -71,6 +71,9 @@ class StyleListSerializer(BaseSerializer):
 
     artist_username = serializers.CharField(source="artist.username", read_only=True)
     artist_id = serializers.IntegerField(source="artist.id", read_only=True)
+    artist_profile_image = serializers.CharField(
+        source="artist.profile_image", read_only=True
+    )
     thumbnail_url = serializers.SerializerMethodField()
     tags = serializers.SerializerMethodField()
     sample_images = serializers.SerializerMethodField()
@@ -83,6 +86,7 @@ class StyleListSerializer(BaseSerializer):
             "description",
             "artist_id",
             "artist_username",
+            "artist_profile_image",
             "thumbnail_url",
             "sample_images",
             "generation_cost_tokens",

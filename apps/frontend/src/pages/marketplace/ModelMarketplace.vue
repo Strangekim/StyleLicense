@@ -340,7 +340,13 @@ const followingModels = computed(() => {
                 </span>
                 <!-- Artist Avatar -->
                 <div class="w-5 h-5 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                  <span class="text-xs font-semibold text-neutral-700">
+                  <img
+                    v-if="model.artist_profile_image"
+                    :src="model.artist_profile_image"
+                    alt="Artist profile"
+                    class="w-full h-full object-cover"
+                  />
+                  <span v-else class="text-xs font-semibold text-neutral-700">
                     {{ model.artist_username?.charAt(0).toUpperCase() || 'A' }}
                   </span>
                 </div>
@@ -481,7 +487,13 @@ const followingModels = computed(() => {
                 </span>
                 <!-- Artist Avatar -->
                 <div class="w-5 h-5 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                  <span class="text-xs font-semibold text-neutral-700">
+                  <img
+                    v-if="model.artist_profile_image"
+                    :src="model.artist_profile_image"
+                    alt="Artist profile"
+                    class="w-full h-full object-cover"
+                  />
+                  <span v-else class="text-xs font-semibold text-neutral-700">
                     {{ model.artist_username?.charAt(0).toUpperCase() || 'A' }}
                   </span>
                 </div>
