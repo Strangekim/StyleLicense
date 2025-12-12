@@ -276,6 +276,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useCommunityStore } from '@/stores/community'
 import { useAuthStore } from '@/stores/auth'
+import { getGenerationDetail, toggleLike as apiToggleLike } from '@/services/community.service'
 import BottomNav from '@/components/layout/BottomNav.vue'
 import CommentModal from '@/components/modals/CommentModal.vue'
 import brushIcon from '@/assets/icons/brush_icon.png'
@@ -305,25 +306,18 @@ const truncatedDescription = computed(() => {
 })
 
 const tags = computed(() => {
-  // TODO: Replace with actual tags from API
-  // For now, extract from style name or description
-  const tagList = []
-  if (feedItem.value?.style?.name) {
-    tagList.push(feedItem.value.style.name)
+  // Return tags from API (prompt_tags used during generation)
+  if (feedItem.value?.tags && Array.isArray(feedItem.value.tags)) {
+    return feedItem.value.tags
   }
-  // Mock additional tags
-  if (feedItem.value?.id) {
-    tagList.push('AI Art', 'Digital', 'Creative')
-  }
-  return tagList
+  return []
 })
 
 // Check if the post author is also the style artist
 const isAuthorArtist = computed(() => {
   if (!feedItem.value) return false
-  // TODO: Replace with actual artist comparison when API is ready
-  // For now, check if user has artist role or if user_id matches style artist_id
-  return feedItem.value.user?.id === feedItem.value.style?.artist_id
+  // Check if user_id matches style's artist_id
+  return feedItem.value.user?.id === feedItem.value.style?.artist?.id
 })
 
 // Check if current user owns this image
@@ -343,37 +337,15 @@ async function fetchFeedItem() {
   try {
     const imageId = route.params.id
 
-    // TODO: Replace with actual API call
-    // const response = await getFeedItemById(imageId)
-    // feedItem.value = response.data
+    // Fetch from API
+    const response = await getGenerationDetail(imageId)
 
-    // Mock data for now - check if item exists in store
-    const existingItem = communityStore.feed.find(item => item.id == imageId)
-
-    if (existingItem) {
-      feedItem.value = { ...existingItem }
+    // API returns { success: true, data: {...} } format
+    if (response.success && response.data) {
+      feedItem.value = response.data
+      isPublic.value = response.data.is_public !== false // Set initial visibility
     } else {
-      // Mock data if not in store
-      feedItem.value = {
-        id: imageId,
-        result_url: 'https://picsum.photos/800/800',
-        description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-        user: {
-          id: 1,
-          username: authStore.user?.username || 'Vincent',
-          avatar: null,
-        },
-        style: {
-          id: 1,
-          name: 'Van Gogh Style',
-          artist_id: 1, // Same as user.id to show brush icon
-        },
-        like_count: 100,
-        comment_count: 5,
-        is_liked_by_current_user: false,
-        is_bookmarked: false,
-        created_at: new Date(Date.now() - 1800000).toISOString(), // 30 minutes ago
-      }
+      throw new Error('Invalid response format')
     }
   } catch (err) {
     console.error('Failed to fetch feed item:', err)
@@ -393,18 +365,18 @@ async function handleLike() {
 
   liking.value = true
   try {
-    // TODO: Replace with actual API call
-    // await toggleLike(feedItem.value.id)
+    // Call API to toggle like
+    const response = await apiToggleLike(feedItem.value.id)
 
-    // Update local state
-    feedItem.value.is_liked_by_current_user = !feedItem.value.is_liked_by_current_user
-    feedItem.value.like_count += feedItem.value.is_liked_by_current_user ? 1 : -1
+    // Update local state with API response
+    feedItem.value.is_liked_by_current_user = response.is_liked
+    feedItem.value.like_count = response.like_count
 
     // Update in store if exists
     const storeItem = communityStore.feed.find(item => item.id === feedItem.value.id)
     if (storeItem) {
-      storeItem.is_liked_by_current_user = feedItem.value.is_liked_by_current_user
-      storeItem.like_count = feedItem.value.like_count
+      storeItem.is_liked_by_current_user = response.is_liked
+      storeItem.like_count = response.like_count
     }
   } catch (err) {
     console.error('Failed to toggle like:', err)
