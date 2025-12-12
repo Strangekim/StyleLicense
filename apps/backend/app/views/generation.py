@@ -279,6 +279,53 @@ class GenerationViewSet(viewsets.ViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    @action(detail=True, methods=["patch"], permission_classes=[permissions.IsAuthenticated])
+    def update_details(self, request, pk=None):
+        """
+        Update generation details (description and/or visibility)
+
+        API: PATCH /api/generations/:id/update_details
+        Payload: { description: str, is_public: bool }
+        """
+        try:
+            generation = Generation.objects.get(id=pk)
+        except Generation.DoesNotExist:
+            return Response(
+                {"error": "Generation not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Check ownership
+        if generation.user != request.user:
+            return Response(
+                {"error": "You do not have permission to update this generation"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Update fields
+        description = request.data.get("description")
+        is_public = request.data.get("is_public")
+
+        if description is not None:
+            generation.description = description
+
+        if is_public is not None:
+            generation.is_public = is_public
+
+        generation.save(update_fields=["description", "is_public"])
+
+        return Response(
+            {
+                "success": True,
+                "data": {
+                    "id": generation.id,
+                    "description": generation.description,
+                    "is_public": generation.is_public,
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+
     @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated])
     def me(self, request):
         """
