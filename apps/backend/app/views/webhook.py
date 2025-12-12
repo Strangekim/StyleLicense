@@ -235,23 +235,26 @@ def inference_complete(request):
         with transaction.atomic():
             generation = Generation.objects.select_for_update().get(id=generation_id)
 
+            # Convert GCS URI to HTTPS URL for browser compatibility
+            # gs://bucket/path -> https://storage.googleapis.com/bucket/path
+            if result_url.startswith("gs://"):
+                result_url = result_url.replace("gs://", "https://storage.googleapis.com/", 1)
+
             # Update generation
             generation.status = "completed"
             generation.result_url = result_url
-            generation.generation_progress = None  # Clear progress
 
-            # Merge metadata
-            if generation.metadata:
-                generation.metadata.update(metadata)
-            else:
-                generation.metadata = metadata
+            # Store final metadata in generation_progress
+            if metadata:
+                if not generation.generation_progress:
+                    generation.generation_progress = {}
+                generation.generation_progress.update(metadata)
 
             generation.save(
                 update_fields=[
                     "status",
                     "result_url",
                     "generation_progress",
-                    "metadata",
                 ]
             )
 

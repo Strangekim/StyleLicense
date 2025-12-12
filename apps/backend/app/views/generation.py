@@ -186,81 +186,93 @@ class GenerationViewSet(viewsets.ViewSet):
 
         API: GET /api/generations/:id
         """
-        user = request.user
-
         try:
-            generation = Generation.objects.select_related(
-                "user", "style", "style__user"
-            ).get(id=pk)
-        except Generation.DoesNotExist:
-            return Response(
-                {"error": "Generation not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            user = request.user
 
-        # Check ownership (user can only see their own generations or public ones)
-        if generation.user != user and not generation.is_public:
-            return Response(
-                {"error": "You do not have permission to view this generation"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            try:
+                generation = Generation.objects.select_related(
+                    "user", "style", "style__artist"
+                ).get(id=pk)
+            except Generation.DoesNotExist:
+                return Response(
+                    {"error": "Generation not found"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
 
-        # Build response based on status
-        response_data = {
-            "id": generation.id,
-            "user_id": generation.user.id,
-            "status": generation.status,
-            "consumed_tokens": generation.consumed_tokens,
-            "created_at": generation.created_at.isoformat(),
-            "updated_at": generation.updated_at.isoformat(),
-        }
+            # Check ownership (user can only see their own generations or public ones)
+            if generation.user != user and not generation.is_public:
+                return Response(
+                    {"error": "You do not have permission to view this generation"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
-        # Add progress if processing
-        if generation.status == "processing" and generation.generation_progress:
-            response_data["progress"] = {
-                **generation.generation_progress,
-                "last_updated": generation.updated_at.isoformat(),
+            # Build response based on status
+            response_data = {
+                "id": generation.id,
+                "user_id": generation.user.id,
+                "status": generation.status,
+                "consumed_tokens": generation.consumed_tokens,
+                "created_at": generation.created_at.isoformat(),
+                "updated_at": generation.updated_at.isoformat(),
             }
-        else:
-            response_data["progress"] = None
 
-        # Add result if completed
-        if generation.status == "completed":
-            response_data.update(
-                {
-                    "style": {
-                        "id": generation.style.id,
-                        "name": generation.style.name,
-                        "artist": {
-                            "id": generation.style.user.id,
-                            "artist_name": getattr(
-                                generation.style.user,
-                                "artist_name",
-                                generation.style.user.username,
-                            ),
-                        },
-                    },
-                    "result_url": generation.result_url,
-                    "description": generation.description,
-                    "aspect_ratio": generation.aspect_ratio,
-                    "is_public": generation.is_public,
-                    "like_count": generation.like_count,
-                    "comment_count": generation.comment_count,
-                    "tags": generation.generation_progress.get("prompt_tags", [])
-                    if generation.generation_progress
-                    else [],
+            # Add progress if processing
+            if generation.status == "processing" and generation.generation_progress:
+                response_data["progress"] = {
+                    **generation.generation_progress,
+                    "last_updated": generation.updated_at.isoformat(),
                 }
+            else:
+                response_data["progress"] = None
+
+            # Add result if completed
+            if generation.status == "completed":
+                response_data.update(
+                    {
+                        "style": {
+                            "id": generation.style.id,
+                            "name": generation.style.name,
+                            "artist": {
+                                "id": generation.style.artist.id,
+                                "artist_name": getattr(
+                                    generation.style.artist,
+                                    "artist_name",
+                                    generation.style.artist.username,
+                                ),
+                            },
+                        },
+                        "result_url": generation.result_url,
+                        "description": generation.description,
+                        "aspect_ratio": generation.aspect_ratio,
+                        "is_public": generation.is_public,
+                        "like_count": generation.like_count,
+                        "comment_count": generation.comment_count,
+                        "tags": generation.generation_progress.get("prompt_tags", [])
+                        if generation.generation_progress
+                        else [],
+                    }
+                )
+
+            # Add error info if failed
+            if generation.status == "failed":
+                error_message = None
+                if generation.generation_progress:
+                    error_message = generation.generation_progress.get("error_message")
+                response_data["error_message"] = error_message
+                response_data["refunded"] = True  # Tokens are refunded in webhook
+
+            return Response({"success": True, "data": response_data})
+
+        except Exception as e:
+            import logging
+            import traceback
+            logger = logging.getLogger(__name__)
+            logger.error(f"[Generation] Failed to retrieve generation {pk}: {str(e)}")
+            logger.error(f"[Generation] Traceback: {traceback.format_exc()}")
+            return Response(
+                {"error": f"Failed to retrieve generation: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
-        # Add error info if failed
-        if generation.status == "failed":
-            error_message = None
-            if generation.generation_progress:
-                error_message = generation.generation_progress.get("error_message")
-            response_data["error_message"] = error_message
-            response_data["refunded"] = True  # Tokens are refunded in webhook
-
-        return Response({"success": True, "data": response_data})
 
     @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated])
     def me(self, request):
