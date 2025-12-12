@@ -42,7 +42,7 @@
       <div class="mb-4 px-4 flex items-center space-x-2">
         <!-- Avatar -->
         <img
-          :src="feedItem.user.avatar || '/default-avatar.png'"
+          :src="feedItem.user.profile_image || '/default-avatar.png'"
           :alt="feedItem.user.username"
           class="w-10 h-10 rounded-full object-cover"
         />
@@ -103,18 +103,18 @@
             </button>
 
             <!-- Styled By -->
-            <div class="flex items-center space-x-2">
+            <div v-if="feedItem.style?.artist" class="flex items-center space-x-2">
               <span class="text-sm italic text-gray-900" style="font-family: 'Brush Script MT', cursive;">Styled by</span>
               <img
-                :src="feedItem.user.avatar || '/default-avatar.png'"
-                :alt="feedItem.user.username"
+                :src="artistProfileImage || '/default-avatar.png'"
+                :alt="feedItem.style.artist.artist_name"
                 class="w-6 h-6 rounded-full object-cover"
               />
               <router-link
-                :to="`/profile/${feedItem.user.id}`"
+                :to="`/profile/${feedItem.style.artist.id}`"
                 class="text-sm font-semibold text-gray-900 hover:text-blue-600"
               >
-                {{ feedItem.user.username }}
+                {{ feedItem.style.artist.artist_name }}
               </router-link>
             </div>
           </div>
@@ -228,16 +228,45 @@
           <!-- Post Description -->
           <div class="mb-2">
             <span class="font-semibold text-gray-900 mr-2">{{ feedItem.user.username }}</span>
-            <span class="text-gray-700">
+            <span v-if="!isEditingDescription" class="text-gray-700">
               {{ showFullDescription ? feedItem.description : truncatedDescription }}
             </span>
+            <textarea
+              v-else
+              v-model="editedDescription"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows="3"
+              maxlength="500"
+            ></textarea>
             <button
-              v-if="feedItem.description && feedItem.description.length > 100"
+              v-if="!isEditingDescription && feedItem.description && feedItem.description.length > 100"
               @click="showFullDescription = !showFullDescription"
               class="ml-1 text-gray-500 hover:text-gray-700"
             >
               {{ showFullDescription ? $t('communityDetail.less') : $t('communityDetail.more') }}
             </button>
+            <div v-if="isCurrentUserOwner && !isEditingDescription" class="mt-2">
+              <button
+                @click="startEditingDescription"
+                class="text-sm text-blue-600 hover:text-blue-700"
+              >
+                {{ feedItem.description ? 'Edit description' : 'Add description' }}
+              </button>
+            </div>
+            <div v-if="isEditingDescription" class="mt-2 flex space-x-2">
+              <button
+                @click="saveDescription"
+                class="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+              >
+                Save
+              </button>
+              <button
+                @click="cancelEditingDescription"
+                class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
 
           <!-- Timestamp -->
@@ -276,7 +305,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useCommunityStore } from '@/stores/community'
 import { useAuthStore } from '@/stores/auth'
-import { getGenerationDetail, toggleLike as apiToggleLike } from '@/services/community.service'
+import { getGenerationDetail, toggleLike as apiToggleLike, updateGenerationDetails } from '@/services/community.service'
 import BottomNav from '@/components/layout/BottomNav.vue'
 import CommentModal from '@/components/modals/CommentModal.vue'
 import brushIcon from '@/assets/icons/brush_icon.png'
@@ -296,6 +325,8 @@ const bookmarking = ref(false)
 const isCommentModalOpen = ref(false)
 const showFullDescription = ref(false)
 const isPublic = ref(true) // Track visibility status
+const isEditingDescription = ref(false)
+const editedDescription = ref('')
 
 // Computed
 const truncatedDescription = computed(() => {
@@ -324,6 +355,13 @@ const isAuthorArtist = computed(() => {
 const isCurrentUserOwner = computed(() => {
   if (!authStore.isAuthenticated || !feedItem.value) return false
   return authStore.user?.id === feedItem.value.user?.id
+})
+
+// Get artist profile image
+const artistProfileImage = computed(() => {
+  // For now, return null as we don't have artist profile_image in the API response
+  // We'll need to fetch this separately or include it in the API
+  return null
 })
 
 // Methods
@@ -408,14 +446,48 @@ async function handleBookmark() {
 
 async function handleToggleVisibility() {
   try {
-    // TODO: Replace with actual API call
-    // await updateImageVisibility(feedItem.value.id, !isPublic.value)
+    const newVisibility = !isPublic.value
 
-    // Toggle local state
-    isPublic.value = !isPublic.value
-    console.log('Image visibility toggled to:', isPublic.value ? 'Public' : 'Private')
+    // Call API to update visibility
+    const response = await updateGenerationDetails(feedItem.value.id, {
+      is_public: newVisibility
+    })
+
+    if (response.success) {
+      // Update local state
+      isPublic.value = newVisibility
+      feedItem.value.is_public = newVisibility
+      console.log('Image visibility toggled to:', isPublic.value ? 'Public' : 'Private')
+    }
   } catch (err) {
     console.error('Failed to toggle visibility:', err)
+    alert('Failed to update visibility. Please try again.')
+  }
+}
+
+function startEditingDescription() {
+  isEditingDescription.value = true
+  editedDescription.value = feedItem.value.description || ''
+}
+
+function cancelEditingDescription() {
+  isEditingDescription.value = false
+  editedDescription.value = ''
+}
+
+async function saveDescription() {
+  try {
+    const response = await updateGenerationDetails(feedItem.value.id, {
+      description: editedDescription.value
+    })
+
+    if (response.success) {
+      feedItem.value.description = editedDescription.value
+      isEditingDescription.value = false
+    }
+  } catch (err) {
+    console.error('Failed to save description:', err)
+    alert('Failed to save description. Please try again.')
   }
 }
 

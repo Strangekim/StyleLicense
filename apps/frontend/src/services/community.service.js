@@ -88,3 +88,14 @@ export async function getFollowing(params = {}) {
   const response = await api.get('/api/users/following/', { params })
   return response.data
 }
+
+/**
+ * Update generation details (description and/or visibility)
+ * @param {number} generationId - Generation ID
+ * @param {Object} data - { description?: string, is_public?: boolean }
+ * @returns {Promise<Object>} - Updated generation data
+ */
+export async function updateGenerationDetails(generationId, data) {
+  const response = await api.patch(`/api/generations/${generationId}/update_details/`, data)
+  return response.data
+}
