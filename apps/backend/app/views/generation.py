@@ -227,6 +227,11 @@ class GenerationViewSet(viewsets.ViewSet):
 
             # Add result if completed
             if generation.status == "completed":
+                # Convert GCS URI to HTTPS URL for browser compatibility
+                result_url = generation.result_url
+                if result_url and result_url.startswith("gs://"):
+                    result_url = result_url.replace("gs://", "https://storage.googleapis.com/", 1)
+
                 response_data.update(
                     {
                         "style": {
@@ -241,7 +246,7 @@ class GenerationViewSet(viewsets.ViewSet):
                                 ),
                             },
                         },
-                        "result_url": generation.result_url,
+                        "result_url": result_url,
                         "description": generation.description,
                         "aspect_ratio": generation.aspect_ratio,
                         "is_public": generation.is_public,
@@ -314,9 +319,14 @@ class GenerationViewSet(viewsets.ViewSet):
 
             # Add result data if completed
             if gen.status == "completed":
+                # Convert GCS URI to HTTPS URL for browser compatibility
+                result_url = gen.result_url
+                if result_url and result_url.startswith("gs://"):
+                    result_url = result_url.replace("gs://", "https://storage.googleapis.com/", 1)
+
                 gen_data.update(
                     {
-                        "result_url": gen.result_url,
+                        "result_url": result_url,
                         "description": gen.description,
                         "like_count": gen.like_count,
                         "comment_count": gen.comment_count,

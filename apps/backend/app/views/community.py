@@ -60,10 +60,27 @@ class GenerationViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = PageNumberPagination
 
     def get_queryset(self):
-        """Return public completed generations."""
-        return Generation.objects.filter(
-            is_public=True, status="completed"
-        ).select_related("user", "style", "style__artist")
+        """
+        Return completed generations that are either:
+        - Public (anyone can see)
+        - Private but owned by current user (owner can see their own private images)
+        """
+        from django.db.models import Q
+
+        queryset = Generation.objects.filter(status="completed").select_related(
+            "user", "style", "style__artist"
+        )
+
+        # If user is authenticated, show public images + their own private images
+        if self.request.user.is_authenticated:
+            queryset = queryset.filter(
+                Q(is_public=True) | Q(user=self.request.user)
+            )
+        else:
+            # If not authenticated, only show public images
+            queryset = queryset.filter(is_public=True)
+
+        return queryset
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def like(self, request, pk=None):
