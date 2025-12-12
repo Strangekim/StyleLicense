@@ -17,12 +17,21 @@ class FeedUserSerializer(serializers.ModelSerializer):
 class FeedStyleSerializer(serializers.ModelSerializer):
     """Minimal style info for feed items."""
 
-    artist_name = serializers.CharField(source="artist.username", read_only=True)
+    artist = serializers.SerializerMethodField()
 
     class Meta:
         model = Style
-        fields = ["id", "name", "artist_name"]
-        read_only_fields = fields
+        fields = ["id", "name", "artist"]
+        read_only_fields = ["id", "name"]
+
+    def get_artist(self, obj):
+        """Return artist info."""
+        if obj.artist:
+            return {
+                "id": obj.artist.id,
+                "artist_name": obj.artist.username,
+            }
+        return None
 
 
 class GenerationFeedSerializer(serializers.ModelSerializer):
@@ -31,6 +40,7 @@ class GenerationFeedSerializer(serializers.ModelSerializer):
     user = FeedUserSerializer(read_only=True)
     style = FeedStyleSerializer(read_only=True)
     is_liked_by_current_user = serializers.SerializerMethodField()
+    result_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Generation
@@ -54,6 +64,13 @@ class GenerationFeedSerializer(serializers.ModelSerializer):
             return Like.objects.filter(user=request.user, generation=obj).exists()
         return False
 
+    def get_result_url(self, obj):
+        """Convert GCS URI to HTTPS URL for browser compatibility."""
+        result_url = obj.result_url
+        if result_url and result_url.startswith("gs://"):
+            return result_url.replace("gs://", "https://storage.googleapis.com/", 1)
+        return result_url
+
 
 class GenerationDetailSerializer(serializers.ModelSerializer):
     """Serializer for generation detail view."""
@@ -61,6 +78,8 @@ class GenerationDetailSerializer(serializers.ModelSerializer):
     user = FeedUserSerializer(read_only=True)
     style = FeedStyleSerializer(read_only=True)
     is_liked_by_current_user = serializers.SerializerMethodField()
+    tags = serializers.SerializerMethodField()
+    result_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Generation
@@ -75,6 +94,8 @@ class GenerationDetailSerializer(serializers.ModelSerializer):
             "like_count",
             "comment_count",
             "is_liked_by_current_user",
+            "is_public",
+            "tags",
             "created_at",
         ]
         read_only_fields = fields
@@ -85,6 +106,19 @@ class GenerationDetailSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return Like.objects.filter(user=request.user, generation=obj).exists()
         return False
+
+    def get_tags(self, obj):
+        """Get prompt tags from generation_progress."""
+        if obj.generation_progress and isinstance(obj.generation_progress, dict):
+            return obj.generation_progress.get("prompt_tags", [])
+        return []
+
+    def get_result_url(self, obj):
+        """Convert GCS URI to HTTPS URL for browser compatibility."""
+        result_url = obj.result_url
+        if result_url and result_url.startswith("gs://"):
+            return result_url.replace("gs://", "https://storage.googleapis.com/", 1)
+        return result_url
 
 
 class CommentUserSerializer(serializers.ModelSerializer):

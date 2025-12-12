@@ -82,6 +82,19 @@ class GenerationViewSet(viewsets.ReadOnlyModelViewSet):
 
         return queryset
 
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Override retrieve to return consistent API response format.
+
+        Returns: { success: true, data: {...} }
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response({
+            "success": True,
+            "data": serializer.data
+        })
+
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def like(self, request, pk=None):
         """
