@@ -82,6 +82,7 @@ class WebhookService:
         seed: Optional[int] = None,
         steps: Optional[int] = None,
         guidance_scale: Optional[float] = None,
+        prompt_tags: Optional[list] = None,
     ) -> bool:
         """
         Send inference completed notification
@@ -94,6 +95,7 @@ class WebhookService:
             seed: Random seed used
             steps: Number of inference steps
             guidance_scale: CFG scale value
+            prompt_tags: List of prompt tags
 
         Returns:
             True if successful
@@ -113,6 +115,8 @@ class WebhookService:
             metadata["steps"] = steps
         if guidance_scale is not None:
             metadata["guidance_scale"] = guidance_scale
+        if prompt_tags is not None:
+            metadata["prompt_tags"] = prompt_tags
 
         if metadata:
             payload["metadata"] = metadata
