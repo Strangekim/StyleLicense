@@ -127,6 +127,7 @@ class GenerationConsumer:
         aspect_ratio = data.get("aspect_ratio", "1:1")
         signature_path = data.get("signature_path", "")
         signature_config = data.get("signature_config", {})
+        prompt_tags = data.get("prompt_tags", [])
 
         logger.info(
             f"Processing generation task: generation_id={generation_id}, "
@@ -150,6 +151,7 @@ class GenerationConsumer:
                     num_steps=num_steps,
                     signature_path=signature_path,
                     signature_config=signature_config,
+                    prompt_tags=prompt_tags,
                 )
 
                 if image_url:
@@ -186,6 +188,7 @@ class GenerationConsumer:
         num_steps: int = 50,
         signature_path: str = "",
         signature_config: dict = None,
+        prompt_tags: list = None,
     ) -> str:
         """
         Real image generation process (Phase 2 - GPU Implementation).
@@ -198,6 +201,7 @@ class GenerationConsumer:
             num_steps: Number of inference steps (default: 50)
             signature_path: Path to signature image
             signature_config: Signature configuration (position, size, opacity)
+            prompt_tags: List of prompt tags
 
         Returns:
             str: GCS URL of generated image, or None if failed
@@ -221,19 +225,26 @@ class GenerationConsumer:
                 # Step 1: Download LoRA weights from GCS if needed
                 local_lora_path = None
                 if lora_path:
-                    logger.info("Downloading LoRA weights from GCS...")
-                    local_lora_path = os.path.join(temp_dir, "lora_weights")
-                    os.makedirs(local_lora_path, exist_ok=True)
+                    # Check if it's a GCS path
+                    if lora_path.startswith("gs://") or lora_path.startswith("https://storage.googleapis.com/"):
+                        logger.info("Downloading LoRA weights from GCS...")
+                        local_lora_path = os.path.join(temp_dir, "lora_weights")
 
-                    # Download LoRA weights
-                    # Assuming lora_path is a directory in GCS
-                    # For simplicity, we'll use the path directly if it exists locally
-                    # In production, implement GCS download logic
-                    if os.path.exists(lora_path):
+                        try:
+                            # Download LoRA weights from GCS
+                            local_lora_path = gcs_service.download_lora_weights(lora_path, local_lora_path)
+                            logger.info(f"LoRA weights downloaded to: {local_lora_path}")
+                        except Exception as e:
+                            logger.error(f"Failed to download LoRA weights from GCS: {e}")
+                            local_lora_path = None
+
+                    # Local path (for development/testing)
+                    elif os.path.exists(lora_path):
+                        logger.info(f"Using local LoRA weights: {lora_path}")
                         local_lora_path = lora_path
+
                     else:
-                        logger.warning(f"LoRA weights not found locally: {lora_path}")
-                        # TODO: Implement GCS download for LoRA weights
+                        logger.warning(f"LoRA weights path not found: {lora_path}")
                         local_lora_path = None
 
                 # Step 2: Initialize or reuse generator for batch efficiency
@@ -274,21 +285,43 @@ class GenerationConsumer:
                 logger.info(f"Image generated: {image.size}")
 
                 # Step 5: Insert signature if provided
-                if signature_path and os.path.exists(signature_path):
-                    logger.info("Inserting artist signature...")
-                    watermark_service = WatermarkService()
+                if signature_path:
+                    logger.info(f"Artist signature provided: {signature_path}")
 
-                    signature_image = Image.open(signature_path)
+                    # Download signature from GCS if it's a GCS URI
+                    local_signature_path = None
+                    if signature_path.startswith("gs://") or signature_path.startswith("https://storage.googleapis.com/"):
+                        logger.info("Downloading signature from GCS...")
+                        local_signature_path = os.path.join(temp_dir, "signature.png")
+                        if gcs_service.download_image(signature_path, local_signature_path):
+                            logger.info("Signature downloaded successfully")
+                        else:
+                            logger.warning("Failed to download signature from GCS")
+                            local_signature_path = None
+                    elif os.path.exists(signature_path):
+                        # Local file path (for testing)
+                        local_signature_path = signature_path
+                    else:
+                        logger.warning(f"Signature path not found: {signature_path}")
 
-                    image = watermark_service.insert_signature(
-                        image=image,
-                        signature_image=signature_image,
-                        position=signature_config.get("position", "bottom-right"),
-                        size=signature_config.get("size", "medium"),
-                        opacity=signature_config.get("opacity", 0.7),
-                    )
+                    # Insert signature if we have a valid local file
+                    if local_signature_path and os.path.exists(local_signature_path):
+                        logger.info("Inserting artist signature...")
+                        watermark_service = WatermarkService()
 
-                    logger.info("Signature inserted")
+                        signature_image = Image.open(local_signature_path)
+
+                        image = watermark_service.insert_signature(
+                            image=image,
+                            signature_image=signature_image,
+                            position=signature_config.get("position", "bottom-right"),
+                            size=signature_config.get("size", "medium"),
+                            opacity=signature_config.get("opacity", 0.7),
+                        )
+
+                        logger.info("Signature inserted successfully")
+                    else:
+                        logger.warning("Skipping signature insertion - signature file not available")
 
                 # Step 6: Save image locally
                 output_path = os.path.join(temp_dir, f"gen-{generation_id}.png")
@@ -310,6 +343,7 @@ class GenerationConsumer:
                     seed=None,  # TODO: Return actual seed from generator
                     steps=num_steps,
                     guidance_scale=Config.GUIDANCE_SCALE,
+                    prompt_tags=prompt_tags or [],
                 )
 
                 logger.info(f"Real generation completed for generation_id={generation_id}")
