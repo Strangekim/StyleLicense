@@ -78,18 +78,30 @@
             </div>
           </div>
 
+          <!-- Tags Section (right below image) -->
+          <div v-if="tags.length > 0" class="overflow-x-auto py-3 px-4 border-t border-gray-100 hide-scrollbar">
+            <div class="flex gap-2 min-w-max">
+              <TagButton
+                v-for="tag in tags"
+                :key="tag"
+                :label="tag.toUpperCase()"
+              />
+            </div>
+          </div>
+
           <!-- Image Footer -->
           <div class="px-4 py-3 flex items-center justify-between border-t border-gray-100">
-            <!-- Bookmark Button -->
+            <!-- Bookmark Button (Follow Artist) -->
             <button
+              v-if="feedItem.style?.artist && !isCurrentUserArtist"
               @click="handleBookmark"
               :disabled="bookmarking"
               class="transition-colors"
-              :class="feedItem.is_bookmarked ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'"
+              :class="isFollowingArtist ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'"
             >
               <svg
                 class="w-6 h-6"
-                :fill="feedItem.is_bookmarked ? 'currentColor' : 'none'"
+                :fill="isFollowingArtist ? 'currentColor' : 'none'"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
@@ -101,37 +113,24 @@
                 />
               </svg>
             </button>
+            <div v-else class="w-6"></div>
 
             <!-- Styled By -->
             <div v-if="feedItem.style?.artist" class="flex items-center space-x-2">
               <span class="text-sm italic text-gray-900" style="font-family: 'Brush Script MT', cursive;">Styled by</span>
               <img
-                :src="artistProfileImage || '/default-avatar.png'"
+                :src="feedItem.style.artist.profile_image || '/default-avatar.png'"
                 :alt="feedItem.style.artist.artist_name"
                 class="w-6 h-6 rounded-full object-cover"
               />
               <router-link
-                :to="`/profile/${feedItem.style.artist.id}`"
+                :to="`/marketplace/styles/${feedItem.style.id}`"
                 class="text-sm font-semibold text-gray-900 hover:text-blue-600"
               >
                 {{ feedItem.style.artist.artist_name }}
               </router-link>
             </div>
           </div>
-        </div>
-
-        <!-- Tags Section -->
-        <div v-if="tags.length > 0" class="mb-4 px-4 flex items-center space-x-2 overflow-x-auto pb-2">
-          <button
-            v-for="tag in tags"
-            :key="tag"
-            class="flex-shrink-0 inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
-            </svg>
-            {{ tag }}
-          </button>
         </div>
 
         <!-- Actions and Info -->
@@ -250,7 +249,7 @@
                 @click="startEditingDescription"
                 class="text-sm text-blue-600 hover:text-blue-700"
               >
-                {{ feedItem.description ? 'Edit description' : 'Add description' }}
+                {{ feedItem.description ? $t('communityDetail.editDescription') : $t('communityDetail.addDescription') }}
               </button>
             </div>
             <div v-if="isEditingDescription" class="mt-2 flex space-x-2">
@@ -305,9 +304,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useCommunityStore } from '@/stores/community'
 import { useAuthStore } from '@/stores/auth'
-import { getGenerationDetail, toggleLike as apiToggleLike, updateGenerationDetails } from '@/services/community.service'
+import { getGenerationDetail, toggleLike as apiToggleLike, updateGenerationDetails, toggleFollow } from '@/services/community.service'
+import { getFollowingList } from '@/services/user.service'
 import BottomNav from '@/components/layout/BottomNav.vue'
 import CommentModal from '@/components/modals/CommentModal.vue'
+import TagButton from '@/components/shared/TagButton.vue'
 import brushIcon from '@/assets/icons/brush_icon.png'
 
 const route = useRoute()
@@ -327,6 +328,7 @@ const showFullDescription = ref(false)
 const isPublic = ref(true) // Track visibility status
 const isEditingDescription = ref(false)
 const editedDescription = ref('')
+const isFollowingArtist = ref(false)
 
 // Computed
 const truncatedDescription = computed(() => {
@@ -357,11 +359,10 @@ const isCurrentUserOwner = computed(() => {
   return authStore.user?.id === feedItem.value.user?.id
 })
 
-// Get artist profile image
-const artistProfileImage = computed(() => {
-  // For now, return null as we don't have artist profile_image in the API response
-  // We'll need to fetch this separately or include it in the API
-  return null
+// Check if current user is the artist
+const isCurrentUserArtist = computed(() => {
+  if (!authStore.isAuthenticated || !feedItem.value) return false
+  return authStore.user?.id === feedItem.value.style?.artist?.id
 })
 
 // Methods
@@ -382,6 +383,17 @@ async function fetchFeedItem() {
     if (response.success && response.data) {
       feedItem.value = response.data
       isPublic.value = response.data.is_public !== false // Set initial visibility
+
+      // Check if current user is following the artist
+      if (authStore.isAuthenticated && feedItem.value.style?.artist?.id) {
+        try {
+          const followingData = await getFollowingList()
+          const followingIds = followingData.results?.map(user => user.id) || []
+          isFollowingArtist.value = followingIds.includes(feedItem.value.style.artist.id)
+        } catch (err) {
+          console.error('Failed to fetch following list:', err)
+        }
+      }
     } else {
       throw new Error('Invalid response format')
     }
@@ -429,16 +441,14 @@ async function handleBookmark() {
     return
   }
 
-  if (bookmarking.value) return
+  if (bookmarking.value || !feedItem.value?.style?.artist) return
 
   bookmarking.value = true
   try {
-    // TODO: Replace with actual API call
-    // await toggleBookmark(feedItem.value.id)
-
-    feedItem.value.is_bookmarked = !feedItem.value.is_bookmarked
+    const response = await toggleFollow(feedItem.value.style.artist.id)
+    isFollowingArtist.value = response.is_following
   } catch (err) {
-    console.error('Failed to toggle bookmark:', err)
+    console.error('Failed to toggle follow:', err)
   } finally {
     bookmarking.value = false
   }

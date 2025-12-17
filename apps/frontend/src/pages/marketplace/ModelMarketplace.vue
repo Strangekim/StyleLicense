@@ -80,9 +80,9 @@ const handleCardClick = (modelId) => {
   router.push(`/models/${modelId}`)
 }
 
-const handleArtistClick = (artistId, event) => {
+const handleArtistClick = (styleId, event) => {
   event.stopPropagation()
-  router.push(`/artist/${artistId}`)
+  router.push(`/marketplace/styles/${styleId}`)
 }
 
 const handleToggleFollow = async (artistId, event) => {
@@ -196,9 +196,8 @@ const followingModels = computed(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-white">
-    <AppLayout>
-      <div class="max-w-screen-lg mx-auto">
+  <AppLayout>
+    <div class="max-w-screen-lg mx-auto pb-4 overflow-x-hidden">
         <!-- Search Bar -->
         <div class="sticky top-0 z-30 bg-white border-b border-neutral-100 px-4 py-3">
           <div class="max-w-screen-sm mx-auto">
@@ -230,7 +229,7 @@ const followingModels = computed(() => {
         </div>
 
         <!-- Recent/Popular Section (Horizontal Scroll) -->
-        <div class="mb-8">
+        <div class="mb-2">
           <div v-if="recentOrPopularModels.length > 0" class="overflow-x-auto px-4">
         <div class="flex gap-3 pb-4" style="width: max-content;">
           <div
@@ -299,11 +298,11 @@ const followingModels = computed(() => {
             </div>
 
             <!-- Card Content -->
-            <div class="p-3 flex flex-col" style="min-height: 180px;">
+            <div class="p-2 flex flex-col" style="min-height: 120px;">
               <!-- Artist Name -->
               <h3
                 class="font-semibold text-sm text-neutral-900 mb-1 cursor-pointer hover:underline truncate"
-                @click="handleArtistClick(model.artist_id, $event)"
+                @click="handleArtistClick(model.id, $event)"
               >
                 {{ model.artist_username || $t('marketplace.unknownArtist') }}
               </h3>
@@ -329,17 +328,17 @@ const followingModels = computed(() => {
               </div>
 
               <!-- Model Name -->
-              <p class="text-xs text-neutral-500 mb-3 truncate">
+              <p class="text-xs text-neutral-500 mb-1 truncate">
                 {{ model.name }}
               </p>
 
               <!-- Styled by Section -->
-              <div class="flex items-center justify-end gap-2">
+              <div class="flex items-center justify-end gap-1.5 mt-1">
                 <span class="text-xs italic text-neutral-900 flex-shrink-0" style="font-family: 'Brush Script MT', cursive;">
                   Styled by
                 </span>
                 <!-- Artist Avatar -->
-                <div class="w-5 h-5 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div class="w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden flex-shrink-0">
                   <img
                     v-if="model.artist_profile_image"
                     :src="model.artist_profile_image"
@@ -376,9 +375,9 @@ const followingModels = computed(() => {
     </div>
 
         <!-- Following Artists Section (Horizontal Scroll) -->
-        <div v-if="authStore.isAuthenticated && followingModels.length > 0" class="mb-8">
+        <div v-if="authStore.isAuthenticated && followingModels.length > 0" class="mb-2">
       <h2 class="text-sm font-semibold text-neutral-900 px-4 mb-3">{{ $t('marketplace.followingArtists') }}</h2>
-      <div class="overflow-x-auto -mx-4 px-4">
+      <div class="overflow-x-auto px-4">
         <div class="flex gap-3 pb-4" style="width: max-content;">
           <div
             v-for="model in followingModels"
@@ -446,11 +445,11 @@ const followingModels = computed(() => {
             </div>
 
             <!-- Card Content -->
-            <div class="p-3 flex flex-col" style="min-height: 180px;">
+            <div class="p-2 flex flex-col" style="min-height: 120px;">
               <!-- Artist Name -->
               <h3
                 class="font-semibold text-sm text-neutral-900 mb-1 cursor-pointer hover:underline truncate"
-                @click="handleArtistClick(model.artist_id, $event)"
+                @click="handleArtistClick(model.id, $event)"
               >
                 {{ model.artist_username || $t('marketplace.unknownArtist') }}
               </h3>
@@ -476,17 +475,17 @@ const followingModels = computed(() => {
               </div>
 
               <!-- Model Name -->
-              <p class="text-xs text-neutral-500 mb-3 truncate">
+              <p class="text-xs text-neutral-500 mb-1 truncate">
                 {{ model.name }}
               </p>
 
               <!-- Styled by Section -->
-              <div class="flex items-center justify-end gap-2">
+              <div class="flex items-center justify-end gap-1.5 mt-1">
                 <span class="text-xs italic text-neutral-900 flex-shrink-0" style="font-family: 'Brush Script MT', cursive;">
                   Styled by
                 </span>
                 <!-- Artist Avatar -->
-                <div class="w-5 h-5 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div class="w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden flex-shrink-0">
                   <img
                     v-if="model.artist_profile_image"
                     :src="model.artist_profile_image"
@@ -508,6 +507,5 @@ const followingModels = computed(() => {
       </div>
     </div>
       </div>
-    </AppLayout>
-  </div>
+  </AppLayout>
 </template>

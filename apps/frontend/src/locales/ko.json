@@ -96,7 +96,8 @@
       "enterPrompt": "프롬프트를 입력해주세요",
       "promptTooLong": "프롬프트는 500자 이내로 작성해주세요",
       "englishOnly": "영어와 공백만 입력 가능합니다",
-      "generationFailed": "생성을 시작하지 못했습니다"
+      "generationFailed": "생성을 시작하지 못했습니다",
+      "insufficientTokensServer": "토큰이 부족합니다. 이미지를 생성하려면 토큰을 구매해주세요."
     },
     "status": {
       "queued": "대기 중",
@@ -141,7 +142,13 @@
     "placeholder": "댓글을 입력하세요...",
     "post": "게시",
     "posting": "게시 중...",
-    "empty": "첫 댓글을 남겨보세요"
+    "empty": "첫 댓글을 남겨보세요",
+    "reply": "답글",
+    "replyPlaceholder": "답글을 입력하세요...",
+    "replyingTo": "님에게 답글 작성 중",
+    "delete": "삭제",
+    "cancel": "취소",
+    "deleteConfirm": "정말 삭제하시겠습니까?"
   },
   "profile": {
     "generations": "생성",
@@ -267,6 +274,8 @@
     "less": "접기",
     "viewAllComments": "댓글 {count}개 모두 보기",
     "loadFailed": "이미지 세부정보를 불러오지 못했습니다",
+    "editDescription": "설명 편집",
+    "addDescription": "설명 추가",
     "justNow": "방금 전",
     "minuteAgo": "{count}분 전",
     "minutesAgo": "{count}분 전",
@@ -291,7 +300,9 @@
     "minutesAgo": "{count}분 전",
     "hoursAgo": "{count}시간 전",
     "daysAgo": "{count}일 전",
-    "weeksAgo": "{count}주 전"
+    "weeksAgo": "{count}주 전",
+    "generationCost": "생성 비용",
+    "tokensWillBeDeducted": "이미지를 생성하면 토큰이 차감됩니다"
   },
   "signatureCanvas": {
     "clear": "지우기",

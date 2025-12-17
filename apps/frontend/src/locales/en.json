@@ -96,7 +96,8 @@
       "enterPrompt": "Please enter a prompt",
       "promptTooLong": "Prompt must be less than 500 characters",
       "englishOnly": "Only English letters and spaces are allowed",
-      "generationFailed": "Failed to start generation"
+      "generationFailed": "Failed to start generation",
+      "insufficientTokensServer": "Insufficient tokens. Please purchase tokens to generate images."
     },
     "status": {
       "queued": "Queued",
@@ -141,7 +142,13 @@
     "placeholder": "Write a comment...",
     "post": "Post",
     "posting": "Posting...",
-    "empty": "Be the first to comment"
+    "empty": "Be the first to comment",
+    "reply": "Reply",
+    "replyPlaceholder": "Write a reply...",
+    "replyingTo": "'s reply",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "deleteConfirm": "Are you sure you want to delete this?"
   },
   "profile": {
     "generations": "Generations",
@@ -267,6 +274,8 @@
     "less": "less",
     "viewAllComments": "View all {count} comments",
     "loadFailed": "Failed to load image details",
+    "editDescription": "Edit description",
+    "addDescription": "Add description",
     "justNow": "just now",
     "minuteAgo": "{count} minute ago",
     "minutesAgo": "{count} minutes ago",
@@ -291,7 +300,9 @@
     "minutesAgo": "{count} minutes ago",
     "hoursAgo": "{count} hours ago",
     "daysAgo": "{count} days ago",
-    "weeksAgo": "{count} weeks ago"
+    "weeksAgo": "{count} weeks ago",
+    "generationCost": "Generation Cost",
+    "tokensWillBeDeducted": "Tokens will be deducted when you generate an image"
   },
   "signatureCanvas": {
     "clear": "Clear",
