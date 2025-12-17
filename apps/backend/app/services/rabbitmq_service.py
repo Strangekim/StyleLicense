@@ -58,7 +58,7 @@ class RabbitMQService:
                 yield self._channel
                 break
 
-            except (pika.exceptions.AMQPConnectionError, pika.exceptions.ChannelClosed) as e:
+            except Exception as e:
                 retry_count += 1
                 logger.warning("RabbitMQ connection attempt %d/%d failed: %s", retry_count, max_retries, str(e))
 
@@ -182,6 +182,7 @@ class RabbitMQService:
         seed: Optional[int] = None,
         signature_path: Optional[str] = None,
         signature_config: Optional[Dict[str, Any]] = None,
+        prompt_tags: Optional[List[str]] = None,
         webhook_url: Optional[str] = None
     ) -> str:
         """
@@ -196,6 +197,7 @@ class RabbitMQService:
             seed: Random seed for reproducibility
             signature_path: Path to artist signature image (GCS URL)
             signature_config: Signature configuration (position, size, opacity)
+            prompt_tags: List of prompt tags
             webhook_url: Optional callback URL for status updates
 
         Returns:
@@ -227,6 +229,7 @@ class RabbitMQService:
                 "seed": seed,
                 "signature_path": signature_path or "",
                 "signature_config": signature_config,
+                "prompt_tags": prompt_tags or [],
             },
             "webhook_url": webhook_url,
         }
