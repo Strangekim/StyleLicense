@@ -108,9 +108,18 @@ const router = createRouter({
   routes,
 })
 
+// Track if auth has been initialized to avoid redundant calls
+let authInitialized = false
+
 // Navigation guards
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
+
+  // Initialize auth state on first navigation (page load/refresh)
+  if (!authInitialized) {
+    authInitialized = true
+    await authStore.initAuth()
+  }
 
   // Check if route requires authentication
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
