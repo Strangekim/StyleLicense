@@ -505,7 +505,7 @@ class StyleViewSet(BaseViewSet):
             {
                 'id': gen.id,
                 'image_url': gen.result_url,
-                'prompt': gen.prompt,
+                'prompt': ', '.join(gen.generation_progress.get('prompt_tags', [])) if gen.generation_progress else '',
                 'created_at': gen.created_at.isoformat() if gen.created_at else None,
             }
             for gen in generations
