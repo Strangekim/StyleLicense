@@ -12,6 +12,7 @@ import { useModelsStore } from '@/stores/models'
 import { useGenerationStore } from '@/stores/generations'
 import { useTokenStore } from '@/stores/tokens'
 import { useAuthStore } from '@/stores/auth'
+import { useAlertStore } from '@/stores/alert'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TagButton from '@/components/shared/TagButton.vue'
 import { toggleFollow, getFollowingList } from '@/services/user.service'
@@ -23,6 +24,7 @@ const modelsStore = useModelsStore()
 const generationStore = useGenerationStore()
 const tokenStore = useTokenStore()
 const authStore = useAuthStore()
+const alertStore = useAlertStore()
 
 // State
 const modelId = computed(() => parseInt(route.params.id))
@@ -247,13 +249,28 @@ const handleGenerate = async () => {
     await tokenStore.fetchBalance()
 
     // Show success
-    alert('Image generation started! Check your generation history.')
+    alertStore.show({
+      type: 'success',
+      title: t('alerts.generationSuccess.title'),
+      message: t('alerts.generationSuccess.message'),
+      confirmText: t('alerts.generationSuccess.confirmButton'),
+      showCancel: false,
+      onConfirm: () => {
+        router.push('/profile')
+      }
+    })
 
     // Clear user tags (keep default tag)
     userTags.value = []
   } catch (error) {
     console.error('Generation failed:', error)
-    alert(error.response?.data?.error?.message || 'Failed to start generation')
+    alertStore.show({
+      type: 'error',
+      title: t('alerts.error.title'),
+      message: error.response?.data?.error?.message || t('alerts.generationFailed.message'),
+      confirmText: t('alerts.error.confirmButton'),
+      showCancel: false
+    })
   } finally {
     isGenerating.value = false
   }

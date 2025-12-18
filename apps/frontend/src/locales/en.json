@@ -48,6 +48,14 @@
       "confirmButton": "Purchase Tokens",
       "cancelButton": "Cancel"
     },
+    "generationSuccess": {
+      "title": "Generation Started!",
+      "message": "Your image is being generated. You can view the progress on your profile page.",
+      "confirmButton": "Go to Profile"
+    },
+    "generationFailed": {
+      "message": "Failed to start generation. Please try again."
+    },
     "error": {
       "title": "Error",
       "message": "An error occurred. Please try again.",
