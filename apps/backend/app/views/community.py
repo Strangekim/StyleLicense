@@ -352,19 +352,36 @@ class UserViewSet(viewsets.GenericViewSet):
             )
 
         # Upgrade to artist
-        user.role = "artist"
-        user.save(update_fields=["role"])
+        try:
+            user.role = "artist"
+            user.save(update_fields=["role"])
 
-        # Return updated profile
-        serializer = UserProfileSerializer(user)
-        return Response(
-            {
-                "success": True,
-                "data": serializer.data,
-                "message": "Successfully upgraded to artist account",
-            },
-            status=status.HTTP_200_OK,
-        )
+            # Return updated profile
+            serializer = UserProfileSerializer(user)
+            return Response(
+                {
+                    "success": True,
+                    "data": serializer.data,
+                    "message": "Successfully upgraded to artist account",
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            import logging
+            import traceback
+            logger = logging.getLogger(__name__)
+            logger.error(f"[ArtistUpgrade] Failed to upgrade user {user.id}: {str(e)}")
+            logger.error(f"[ArtistUpgrade] Traceback: {traceback.format_exc()}")
+            return Response(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "UPGRADE_FAILED",
+                        "message": f"Failed to upgrade to artist: {str(e)}",
+                    },
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=True, methods=["post"])
     def follow(self, request, pk=None):

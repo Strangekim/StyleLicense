@@ -257,13 +257,15 @@
       "saveFailed": "Failed to save profile. Please try again.",
       "photoTooLarge": "File size must be less than 5MB",
       "signatureTooLarge": "File size must be less than 2MB",
-      "signatureRequired": "Please provide your signature before upgrading to artist account."
+      "signatureRequired": "Please provide your signature before upgrading to artist account.",
+      "upgradeFailed": "Failed to upgrade to professional account. Please try again."
     },
     "confirmUnsavedChanges": "You have unsaved changes. Are you sure you want to leave?",
     "confirmSwitchToProfessional": "Switch to a professional account? This will give you access to create and sell styles.",
     "confirmDeleteAccount": "Are you sure you want to delete your account? This action cannot be undone.",
     "confirmDeleteAccountFinal": "This will permanently delete all your data. Type 'DELETE' to confirm.",
-    "deleteNotImplemented": "Account deletion is not yet implemented"
+    "deleteNotImplemented": "Account deletion is not yet implemented",
+    "upgradedToArtist": "Successfully upgraded to professional account!"
   },
   "communityDetail": {
     "backToCommunity": "Back to Community",
