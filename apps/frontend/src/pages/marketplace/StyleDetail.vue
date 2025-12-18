@@ -498,6 +498,28 @@ onMounted(async () => {
             class="w-full h-full object-cover"
           />
 
+          <!-- Previous Button -->
+          <button
+            v-if="exampleGenerations.length > 1"
+            @click="currentExampleIndex = (currentExampleIndex - 1 + exampleGenerations.length) % exampleGenerations.length"
+            class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+
+          <!-- Next Button -->
+          <button
+            v-if="exampleGenerations.length > 1"
+            @click="currentExampleIndex = (currentExampleIndex + 1) % exampleGenerations.length"
+            class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
+
           <!-- Carousel Dots -->
           <div v-if="exampleGenerations.length > 1" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
             <button
@@ -507,6 +529,11 @@ onMounted(async () => {
               class="w-1.5 h-1.5 rounded-full transition-colors"
               :class="currentExampleIndex === index ? 'bg-white' : 'bg-white/50'"
             ></button>
+          </div>
+
+          <!-- Image Counter -->
+          <div v-if="exampleGenerations.length > 1" class="absolute top-3 right-3 px-2 py-1 rounded-full bg-black/50 text-white text-xs">
+            {{ currentExampleIndex + 1 }} / {{ exampleGenerations.length }}
           </div>
         </div>
 
