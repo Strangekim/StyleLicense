@@ -264,6 +264,13 @@ const handleGenerate = async () => {
     userTags.value = []
   } catch (error) {
     console.error('Generation failed:', error)
+
+    // Don't show alert for 402 errors - API interceptor will handle it
+    if (error.response?.status === 402) {
+      // API interceptor already showed the insufficient tokens alert
+      return
+    }
+
     alertStore.show({
       type: 'error',
       title: t('alerts.error.title'),
