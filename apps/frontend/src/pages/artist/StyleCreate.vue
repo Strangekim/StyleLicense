@@ -69,6 +69,36 @@ const isEditMode = computed(() => {
   return status === 'completed' || status === 'failed'
 })
 
+// Computed: Format training progress for display
+const formattedProgress = computed(() => {
+  if (!existingStyle.value?.training_progress) return null
+
+  const progress = existingStyle.value.training_progress
+
+  return {
+    percent: progress.progress_percent || 0,
+    currentEpoch: progress.current_epoch || 0,
+    totalEpochs: progress.total_epochs || 200,
+    estimatedTimeText: formatEstimatedTime(progress.estimated_seconds || 0)
+  }
+})
+
+// Helper: Format estimated seconds to human-readable time
+const formatEstimatedTime = (seconds) => {
+  if (!seconds || seconds <= 0) return ''
+
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+
+  if (hours > 0) {
+    return `약 ${hours}시간 ${minutes}분`
+  } else if (minutes > 0) {
+    return `약 ${minutes}분`
+  } else {
+    return '1분 이내'
+  }
+}
+
 // Form state
 const formData = ref({
   name: '',
@@ -359,67 +389,132 @@ const resetForm = () => {
       </div>
 
       <!-- Training in Progress State -->
-      <div v-else-if="isTrainingInProgress" class="max-w-2xl mx-auto">
-        <Card class="text-center py-12">
-          <!-- Animated Icon -->
-          <div class="mb-6">
-            <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-100 rounded-full">
-              <svg class="w-10 h-10 text-blue-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+      <div v-else-if="isTrainingInProgress" class="max-w-3xl mx-auto">
+        <Card class="overflow-hidden">
+          <!-- Header with Gradient Background -->
+          <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-8 py-10 text-center text-white">
+            <!-- Animated Icon -->
+            <div class="mb-4">
+              <div class="inline-flex items-center justify-center w-16 h-16 bg-white bg-opacity-20 rounded-full backdrop-blur-sm">
+                <svg class="w-8 h-8 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
             </div>
-          </div>
 
-          <!-- Title and Description -->
-          <h2 class="text-2xl font-bold text-neutral-900 mb-3">
-            {{ $t('styleCreate.trainingInProgress') }}
-          </h2>
-          <p class="text-neutral-600 mb-8">
-            {{ $t('styleCreate.trainingDescription') }}
-          </p>
-
-          <!-- Progress Bar (if training_progress is available) -->
-          <div v-if="existingStyle.training_progress" class="mb-6">
-            <div class="w-full bg-neutral-200 rounded-full h-3 overflow-hidden">
-              <div
-                class="bg-blue-600 h-3 rounded-full transition-all duration-500"
-                :style="{ width: `${existingStyle.training_progress}%` }"
-              ></div>
-            </div>
-            <p class="text-sm text-neutral-600 mt-2">
-              {{ existingStyle.training_progress }}% {{ $t('common.loading') }}
+            <!-- Title -->
+            <h2 class="text-2xl font-bold mb-2">
+              {{ $t('styleCreate.trainingInProgress') }}
+            </h2>
+            <p class="text-blue-100 text-sm">
+              {{ $t('styleCreate.trainingDescription') }}
             </p>
           </div>
 
-          <!-- Style Info -->
-          <div class="bg-neutral-50 rounded-lg p-6 mb-8 text-left">
-            <div class="space-y-3">
-              <div>
-                <p class="text-sm text-neutral-500 mb-1">{{ $t('styleCreate.styleName') }}</p>
-                <p class="font-medium text-neutral-900">{{ existingStyle.name }}</p>
-              </div>
-              <div v-if="existingStyle.description">
-                <p class="text-sm text-neutral-500 mb-1">{{ $t('styleCreate.description') }}</p>
-                <p class="text-neutral-700">{{ existingStyle.description }}</p>
-              </div>
-              <div>
-                <p class="text-sm text-neutral-500 mb-1">{{ $t('common.status') }}</p>
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                  {{ $t(`styleCreate.status.${existingStyle.training_status}`) }}
+          <!-- Progress Section -->
+          <div class="px-8 py-8">
+            <!-- Progress Info -->
+            <div v-if="formattedProgress" class="mb-6">
+              <!-- Progress Percentage -->
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-3xl font-bold text-blue-600">
+                  {{ formattedProgress.percent }}%
                 </span>
+                <span class="text-sm text-neutral-500">
+                  {{ formattedProgress.currentEpoch }} / {{ formattedProgress.totalEpochs }} epochs
+                </span>
+              </div>
+
+              <!-- Progress Bar -->
+              <div class="w-full bg-neutral-200 rounded-full h-4 overflow-hidden mb-3">
+                <div
+                  class="bg-gradient-to-r from-blue-500 to-purple-600 h-4 rounded-full transition-all duration-500 relative overflow-hidden"
+                  :style="{ width: `${formattedProgress.percent}%` }"
+                >
+                  <!-- Animated shine effect -->
+                  <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-shimmer"></div>
+                </div>
+              </div>
+
+              <!-- Estimated Time -->
+              <div v-if="formattedProgress.estimatedTimeText" class="flex items-center justify-center gap-2 text-sm text-neutral-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>예상 남은 시간: {{ formattedProgress.estimatedTimeText }}</span>
+              </div>
+            </div>
+
+            <!-- Loading State (no progress data yet) -->
+            <div v-else class="text-center py-6">
+              <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+              <p class="text-sm text-neutral-600">학습 준비 중...</p>
+            </div>
+
+            <!-- Divider -->
+            <div class="border-t border-neutral-200 my-6"></div>
+
+            <!-- Style Info -->
+            <div class="space-y-4">
+              <h3 class="text-lg font-semibold text-neutral-900 mb-4">스타일 정보</h3>
+
+              <div class="grid grid-cols-1 gap-4">
+                <!-- Style Name -->
+                <div class="flex items-start gap-3">
+                  <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-xs text-neutral-500 mb-1">스타일 이름</p>
+                    <p class="font-medium text-neutral-900">{{ existingStyle.name }}</p>
+                  </div>
+                </div>
+
+                <!-- Description -->
+                <div v-if="existingStyle.description" class="flex items-start gap-3">
+                  <div class="flex-shrink-0 w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
+                    </svg>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-xs text-neutral-500 mb-1">설명</p>
+                    <p class="text-neutral-700 text-sm">{{ existingStyle.description }}</p>
+                  </div>
+                </div>
+
+                <!-- Status Badge -->
+                <div class="flex items-start gap-3">
+                  <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-xs text-neutral-500 mb-1">상태</p>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                      {{ $t(`styleCreate.status.${existingStyle.training_status}`) }}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Actions -->
-          <Button
-            type="button"
-            variant="primary"
-            size="lg"
-            @click="router.push('/marketplace')"
-          >
-            {{ $t('styleCreate.goToMarketplace') }}
-          </Button>
+          <!-- Footer Actions -->
+          <div class="bg-neutral-50 px-8 py-4 border-t border-neutral-200">
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              fullWidth
+              @click="router.push('/marketplace')"
+            >
+              마켓플레이스로 이동
+            </Button>
+          </div>
         </Card>
       </div>
 
@@ -671,3 +766,18 @@ const resetForm = () => {
     </div>
   </AppLayout>
 </template>
+
+<style scoped>
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+</style>
