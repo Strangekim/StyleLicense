@@ -163,6 +163,21 @@ export const useModelsStore = defineStore('models', () => {
   }
 
   /**
+   * Fetch example generations for a style
+   * @param {number} id - Style ID
+   * @returns {Promise<Object>} Response with example generations
+   */
+  const fetchStyleExampleGenerations = async (id) => {
+    try {
+      const response = await modelService.getStyleExampleGenerations(id)
+      return response
+    } catch (err) {
+      console.error('Failed to fetch example generations from API:', err)
+      throw err
+    }
+  }
+
+  /**
    * Reset store state
    */
   const reset = () => {
@@ -197,5 +212,6 @@ export const useModelsStore = defineStore('models', () => {
     clearCurrentModel,
     clearError,
     reset,
+    fetchStyleExampleGenerations,
   }
 })

@@ -131,6 +131,17 @@ export async function deleteModel(id) {
   return response.data
 }
 
+/**
+ * Get example generations for a style
+ *
+ * @param {number} id - Style ID
+ * @returns {Promise<Object>} List of public generations created with this style
+ */
+export async function getStyleExampleGenerations(id) {
+  const response = await apiClient.get(`/api/styles/${id}/example-generations/`)
+  return response.data
+}
+
 export default {
   listModels,
   getModelDetail,
@@ -138,4 +149,5 @@ export default {
   createModel,
   updateModel,
   deleteModel,
+  getStyleExampleGenerations,
 }

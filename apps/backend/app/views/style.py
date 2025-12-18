@@ -480,6 +480,42 @@ class StyleViewSet(BaseViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+    @action(detail=True, methods=["get"], permission_classes=[AllowAny], url_path='example-generations')
+    def example_generations(self, request, pk=None):
+        """
+        Get public example generations for this style.
+
+        Returns up to 10 recent public generations created with this style.
+
+        Endpoint: GET /api/styles/:id/example-generations/
+        """
+        style = self.get_object()
+
+        from app.models import Generation
+
+        # Get recent public generations for this style
+        generations = Generation.objects.filter(
+            style=style,
+            status='completed',
+            is_public=True
+        ).order_by('-created_at')[:10]
+
+        # Simple serialization
+        data = [
+            {
+                'id': gen.id,
+                'image_url': gen.result_url,
+                'prompt': gen.prompt,
+                'created_at': gen.created_at.isoformat() if gen.created_at else None,
+            }
+            for gen in generations
+        ]
+
+        return Response({
+            'success': True,
+            'data': data
+        })
+
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated, IsOwnerOrReadOnly], url_path='regenerate-tags')
     def regenerate_tags(self, request, pk=None):
         """

@@ -33,6 +33,11 @@ const isLoading = computed(() => modelsStore.loading)
 const currentImageIndex = ref(0)
 const isBookmarked = ref(false)
 
+// Example generations state (separate from training images)
+const exampleGenerations = ref([])
+const currentExampleIndex = ref(0)
+const loadingExamples = ref(false)
+
 // Generation form state
 const prompt = ref('')
 const newTagInput = ref('')
@@ -58,6 +63,11 @@ const sampleImages = computed(() => {
 
 const currentImage = computed(() => {
   return sampleImages.value[currentImageIndex.value] || null
+})
+
+// Current example generation image
+const currentExampleImage = computed(() => {
+  return exampleGenerations.value[currentExampleIndex.value]?.image_url || null
 })
 
 // Training image tags: all backend caption tags (read-only)
@@ -291,10 +301,32 @@ const navigateToArtist = () => {
   }
 }
 
+// Fetch example generations for this style
+const fetchExampleGenerations = async () => {
+  if (!modelId.value) return
+
+  loadingExamples.value = true
+  try {
+    const response = await modelsStore.fetchStyleExampleGenerations(modelId.value)
+    if (response.success && response.data) {
+      exampleGenerations.value = response.data
+      currentExampleIndex.value = 0
+    }
+  } catch (error) {
+    console.error('Failed to fetch example generations:', error)
+    exampleGenerations.value = []
+  } finally {
+    loadingExamples.value = false
+  }
+}
+
 // Fetch model on mount
 onMounted(async () => {
   try {
     await modelsStore.fetchModelDetail(modelId.value)
+
+    // Fetch example generations for this style
+    await fetchExampleGenerations()
 
     // Fetch user balance if authenticated
     if (authStore.isAuthenticated) {
@@ -453,24 +485,34 @@ onMounted(async () => {
       <div class="py-4 border-t border-neutral-100">
         <h2 class="text-base font-semibold text-neutral-900 mb-3">{{ $t('styleDetail.exampleGenerateImage') }}</h2>
 
-        <!-- Example Image (same as training image for now) -->
-        <div class="relative w-full aspect-square bg-neutral-100 mb-4 rounded-lg overflow-hidden">
+        <!-- Example Generation Images -->
+        <div v-if="loadingExamples" class="relative w-full aspect-square bg-neutral-100 mb-4 rounded-lg overflow-hidden flex items-center justify-center">
+          <div class="text-neutral-400 text-sm">Loading examples...</div>
+        </div>
+
+        <div v-else-if="exampleGenerations.length > 0" class="relative w-full aspect-square bg-neutral-100 mb-4 rounded-lg overflow-hidden">
           <img
-            v-if="currentImage"
-            :src="currentImage"
-            :alt="model.name"
+            v-if="currentExampleImage"
+            :src="currentExampleImage"
+            :alt="exampleGenerations[currentExampleIndex]?.prompt || model.name"
             class="w-full h-full object-cover"
           />
 
           <!-- Carousel Dots -->
-          <div v-if="sampleImages.length > 1" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+          <div v-if="exampleGenerations.length > 1" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
             <button
-              v-for="(image, index) in sampleImages"
-              :key="`gen-${index}`"
-              @click="currentImageIndex = index"
+              v-for="(example, index) in exampleGenerations"
+              :key="`example-${example.id}`"
+              @click="currentExampleIndex = index"
               class="w-1.5 h-1.5 rounded-full transition-colors"
-              :class="currentImageIndex === index ? 'bg-white' : 'bg-white/50'"
+              :class="currentExampleIndex === index ? 'bg-white' : 'bg-white/50'"
             ></button>
+          </div>
+        </div>
+
+        <div v-else class="relative w-full aspect-square bg-neutral-100 mb-4 rounded-lg overflow-hidden flex items-center justify-center">
+          <div class="text-neutral-400 text-sm text-center p-4">
+            <p>{{ $t('styleDetail.noExampleGenerations') }}</p>
           </div>
         </div>
 

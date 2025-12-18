@@ -312,6 +312,7 @@
     "trainingImage": "Training Image",
     "styledBy": "Styled by",
     "exampleGenerateImage": "Example Generate Image",
+    "noExampleGenerations": "No example generations available yet",
     "warningTitle": "Do not Write Like These Tag",
     "warningMessage": "Avoid using Irrelevant, inappropriate, or misleading words when adding tags or descriptions",
     "tagInputPlaceholder": "write create img prompt",
