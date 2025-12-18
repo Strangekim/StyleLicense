@@ -5,7 +5,7 @@
  * providing metadata, and submitting for training.
  */
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useModelsStore } from '@/stores/models'
@@ -27,6 +27,43 @@ const isCheckingExistingStyle = ref(true)
 // Existing style (for edit mode)
 const existingStyle = ref(null)
 
+// Polling interval for training progress updates
+let pollingInterval = null
+
+// Fetch existing style data
+const fetchExistingStyle = async () => {
+  try {
+    const response = await getMyStyle()
+
+    if (response && response.data) {
+      existingStyle.value = response.data
+
+      // Load existing data into form for editing (only if not training)
+      if (!isTrainingInProgress.value) {
+        formData.value.name = existingStyle.value.name || ''
+        formData.value.description = existingStyle.value.description || ''
+        formData.value.price_per_generation = existingStyle.value.generation_cost_tokens || 10
+      }
+
+      // If training just completed, stop polling
+      if (pollingInterval && existingStyle.value.training_status === 'completed') {
+        clearInterval(pollingInterval)
+        pollingInterval = null
+      }
+    }
+  } catch (err) {
+    console.error('Failed to fetch existing style:', err)
+  }
+}
+
+// Start polling for training progress updates
+const startProgressPolling = () => {
+  // Poll every 10 seconds
+  pollingInterval = setInterval(async () => {
+    await fetchExistingStyle()
+  }, 10000) // 10 seconds
+}
+
 // Check if user already has an active style (MVP: 1 style per artist)
 onMounted(async () => {
   isCheckingExistingStyle.value = true
@@ -37,21 +74,24 @@ onMounted(async () => {
   }
 
   try {
-    // Get artist's existing style
-    const response = await getMyStyle()
+    await fetchExistingStyle()
 
-    if (response && response.data) {
-      existingStyle.value = response.data
-
-      // Load existing data into form for editing
-      formData.value.name = existingStyle.value.name || ''
-      formData.value.description = existingStyle.value.description || ''
-      formData.value.price_per_generation = existingStyle.value.generation_cost_tokens || 10
+    // If training is in progress, start polling for updates
+    if (isTrainingInProgress.value) {
+      startProgressPolling()
     }
   } catch (err) {
     console.error('Failed to check existing style:', err)
   } finally {
     isCheckingExistingStyle.value = false
+  }
+})
+
+// Cleanup on unmount
+onUnmounted(() => {
+  if (pollingInterval) {
+    clearInterval(pollingInterval)
+    pollingInterval = null
   }
 })
 
