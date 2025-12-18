@@ -8,6 +8,7 @@ import os
 import logging
 from typing import List
 from pathlib import Path
+from urllib.parse import unquote
 from PIL import Image
 from config import Config
 
@@ -67,6 +68,9 @@ class GCSService:
             # Remove gs:// prefix for other buckets
             elif blob_path.startswith("gs://"):
                 blob_path = blob_path.replace("gs://", "").split("/", 1)[-1]
+
+            # URL decode the path to handle special characters (e.g., Korean filenames)
+            blob_path = unquote(blob_path)
 
             logger.info(f"Downloading image from GCS: {blob_path}")
 
