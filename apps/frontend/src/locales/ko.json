@@ -38,7 +38,8 @@
     "justNow": "방금 전",
     "minutesAgo": "{n}분 전",
     "hoursAgo": "{n}시간 전",
-    "daysAgo": "{n}일 전"
+    "daysAgo": "{n}일 전",
+    "status": "상태"
   },
   "tokens": {
     "balance": "토큰 잔액",

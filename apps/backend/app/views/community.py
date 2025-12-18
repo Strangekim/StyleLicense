@@ -9,7 +9,7 @@ from rest_framework.pagination import PageNumberPagination
 from django.db.models import Prefetch
 from django.db import transaction
 
-from app.models import Generation, Like, Comment, Follow, User
+from app.models import Generation, Like, Comment, Follow, User, Artist
 from app.serializers.community import (
     GenerationFeedSerializer,
     GenerationDetailSerializer,
@@ -310,6 +310,11 @@ class UserViewSet(viewsets.GenericViewSet):
 
         IMPORTANT: User MUST have a signature before upgrading to artist.
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error("[DEBUG] upgrade_to_artist function called")
+        logger.error(f"[DEBUG] User: {request.user.id if request.user else 'None'}")
+
         user = request.user
 
         # Check if already an artist

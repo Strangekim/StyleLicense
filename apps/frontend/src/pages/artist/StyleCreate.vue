@@ -55,8 +55,19 @@ onMounted(async () => {
   }
 })
 
-// Computed: Edit mode if existing style exists
-const isEditMode = computed(() => !!existingStyle.value)
+// Computed: Check training status
+const isTrainingInProgress = computed(() => {
+  if (!existingStyle.value) return false
+  const status = existingStyle.value.training_status
+  return status === 'pending' || status === 'training'
+})
+
+// Computed: Edit mode if existing style exists AND training is completed
+const isEditMode = computed(() => {
+  if (!existingStyle.value) return false
+  const status = existingStyle.value.training_status
+  return status === 'completed' || status === 'failed'
+})
 
 // Form state
 const formData = ref({
@@ -347,8 +358,73 @@ const resetForm = () => {
         </div>
       </div>
 
+      <!-- Training in Progress State -->
+      <div v-else-if="isTrainingInProgress" class="max-w-2xl mx-auto">
+        <Card class="text-center py-12">
+          <!-- Animated Icon -->
+          <div class="mb-6">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-100 rounded-full">
+              <svg class="w-10 h-10 text-blue-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Title and Description -->
+          <h2 class="text-2xl font-bold text-neutral-900 mb-3">
+            {{ $t('styleCreate.trainingInProgress') }}
+          </h2>
+          <p class="text-neutral-600 mb-8">
+            {{ $t('styleCreate.trainingDescription') }}
+          </p>
+
+          <!-- Progress Bar (if training_progress is available) -->
+          <div v-if="existingStyle.training_progress" class="mb-6">
+            <div class="w-full bg-neutral-200 rounded-full h-3 overflow-hidden">
+              <div
+                class="bg-blue-600 h-3 rounded-full transition-all duration-500"
+                :style="{ width: `${existingStyle.training_progress}%` }"
+              ></div>
+            </div>
+            <p class="text-sm text-neutral-600 mt-2">
+              {{ existingStyle.training_progress }}% {{ $t('common.loading') }}
+            </p>
+          </div>
+
+          <!-- Style Info -->
+          <div class="bg-neutral-50 rounded-lg p-6 mb-8 text-left">
+            <div class="space-y-3">
+              <div>
+                <p class="text-sm text-neutral-500 mb-1">{{ $t('styleCreate.styleName') }}</p>
+                <p class="font-medium text-neutral-900">{{ existingStyle.name }}</p>
+              </div>
+              <div v-if="existingStyle.description">
+                <p class="text-sm text-neutral-500 mb-1">{{ $t('styleCreate.description') }}</p>
+                <p class="text-neutral-700">{{ existingStyle.description }}</p>
+              </div>
+              <div>
+                <p class="text-sm text-neutral-500 mb-1">{{ $t('common.status') }}</p>
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                  {{ $t(`styleCreate.status.${existingStyle.training_status}`) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            @click="router.push('/marketplace')"
+          >
+            {{ $t('styleCreate.goToMarketplace') }}
+          </Button>
+        </Card>
+      </div>
+
       <!-- Form -->
-      <form v-if="!isCheckingExistingStyle" @submit.prevent="handleSubmit" class="space-y-8">
+      <form v-else-if="!isCheckingExistingStyle" @submit.prevent="handleSubmit" class="space-y-8">
         <!-- Basic Info -->
         <Card>
           <h2 class="text-xl font-semibold text-neutral-900 mb-4">
