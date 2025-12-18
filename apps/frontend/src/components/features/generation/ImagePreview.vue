@@ -26,13 +26,13 @@ const isDownloading = ref(false)
 
 // Download image
 const handleDownload = async () => {
-  if (!props.generation.image_url) return
+  if (!props.generation.result_url) return
 
   try {
     isDownloading.value = true
 
     // Fetch the image
-    const response = await fetch(props.generation.image_url)
+    const response = await fetch(props.generation.result_url)
     const blob = await response.blob()
 
     // Create download link
@@ -90,8 +90,8 @@ const formatDate = (dateString) => {
     <!-- Image -->
     <div class="relative bg-neutral-100 aspect-square">
       <img
-        v-if="generation.image_url && generation.status === 'completed'"
-        :src="generation.image_url"
+        v-if="generation.result_url && generation.status === 'completed'"
+        :src="generation.result_url"
         :alt="`Generation ${generation.id}`"
         class="w-full h-full object-contain"
       />
