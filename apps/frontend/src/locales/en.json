@@ -41,6 +41,19 @@
     "hoursAgo": "{n}h ago",
     "daysAgo": "{n}d ago"
   },
+  "alerts": {
+    "insufficientTokens": {
+      "title": "Insufficient Tokens",
+      "message": "You don't have enough tokens to complete this action. Would you like to purchase more tokens?",
+      "confirmButton": "Purchase Tokens",
+      "cancelButton": "Cancel"
+    },
+    "error": {
+      "title": "Error",
+      "message": "An error occurred. Please try again.",
+      "confirmButton": "OK"
+    }
+  },
   "tokens": {
     "balance": "Token Balance",
     "purchase": "Purchase Tokens",

@@ -310,5 +310,18 @@
   "signatureCanvas": {
     "clear": "지우기",
     "drawYourSignature": "위에 서명을 그려주세요"
+  },
+  "alerts": {
+    "insufficientTokens": {
+      "title": "토큰이 부족합니다",
+      "message": "이 작업을 완료하기 위한 토큰이 부족합니다. 토큰을 구매하시겠습니까?",
+      "confirmButton": "토큰 구매",
+      "cancelButton": "취소"
+    },
+    "error": {
+      "title": "오류",
+      "message": "오류가 발생했습니다. 다시 시도해주세요.",
+      "confirmButton": "확인"
+    }
   }
 }

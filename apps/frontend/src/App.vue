@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import Alert from '@/components/shared/Alert.vue'
 
 const authStore = useAuthStore()
 
@@ -12,4 +13,5 @@ onMounted(async () => {
 
 <template>
   <router-view />
+  <Alert />
 </template>
