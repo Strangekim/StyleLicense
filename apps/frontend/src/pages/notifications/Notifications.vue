@@ -71,17 +71,17 @@
               <div class="flex-shrink-0 relative">
                 <!-- User Avatar (for social notifications) -->
                 <div
-                  v-if="notification.user?.avatar"
+                  v-if="notification.actor_profile_image"
                   class="w-12 h-12 rounded-full overflow-hidden bg-gray-200 ring-2"
                   :class="getNotificationRingClass(notification.type)"
                 >
                   <img
-                    :src="notification.user.avatar"
-                    :alt="notification.user.username"
+                    :src="notification.actor_profile_image"
+                    :alt="notification.actor_username"
                     class="w-full h-full object-cover"
                   />
                 </div>
-                <!-- Icon (for system notifications) -->
+                <!-- Icon (for system notifications or no avatar) -->
                 <div
                   v-else
                   class="w-12 h-12 rounded-full flex items-center justify-center"
