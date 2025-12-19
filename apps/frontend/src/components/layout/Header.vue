@@ -54,14 +54,18 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useNotificationStore } from '@/stores/notification'
+import { useAuthStore } from '@/stores/auth'
 
 // i18n setup
 const { locale } = useI18n()
 
-// TODO: Connect to notification store
-const hasUnread = ref(false)
+// Notification store
+const notificationStore = useNotificationStore()
+const authStore = useAuthStore()
+const { hasUnread } = notificationStore
 
 // Toggle language between en and ko
 const toggleLanguage = () => {
@@ -78,5 +82,17 @@ const loadPreferredLanguage = () => {
   }
 }
 
-loadPreferredLanguage()
+// Fetch unread notification count on mount
+onMounted(async () => {
+  loadPreferredLanguage()
+
+  // Only fetch if user is authenticated
+  if (authStore.isAuthenticated) {
+    try {
+      await notificationStore.fetchNotifications({ page: 1, page_size: 1 })
+    } catch (err) {
+      console.error('Failed to fetch notification count:', err)
+    }
+  }
+})
 </script>
