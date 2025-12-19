@@ -4,10 +4,7 @@
       <!-- Header -->
       <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div class="max-w-3xl mx-auto px-4 py-4">
-          <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-gray-900">
-              {{ $t('notifications.title') }}
-            </h1>
+          <div class="flex items-center justify-end">
             <button
               v-if="hasUnread"
               @click="handleMarkAllAsRead"
