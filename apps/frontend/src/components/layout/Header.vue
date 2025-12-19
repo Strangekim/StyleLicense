@@ -56,16 +56,17 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { storeToRefs } from 'pinia'
 import { useNotificationStore } from '@/stores/notification'
 import { useAuthStore } from '@/stores/auth'
 
 // i18n setup
 const { locale } = useI18n()
 
-// Notification store
+// Notification store - use storeToRefs to maintain reactivity
 const notificationStore = useNotificationStore()
 const authStore = useAuthStore()
-const { hasUnread } = notificationStore
+const { hasUnread } = storeToRefs(notificationStore)
 
 // Toggle language between en and ko
 const toggleLanguage = () => {

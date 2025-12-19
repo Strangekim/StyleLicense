@@ -146,14 +146,15 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import { useNotificationStore } from '@/stores/notification'
 import AppLayout from '@/components/layout/AppLayout.vue'
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
 
-// State
-const { notifications, loading, error, hasUnread } = notificationStore
+// State - use storeToRefs to maintain reactivity
+const { notifications, loading, error, hasUnread } = storeToRefs(notificationStore)
 
 // Methods
 onMounted(async () => {
