@@ -30,12 +30,11 @@ COPY . .
 # Create directory for static files
 RUN mkdir -p /app/staticfiles
 
+# Set permissions for entrypoint script
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Collect static files (will be overridden by volume in development)
 RUN python manage.py collectstatic --noinput || true
-
-# Copy and set permissions for entrypoint script
-COPY docker-entrypoint.sh /app/
-RUN chmod +x /app/docker-entrypoint.sh
 
 # Create a non-root user
 RUN useradd -m -u 1000 django && \

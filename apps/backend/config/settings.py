@@ -263,6 +263,9 @@ API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 # Internal API Token for webhook authentication
 INTERNAL_API_TOKEN = os.getenv("INTERNAL_API_TOKEN", "")
 
+# Google Cloud Storage Configuration
+GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "stylelicense-media")
+
 # Logging Configuration
 LOGGING = {
     'version': 1,
