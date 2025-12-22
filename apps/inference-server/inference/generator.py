@@ -1,11 +1,13 @@
 """Image generation using Stable Diffusion with LoRA weights."""
 
 import os
+import json
 import logging
 from typing import Optional, Callable, Tuple
 from PIL import Image
 import torch
 from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler
+from peft import PeftModel
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +95,9 @@ class ImageGenerator:
         """
         Load LoRA weights into pipeline.
 
+        Supports both PEFT format (adapter_config.json + adapter_model.safetensors)
+        and Diffusers native format.
+
         Args:
             lora_weights_path: Path to LoRA weights directory or file
 
@@ -104,8 +109,37 @@ class ImageGenerator:
 
         logger.info(f"Loading LoRA weights from: {lora_weights_path}")
 
-        # Load LoRA weights
-        self.pipeline.load_lora_weights(lora_weights_path)
+        # Check if it's PEFT format (has adapter_config.json)
+        adapter_config_path = os.path.join(lora_weights_path, "adapter_config.json")
+        is_peft_format = os.path.exists(adapter_config_path)
+
+        if is_peft_format:
+            logger.info("Detected PEFT format LoRA weights")
+
+            # Load PEFT adapter into UNet
+            try:
+                logger.info("Loading PEFT adapter into UNet...")
+                self.pipeline.unet = PeftModel.from_pretrained(
+                    self.pipeline.unet,
+                    lora_weights_path,
+                    adapter_name="default"
+                )
+                logger.info("PEFT adapter loaded successfully")
+
+            except Exception as e:
+                logger.error(f"Failed to load PEFT adapter: {e}", exc_info=True)
+                raise RuntimeError(f"Failed to load PEFT LoRA weights") from e
+        else:
+            logger.info("Detected Diffusers native format LoRA weights")
+
+            # Load using standard diffusers method
+            try:
+                self.pipeline.load_lora_weights(lora_weights_path)
+                logger.info("Diffusers LoRA weights loaded successfully")
+
+            except Exception as e:
+                logger.error(f"Failed to load Diffusers LoRA weights: {e}", exc_info=True)
+                raise RuntimeError(f"Failed to load LoRA weights") from e
 
         logger.info("LoRA weights loaded successfully")
 

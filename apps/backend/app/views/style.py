@@ -6,6 +6,11 @@ Endpoints:
 - GET /api/styles/:id/ - Retrieve style detail
 - POST /api/styles/ - Create new style and start training
 - DELETE /api/styles/:id/ - Delete style (owner only)
+
+Rate Limiting (DDoS Protection):
+- list: 200 requests/hour per IP
+- retrieve: 300 requests/hour per IP
+- create: 10 requests/hour per user (authenticated)
 """
 import logging
 
@@ -14,13 +19,15 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.db.models import Q, Prefetch
-from django.conf import settings
+from django_ratelimit.decorators import ratelimit
+from django.utils.decorators import method_decorator
 
 from app.models import Style, Artwork, StyleTag
 from app.serializers import (
     StyleListSerializer,
     StyleDetailSerializer,
     StyleCreateSerializer,
+    StyleUpdateSerializer,
 )
 from app.views.base import BaseViewSet
 from app.permissions import IsArtist, IsOwnerOrReadOnly
@@ -70,11 +77,22 @@ class StyleViewSet(BaseViewSet):
         """Use different serializers by action."""
         if self.action == "list":
             return StyleListSerializer
-        elif self.action == "retrieve":
+        elif self.action == "retrieve" or self.action == "my_style":
             return StyleDetailSerializer
         elif self.action == "create":
             return StyleCreateSerializer
+        elif self.action in ["update", "partial_update"]:
+            return StyleUpdateSerializer
         return StyleListSerializer
+
+    @method_decorator(ratelimit(key='ip', rate='200/h', method='GET', block=True))
+    def list(self, request, *args, **kwargs):
+        """
+        List styles with filtering and sorting.
+
+        Rate limit: 200 requests/hour per IP address.
+        """
+        return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
         """
@@ -143,8 +161,13 @@ class StyleViewSet(BaseViewSet):
 
         return queryset
 
+    @method_decorator(ratelimit(key='ip', rate='300/h', method='GET', block=True))
     def retrieve(self, request, *args, **kwargs):
-        """Retrieve style detail."""
+        """
+        Retrieve style detail.
+
+        Rate limit: 300 requests/hour per IP address.
+        """
         instance = self.get_object()
         serializer = self.get_serializer(instance)
         return Response({"success": True, "data": serializer.data})
@@ -194,42 +217,87 @@ class StyleViewSet(BaseViewSet):
             logger.error(f"[Style Create] Error during save: {str(e)}", exc_info=True)
             raise
 
-        # Get training images from request
+        # Get training images and captions from request
         training_images = request.FILES.getlist("training_images")
+        captions = request.POST.getlist("captions")
 
         # Upload images to GCS and update Artwork records
         from app.services.gcs_service import get_gcs_service
 
+        gcs_service = get_gcs_service()
         image_paths = []
         artworks = style.artworks.all()
-        gcs_service = get_gcs_service()
+
+        # Collect all caption words for tag extraction
+        all_caption_words = []
 
         for idx, (artwork, image_file) in enumerate(zip(artworks, training_images)):
             try:
-                # Upload to GCS
+                # Get caption for this image (if available)
+                caption = captions[idx] if idx < len(captions) else None
+
+                # Upload to GCS (with caption)
                 gcs_uri = gcs_service.upload_training_image(
                     style_id=style.id,
                     image_file=image_file.file,
                     image_index=idx,
-                    filename=image_file.name
+                    filename=image_file.name,
+                    caption=caption
                 )
 
-                # Update artwork with GCS URL
+                # Update artwork with GCS URI and caption
                 artwork.image_url = gcs_uri
+                artwork.caption = caption
                 artwork.is_valid = True
-                artwork.save(update_fields=["image_url", "is_valid"])
+                artwork.save(update_fields=["image_url", "caption", "is_valid"])
                 image_paths.append(gcs_uri)
 
-                logger.info(f"[Style Create] Uploaded image {idx} to GCS: {gcs_uri}")
+                # Extract words from caption for tags
+                if caption:
+                    # Split by comma and strip whitespace
+                    words = [word.strip().lower() for word in caption.split(',')]
+                    all_caption_words.extend([w for w in words if w])
 
             except Exception as e:
-                logger.error(f"[Style Create] Failed to upload image {idx}: {e}")
-                # Use placeholder if GCS upload fails
-                placeholder_url = f"gs://{settings.GCS_BUCKET_NAME}/training/{style.id}/image_{idx}.jpg"
-                artwork.image_url = placeholder_url
+                logger.error(f"Failed to upload image {idx} for style {style.id}: {e}")
+                # Mark as invalid if upload fails
                 artwork.is_valid = False
-                artwork.save(update_fields=["image_url", "is_valid"])
-                image_paths.append(placeholder_url)
+                artwork.save(update_fields=["is_valid"])
+
+        # Create tags from captions and style name
+        from app.models import Tag, StyleTag
+
+        # Collect all unique tag names
+        tag_names_set = set()
+
+        # 1. Add style name as a tag
+        tag_names_set.add(style.name.strip().lower())
+
+        # 2. Add all caption words as tags
+        tag_names_set.update(all_caption_words)
+
+        # Convert to list and sort for consistent ordering
+        unique_tag_names = sorted(list(tag_names_set))
+
+        # Get current sequence number (in case serializer already created some tags)
+        existing_tags_count = style.style_tags.count()
+        sequence_start = existing_tags_count
+
+        # Create or get tags and associate with style
+        logger.info(f"[Style Create] Creating {len(unique_tag_names)} tags for style {style.id}")
+        for idx, tag_name in enumerate(unique_tag_names):
+            if not tag_name or len(tag_name) > 100:
+                continue
+
+            tag, created = Tag.objects.get_or_create(name=tag_name)
+
+            # Check if this tag is already associated with this style
+            if not StyleTag.objects.filter(style=style, tag=tag).exists():
+                StyleTag.objects.create(style=style, tag=tag, sequence=sequence_start + idx)
+                # Increment usage count
+                tag.usage_count += 1
+                tag.save(update_fields=["usage_count"])
+                logger.info(f"[Style Create] Added tag '{tag_name}' (created={created})")
 
         # Send training task to RabbitMQ
         task_id = None
@@ -300,4 +368,227 @@ class StyleViewSet(BaseViewSet):
         return Response(
             {"success": True, "message": "Style deleted successfully"},
             status=status.HTTP_204_NO_CONTENT,
+        )
+
+    def update(self, request, *args, **kwargs):
+        """
+        Update style (PUT).
+
+        MVP Limitation: Only name and description can be updated.
+        Only owner can update their style.
+        """
+        instance = self.get_object()
+
+        # Check if user is owner
+        if instance.artist != request.user:
+            return Response(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "PERMISSION_DENIED",
+                        "message": "You can only update your own styles",
+                    },
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # Return updated style with full details
+        response_serializer = StyleDetailSerializer(instance)
+        return Response(
+            {
+                "success": True,
+                "data": response_serializer.data,
+                "message": "Style updated successfully",
+            }
+        )
+
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Partially update style (PATCH).
+
+        MVP Limitation: Only name and description can be updated.
+        Only owner can update their style.
+        """
+        instance = self.get_object()
+
+        # Check if user is owner
+        if instance.artist != request.user:
+            return Response(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "PERMISSION_DENIED",
+                        "message": "You can only update your own styles",
+                    },
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # Return updated style with full details
+        response_serializer = StyleDetailSerializer(instance)
+        return Response(
+            {
+                "success": True,
+                "data": response_serializer.data,
+                "message": "Style updated successfully",
+            }
+        )
+
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated, IsArtist], url_path='my-style')
+    def my_style(self, request):
+        """
+        Get the current artist's active style.
+
+        MVP Limitation: Artists can only have 1 active style.
+        Returns 404 if no style exists.
+
+        Endpoint: GET /api/styles/my-style/
+        """
+        logger.info(f"[my_style] Request from user_id={request.user.id}, role={request.user.role}")
+
+        try:
+            style = Style.objects.select_related("artist").prefetch_related(
+                Prefetch(
+                    "style_tags",
+                    queryset=StyleTag.objects.select_related("tag").order_by("sequence"),
+                ),
+                Prefetch("artworks", queryset=Artwork.objects.filter(is_valid=True)),
+            ).get(artist=request.user, is_active=True)
+
+            logger.info(f"[my_style] Found style: id={style.id}, name={style.name}")
+            serializer = self.get_serializer(style)
+            return Response({"success": True, "data": serializer.data})
+
+        except Style.DoesNotExist:
+            logger.warning(f"[my_style] No active style found for user_id={request.user.id}")
+            return Response(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "STYLE_NOT_FOUND",
+                        "message": "You don't have an active style yet",
+                    },
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+    @action(detail=True, methods=["get"], permission_classes=[AllowAny], url_path='example-generations')
+    def example_generations(self, request, pk=None):
+        """
+        Get public example generations for this style.
+
+        Returns up to 10 recent public generations created with this style.
+
+        Endpoint: GET /api/styles/:id/example-generations/
+        """
+        style = self.get_object()
+
+        from app.models import Generation
+
+        # Get recent public generations for this style
+        generations = Generation.objects.filter(
+            style=style,
+            status='completed',
+            is_public=True
+        ).order_by('-created_at')[:10]
+
+        # Simple serialization
+        data = [
+            {
+                'id': gen.id,
+                'image_url': gen.result_url,
+                'prompt': ', '.join(gen.generation_progress.get('prompt_tags', [])) if gen.generation_progress else '',
+                'created_at': gen.created_at.isoformat() if gen.created_at else None,
+            }
+            for gen in generations
+        ]
+
+        return Response({
+            'success': True,
+            'data': data
+        })
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated, IsOwnerOrReadOnly], url_path='regenerate-tags')
+    def regenerate_tags(self, request, pk=None):
+        """
+        Regenerate tags for a style based on its name and captions.
+
+        This is a temporary endpoint for fixing existing styles.
+        Only the owner can regenerate tags.
+
+        Endpoint: POST /api/styles/:id/regenerate-tags/
+        """
+        style = self.get_object()
+
+        # Check ownership
+        if style.artist != request.user:
+            return Response(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "PERMISSION_DENIED",
+                        "message": "You can only regenerate tags for your own styles",
+                    },
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        logger.info(f"[Regenerate Tags] Starting for style {style.id}: {style.name}")
+
+        # Collect caption words
+        all_caption_words = []
+        artworks = style.artworks.filter(is_valid=True)
+
+        for artwork in artworks:
+            if artwork.caption:
+                words = [word.strip().lower() for word in artwork.caption.split(',')]
+                all_caption_words.extend([w for w in words if w])
+
+        # Collect unique tag names
+        tag_names_set = set()
+        tag_names_set.add(style.name.strip().lower())
+        tag_names_set.update(all_caption_words)
+
+        unique_tag_names = sorted(list(tag_names_set))
+
+        # Get existing tags count
+        existing_count = style.style_tags.count()
+        sequence_start = existing_count
+
+        # Create tags
+        tags_created = 0
+        for idx, tag_name in enumerate(unique_tag_names):
+            if not tag_name or len(tag_name) > 100:
+                continue
+
+            tag, _ = Tag.objects.get_or_create(name=tag_name)
+
+            if not StyleTag.objects.filter(style=style, tag=tag).exists():
+                StyleTag.objects.create(style=style, tag=tag, sequence=sequence_start + idx)
+                tag.usage_count += 1
+                tag.save(update_fields=['usage_count'])
+                tags_created += 1
+                logger.info(f"[Regenerate Tags] Added tag '{tag_name}'")
+
+        logger.info(f"[Regenerate Tags] Created {tags_created} new tags for style {style.id}")
+
+        return Response(
+            {
+                "success": True,
+                "data": {
+                    "style_id": style.id,
+                    "style_name": style.name,
+                    "tags_created": tags_created,
+                    "total_tags": style.style_tags.count(),
+                },
+                "message": f"Successfully regenerated tags: {tags_created} new tags created",
+            }
         )

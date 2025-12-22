@@ -38,7 +38,8 @@
     "justNow": "방금 전",
     "minutesAgo": "{n}분 전",
     "hoursAgo": "{n}시간 전",
-    "daysAgo": "{n}일 전"
+    "daysAgo": "{n}일 전",
+    "status": "상태"
   },
   "tokens": {
     "balance": "토큰 잔액",
@@ -96,7 +97,8 @@
       "enterPrompt": "프롬프트를 입력해주세요",
       "promptTooLong": "프롬프트는 500자 이내로 작성해주세요",
       "englishOnly": "영어와 공백만 입력 가능합니다",
-      "generationFailed": "생성을 시작하지 못했습니다"
+      "generationFailed": "생성을 시작하지 못했습니다",
+      "insufficientTokensServer": "토큰이 부족합니다. 이미지를 생성하려면 토큰을 구매해주세요."
     },
     "status": {
       "queued": "대기 중",
@@ -141,7 +143,13 @@
     "placeholder": "댓글을 입력하세요...",
     "post": "게시",
     "posting": "게시 중...",
-    "empty": "첫 댓글을 남겨보세요"
+    "empty": "첫 댓글을 남겨보세요",
+    "reply": "답글",
+    "replyPlaceholder": "답글을 입력하세요...",
+    "replyingTo": "님에게 답글 작성 중",
+    "delete": "삭제",
+    "cancel": "취소",
+    "deleteConfirm": "정말 삭제하시겠습니까?"
   },
   "profile": {
     "generations": "생성",
@@ -163,6 +171,13 @@
   "styleCreate": {
     "title": "새 스타일 만들기",
     "subtitle": "작품을 업로드하여 맞춤형 AI 스타일 모델을 학습하세요",
+    "editTitle": "스타일 편집",
+    "editSubtitle": "스타일 이름과 설명을 수정하세요 (MVP: 학습 이미지 수정 불가)",
+    "checkingTrainingStatus": "학습 상태 확인 중...",
+    "checkingExistingStyle": "기존 스타일 확인 중...",
+    "trainingInProgress": "학습이 진행 중입니다",
+    "trainingDescription": "스타일 모델 학습이 완료될 때까지 기다려주세요. 완료되면 알림을 보내드립니다.",
+    "goToMarketplace": "마켓플레이스로 이동",
     "basicInfo": "기본 정보",
     "styleName": "스타일 이름",
     "styleNamePlaceholder": "예: 수채화 꿈",
@@ -190,7 +205,15 @@
     "remove": "제거",
     "uploadingStyleModel": "스타일 모델 업로드 중...",
     "createStyle": "스타일 만들기",
+    "updateStyle": "스타일 수정",
+    "updateSuccess": "스타일이 성공적으로 수정되었습니다!",
     "cancel": "취소",
+    "status": {
+      "pending": "대기 중",
+      "training": "학습 중",
+      "completed": "완료",
+      "failed": "실패"
+    },
     "errors": {
       "invalidImageType": "JPG와 PNG 이미지만 허용됩니다",
       "imageTooLarge": "이미지 크기는 10MB 이하여야 합니다",
@@ -199,6 +222,7 @@
       "maximumImagesExceeded": "최대 100개의 학습 이미지만 허용됩니다",
       "minimumPrice": "가격은 최소 1 토큰이어야 합니다",
       "createFailed": "스타일 생성에 실패했습니다",
+      "updateFailed": "스타일 수정에 실패했습니다",
       "tagEnglishOnly": "태그는 영어와 공백만 입력 가능합니다"
     }
   },
@@ -218,7 +242,12 @@
     "email": "이메일",
     "emailCannotBeChanged": "이메일은 변경할 수 없습니다",
     "signature": "서명",
+    "signatureRequiredForArtist": "작가 계정으로 전환하려면 서명이 필요합니다",
     "signaturePlaceholder": "서명 입력",
+    "drawSignature": "그리기",
+    "uploadSignature": "업로드",
+    "uploadSignatureImage": "서명 이미지 업로드",
+    "clearSignature": "지우기",
     "upload": "업로드",
     "dangerZone": "위험 구역",
     "deleteAccount": "계정 삭제",
@@ -228,13 +257,16 @@
       "bioTooLong": "소개는 150자 이내로 작성해주세요",
       "saveFailed": "프로필 저장에 실패했습니다. 다시 시도해주세요.",
       "photoTooLarge": "파일 크기는 5MB 이하여야 합니다",
-      "signatureTooLarge": "파일 크기는 2MB 이하여야 합니다"
+      "signatureTooLarge": "파일 크기는 2MB 이하여야 합니다",
+      "signatureRequired": "작가 계정으로 전환하기 전에 서명을 제공해주세요.",
+      "upgradeFailed": "프로페셔널 계정으로 전환하지 못했습니다. 다시 시도해주세요."
     },
     "confirmUnsavedChanges": "저장하지 않은 변경사항이 있습니다. 나가시겠습니까?",
     "confirmSwitchToProfessional": "프로페셔널 계정으로 전환하시겠습니까? 스타일을 생성하고 판매할 수 있습니다.",
     "confirmDeleteAccount": "계정을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.",
     "confirmDeleteAccountFinal": "모든 데이터가 영구적으로 삭제됩니다. 확인하려면 'DELETE'를 입력하세요.",
-    "deleteNotImplemented": "계정 삭제는 아직 구현되지 않았습니다"
+    "deleteNotImplemented": "계정 삭제는 아직 구현되지 않았습니다",
+    "upgradedToArtist": "프로페셔널 계정으로 전환되었습니다!"
   },
   "communityDetail": {
     "backToCommunity": "커뮤니티로 돌아가기",
@@ -245,6 +277,8 @@
     "less": "접기",
     "viewAllComments": "댓글 {count}개 모두 보기",
     "loadFailed": "이미지 세부정보를 불러오지 못했습니다",
+    "editDescription": "설명 편집",
+    "addDescription": "설명 추가",
     "justNow": "방금 전",
     "minuteAgo": "{count}분 전",
     "minutesAgo": "{count}분 전",
@@ -255,9 +289,9 @@
   },
   "styleDetail": {
     "trainingImage": "학습 이미지",
-    "subtitle": "새로운 아티스틱 스타일입니다",
     "styledBy": "스타일 제공",
     "exampleGenerateImage": "생성 이미지 예시",
+    "noExampleGenerations": "아직 생성된 예시가 없습니다",
     "warningTitle": "이런 태그는 작성하지 마세요",
     "warningMessage": "태그나 설명을 추가할 때 부적절하거나 오해의 소지가 있는 단어는 사용하지 마세요",
     "tagInputPlaceholder": "이미지 생성 프롬프트 입력",
@@ -270,6 +304,33 @@
     "minutesAgo": "{count}분 전",
     "hoursAgo": "{count}시간 전",
     "daysAgo": "{count}일 전",
-    "weeksAgo": "{count}주 전"
+    "weeksAgo": "{count}주 전",
+    "generationCost": "생성 비용",
+    "tokensWillBeDeducted": "이미지를 생성하면 토큰이 차감됩니다"
+  },
+  "signatureCanvas": {
+    "clear": "지우기",
+    "drawYourSignature": "위에 서명을 그려주세요"
+  },
+  "alerts": {
+    "insufficientTokens": {
+      "title": "토큰이 부족합니다",
+      "message": "이 작업을 완료하기 위한 토큰이 부족합니다. 토큰을 구매하시겠습니까?",
+      "confirmButton": "토큰 구매",
+      "cancelButton": "취소"
+    },
+    "generationSuccess": {
+      "title": "생성이 시작되었습니다!",
+      "message": "이미지가 생성되고 있습니다. 프로필 페이지에서 진행 상황을 확인할 수 있습니다.",
+      "confirmButton": "프로필로 이동"
+    },
+    "generationFailed": {
+      "message": "생성을 시작하지 못했습니다. 다시 시도해주세요."
+    },
+    "error": {
+      "title": "오류",
+      "message": "오류가 발생했습니다. 다시 시도해주세요.",
+      "confirmButton": "확인"
+    }
   }
 }

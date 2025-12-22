@@ -1,5 +1,8 @@
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
+import { useAlertStore } from '@/stores/alert'
+import i18n from '@/i18n'
+import router from '@/router'
 
 const API_BASE_URL = 'https://stylelicense-backend-606831968092.asia-northeast3.run.app'
 
@@ -54,6 +57,25 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
     const authStore = useAuthStore()
+
+    // Handle 402 Payment Required (Insufficient Tokens)
+    if (error.response?.status === 402) {
+      const alertStore = useAlertStore()
+      const { t } = i18n.global
+
+      alertStore.show({
+        type: 'warning',
+        title: t('alerts.insufficientTokens.title'),
+        message: t('alerts.insufficientTokens.message'),
+        confirmText: t('alerts.insufficientTokens.confirmButton'),
+        cancelText: t('alerts.insufficientTokens.cancelButton'),
+        onConfirm: () => {
+          router.push('/tokens')
+        }
+      })
+
+      return Promise.reject(error)
+    }
 
     // Check if the error is a 401 and it's not a request to the refresh token endpoint
     if (error.response?.status === 401 && !originalRequest._retry) {

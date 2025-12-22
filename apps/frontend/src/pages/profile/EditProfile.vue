@@ -123,46 +123,85 @@
           </p>
         </div>
 
-        <!-- Signature -->
+        <!-- Signature (Required for Artist) -->
         <div class="mb-4">
-          <label for="signature" class="block text-sm font-medium text-gray-700 mb-2">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
             {{ $t('editProfile.signature') }}
+            <span v-if="!isProfessional" class="text-red-600">*</span>
           </label>
+          <p class="text-xs text-gray-500 mb-3">
+            {{ $t('editProfile.signatureRequiredForArtist') || 'Signature is required to upgrade to artist account' }}
+          </p>
 
-          <!-- Signature Display -->
-          <div v-if="form.signature || previewSignature" class="mb-2 p-4 border border-gray-300 rounded-lg bg-gray-50">
-            <img
-              v-if="previewSignature || (form.signature && form.signature.startsWith('http'))"
-              :src="previewSignature || form.signature"
-              alt="Signature"
-              class="max-h-20 object-contain"
-            />
-            <p v-else class="text-gray-700 font-signature text-2xl">
-              {{ form.signature }}
-            </p>
+          <!-- Mode Tabs -->
+          <div class="flex gap-2 mb-3">
+            <button
+              type="button"
+              @click="signatureMode = 'canvas'"
+              :class="[
+                'px-4 py-2 rounded-lg font-medium text-sm transition-colors',
+                signatureMode === 'canvas'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ]"
+            >
+              {{ $t('editProfile.drawSignature') || 'Draw' }}
+            </button>
+            <button
+              type="button"
+              @click="signatureMode = 'image'"
+              :class="[
+                'px-4 py-2 rounded-lg font-medium text-sm transition-colors',
+                signatureMode === 'image'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ]"
+            >
+              {{ $t('editProfile.uploadSignature') || 'Upload' }}
+            </button>
           </div>
 
-          <!-- Signature Input Options -->
-          <div class="flex gap-2">
-            <input
-              id="signature"
-              v-model="form.signature"
-              type="text"
-              class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              :placeholder="$t('editProfile.signaturePlaceholder')"
+          <!-- Canvas Drawing Mode -->
+          <div v-if="signatureMode === 'canvas'">
+            <SignatureCanvas
+              ref="signatureCanvasRef"
+              :width="400"
+              :height="150"
+              @update:signature="handleSignatureCanvasUpdate"
             />
-            <label class="px-4 py-2 bg-gray-100 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-200 cursor-pointer flex items-center">
-              <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              {{ $t('editProfile.upload') }}
-              <input
-                type="file"
-                accept="image/*"
-                @change="handleSignatureChange"
-                class="hidden"
+          </div>
+
+          <!-- Image Upload Mode -->
+          <div v-else-if="signatureMode === 'image'">
+            <div v-if="!previewSignatureImage" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+              <label class="cursor-pointer">
+                <svg class="w-12 h-12 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p class="text-sm text-gray-600 mb-2">{{ $t('editProfile.uploadSignatureImage') || 'Upload signature image' }}</p>
+                <p class="text-xs text-gray-500">PNG, JPG (max 2MB)</p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  @change="handleSignatureImageUpload"
+                  class="hidden"
+                />
+              </label>
+            </div>
+            <div v-else class="border border-gray-300 rounded-lg p-4 bg-gray-50">
+              <img
+                :src="previewSignatureImage"
+                alt="Signature"
+                class="max-h-32 mx-auto object-contain mb-2"
               />
-            </label>
+              <button
+                type="button"
+                @click="clearSignature"
+                class="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
+              >
+                {{ $t('editProfile.clearSignature') || 'Clear' }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -185,11 +224,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { updateUserProfile, upgradeToArtist } from '@/services/user.service'
+import SignatureCanvas from '@/components/signature/SignatureCanvas.vue'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -200,16 +240,25 @@ const loading = ref(false)
 const saving = ref(false)
 const isProfessional = ref(false)
 const previewAvatar = ref(null)
-const previewSignature = ref(null)
 const avatarFile = ref(null)
-const signatureFile = ref(null)
+
+// Signature state
+const signatureCanvasRef = ref(null)
+const signatureDrawingData = ref(null) // Canvas drawing as data URL
+const signatureImageFile = ref(null) // Uploaded signature image file
+const previewSignatureImage = ref(null) // Preview for uploaded image
+const signatureMode = ref('canvas') // 'canvas' or 'image'
 
 const form = ref({
   username: '',
   bio: '',
   email: '',
   avatar: null,
-  signature: '',
+})
+
+// Computed: Check if user has provided any signature
+const hasSignature = computed(() => {
+  return signatureDrawingData.value || signatureImageFile.value || previewSignatureImage.value
 })
 
 // Methods
@@ -220,6 +269,9 @@ onMounted(async () => {
 async function loadProfile() {
   loading.value = true
   try {
+    console.log('[DEBUG] Loading profile...')
+    console.log('[DEBUG] Auth user:', authStore.user)
+
     // Load profile data from auth store
     if (authStore.user) {
       form.value = {
@@ -227,11 +279,24 @@ async function loadProfile() {
         bio: authStore.user.bio || '',
         email: authStore.user.email || '',
         avatar: authStore.user.profile_image || null,
-        signature: authStore.user.artist_profile?.signature_text || '',
+      }
+
+      console.log('[DEBUG] User role:', authStore.user.role)
+      console.log('[DEBUG] Artist object:', authStore.user.artist)
+      console.log('[DEBUG] Signature URL from artist:', authStore.user.artist?.signature_image_url)
+
+      // Load existing signature if artist
+      if (authStore.user.artist?.signature_image_url) {
+        console.log('[DEBUG] Loading existing signature:', authStore.user.artist.signature_image_url)
+        previewSignatureImage.value = authStore.user.artist.signature_image_url
+        signatureMode.value = 'image'
+      } else {
+        console.log('[DEBUG] No existing signature found')
       }
 
       // Check if user is professional (artist)
       isProfessional.value = authStore.user.role === 'artist'
+      console.log('[DEBUG] Is professional:', isProfessional.value)
     }
   } catch (error) {
     console.error('Failed to load profile:', error)
@@ -266,12 +331,39 @@ async function handleSave() {
       updateData.profile_image = avatarFile.value
     }
 
+    // Add signature if provided
+    console.log('[DEBUG] Signature mode:', signatureMode.value)
+    console.log('[DEBUG] Canvas data:', signatureDrawingData.value ? 'exists' : 'null')
+    console.log('[DEBUG] Image file:', signatureImageFile.value ? 'exists' : 'null')
+    console.log('[DEBUG] Preview image:', previewSignatureImage.value ? 'exists' : 'null')
+
+    if (signatureMode.value === 'canvas' && signatureDrawingData.value) {
+      console.log('[DEBUG] Adding canvas signature to update')
+      // Convert canvas data URL to blob
+      const blob = await fetch(signatureDrawingData.value).then(r => r.blob())
+      const file = new File([blob], 'signature_canvas.png', { type: 'image/png' })
+      updateData.signature_image = file
+    } else if (signatureMode.value === 'image' && signatureImageFile.value) {
+      console.log('[DEBUG] Adding image signature to update')
+      updateData.signature_image = signatureImageFile.value
+    } else {
+      console.log('[DEBUG] No new signature to upload')
+    }
+
+    console.log('[DEBUG] Update data keys:', Object.keys(updateData))
+
     // Call backend API to update profile
     const response = await updateUserProfile(updateData)
+    console.log('[DEBUG] Backend response:', response)
 
     if (response.success) {
+      console.log('[DEBUG] Profile update successful, refreshing auth...')
       // Update auth store with new data
       await authStore.initAuth() // Refresh user data from backend
+
+      console.log('[DEBUG] Auth refreshed. User data:', authStore.user)
+      console.log('[DEBUG] Artist data:', authStore.user?.artist)
+      console.log('[DEBUG] Signature URL:', authStore.user?.artist?.signature_image_url)
 
       // Navigate back to profile
       router.push('/profile')
@@ -280,7 +372,19 @@ async function handleSave() {
     }
   } catch (error) {
     console.error('Failed to save profile:', error)
-    alert(t('editProfile.errors.saveFailed'))
+    console.error('[DEBUG] Error response:', error.response?.data)
+    console.error('[DEBUG] Error details:', error.response?.data?.error?.details)
+    console.error('[DEBUG] Error status:', error.response?.status)
+
+    // Show more detailed error message if available
+    const details = error.response?.data?.error?.details
+    const detailsStr = details ? JSON.stringify(details, null, 2) : ''
+    const errorMessage = error.response?.data?.signature_image?.[0] ||
+                        error.response?.data?.profile_image?.[0] ||
+                        error.response?.data?.error?.message ||
+                        error.response?.data?.message ||
+                        t('editProfile.errors.saveFailed')
+    alert(`${errorMessage}\n\nDetails: ${detailsStr}`)
   } finally {
     saving.value = false
   }
@@ -290,8 +394,10 @@ function handleCancel() {
   // Check if there are unsaved changes
   const hasChanges =
     form.value.username !== authStore.user?.username ||
+    form.value.bio !== authStore.user?.bio ||
     previewAvatar.value !== null ||
-    previewSignature.value !== null
+    signatureDrawingData.value !== null ||
+    signatureImageFile.value !== null
 
   if (hasChanges) {
     if (confirm(t('editProfile.confirmUnsavedChanges'))) {
@@ -322,7 +428,12 @@ function handlePhotoChange(event) {
   }
 }
 
-function handleSignatureChange(event) {
+function handleSignatureCanvasUpdate(dataUrl) {
+  signatureDrawingData.value = dataUrl
+  signatureMode.value = 'canvas'
+}
+
+function handleSignatureImageUpload(event) {
   const file = event.target.files[0]
   if (file) {
     if (file.size > 2 * 1024 * 1024) { // 2MB limit
@@ -331,25 +442,57 @@ function handleSignatureChange(event) {
     }
 
     // Store the file for upload
-    signatureFile.value = file
+    signatureImageFile.value = file
+    signatureMode.value = 'image'
 
     // Create preview
     const reader = new FileReader()
     reader.onload = (e) => {
-      previewSignature.value = e.target.result
-      form.value.signature = '' // Clear text signature
+      previewSignatureImage.value = e.target.result
     }
     reader.readAsDataURL(file)
   }
 }
 
+function clearSignature() {
+  signatureDrawingData.value = null
+  signatureImageFile.value = null
+  previewSignatureImage.value = null
+  signatureMode.value = 'canvas'
+  if (signatureCanvasRef.value) {
+    signatureCanvasRef.value.clear()
+  }
+}
+
 async function handleSwitchToProfessional() {
+  // IMPORTANT: Validate signature before allowing upgrade
+  if (!hasSignature.value) {
+    alert(t('editProfile.errors.signatureRequired') || 'Please provide your signature before upgrading to artist account.')
+    return
+  }
+
   if (!confirm(t('editProfile.confirmSwitchToProfessional'))) {
     return
   }
 
   try {
-    // Call backend to upgrade to artist
+    // First, save the signature
+    saving.value = true
+    const updateData = {}
+
+    // Add signature to update data
+    if (signatureMode.value === 'canvas' && signatureDrawingData.value) {
+      const blob = await fetch(signatureDrawingData.value).then(r => r.blob())
+      const file = new File([blob], 'signature_canvas.png', { type: 'image/png' })
+      updateData.signature_image = file
+    } else if (signatureMode.value === 'image' && signatureImageFile.value) {
+      updateData.signature_image = signatureImageFile.value
+    }
+
+    // Save signature first
+    await updateUserProfile(updateData)
+
+    // Then upgrade to artist
     const response = await upgradeToArtist()
 
     if (response.success) {
@@ -367,6 +510,8 @@ async function handleSwitchToProfessional() {
   } catch (error) {
     console.error('Failed to upgrade to artist:', error)
     alert(t('editProfile.errors.upgradeFailed') || 'Failed to upgrade to artist account. Please try again.')
+  } finally {
+    saving.value = false
   }
 }
 

@@ -1,13 +1,10 @@
 """
-GCS Service for file uploads
-
-Handles uploading files to Google Cloud Storage.
+GCS Service for uploading training images and models
 """
-import logging
+import os
 from typing import BinaryIO
 from django.conf import settings
-
-logger = logging.getLogger(__name__)
+from google.cloud import storage
 
 
 class GCSService:
@@ -15,27 +12,41 @@ class GCSService:
 
     def __init__(self):
         """Initialize GCS client"""
+        self.client = None
+        self.bucket = None
+
         try:
-            from google.cloud import storage
-            self.client = storage.Client()
+            # Use Application Default Credentials or credentials from environment
+            if hasattr(settings, 'GOOGLE_APPLICATION_CREDENTIALS') and settings.GOOGLE_APPLICATION_CREDENTIALS:
+                if os.path.exists(settings.GOOGLE_APPLICATION_CREDENTIALS):
+                    self.client = storage.Client.from_service_account_json(
+                        settings.GOOGLE_APPLICATION_CREDENTIALS
+                    )
+                else:
+                    # Try ADC
+                    self.client = storage.Client()
+            else:
+                # Use Application Default Credentials (works on Cloud Run)
+                self.client = storage.Client()
+
             self.bucket = self.client.bucket(settings.GCS_BUCKET_NAME)
-            logger.info(f"GCS client initialized for bucket: {settings.GCS_BUCKET_NAME}")
+
         except Exception as e:
-            logger.warning(f"Failed to initialize GCS client: {e}")
-            self.client = None
-            self.bucket = None
+            print(f"[WARNING] Failed to initialize GCS client: {e}")
+            print("[WARNING] GCS functionality will be disabled")
 
     def upload_training_image(
-        self, style_id: int, image_file: BinaryIO, image_index: int, filename: str
+        self, style_id: int, image_file: BinaryIO, image_index: int, filename: str, caption: str = None
     ) -> str:
         """
-        Upload a training image to GCS
+        Upload a training image to GCS (and optionally its caption)
 
         Args:
             style_id: Style model ID
             image_file: File object to upload
-            image_index: Index of the image (0-9)
+            image_index: Index of the image (0-based)
             filename: Original filename
+            caption: Optional caption text for Stable Diffusion training
 
         Returns:
             GCS URI (gs://bucket/path)
@@ -47,15 +58,14 @@ class GCSService:
             raise RuntimeError("GCS client not initialized")
 
         try:
-            # Determine file extension
-            ext = filename.split('.')[-1] if '.' in filename else 'jpg'
+            # Get file extension
+            ext = os.path.splitext(filename)[1].lstrip(".")
+            if not ext:
+                ext = "jpg"
 
-            # GCS path: training/{style_id}/image_{index}.{ext}
+            # Construct blob path: training/{style_id}/image_{index}.{ext}
             blob_path = f"training/{style_id}/image_{image_index}.{ext}"
 
-            logger.info(f"Uploading training image to GCS: {blob_path}")
-
-            # Create blob and upload
             blob = self.bucket.blob(blob_path)
 
             # Reset file pointer to beginning
@@ -64,15 +74,57 @@ class GCSService:
             # Upload file
             blob.upload_from_file(image_file, content_type=f"image/{ext}")
 
-            # Construct GCS URI
+            # Upload caption file if provided
+            if caption:
+                caption_blob_path = f"training/{style_id}/image_{image_index}.txt"
+                caption_blob = self.bucket.blob(caption_blob_path)
+                caption_blob.upload_from_string(caption, content_type="text/plain")
+
+            # Return GCS URI
             gcs_uri = f"gs://{settings.GCS_BUCKET_NAME}/{blob_path}"
 
-            logger.info(f"Successfully uploaded: {gcs_uri}")
             return gcs_uri
 
         except Exception as e:
-            logger.error(f"Failed to upload image to GCS: {e}", exc_info=True)
-            raise RuntimeError(f"GCS upload failed: {e}") from e
+            raise RuntimeError(f"Failed to upload training image: {e}") from e
+
+    def upload_model(self, style_id: int, model_file: BinaryIO, filename: str) -> str:
+        """
+        Upload a trained model to GCS
+
+        Args:
+            style_id: Style model ID
+            model_file: File object to upload
+            filename: Model filename
+
+        Returns:
+            GCS URI (gs://bucket/path)
+
+        Raises:
+            RuntimeError: If upload fails
+        """
+        if not self.bucket:
+            raise RuntimeError("GCS client not initialized")
+
+        try:
+            # Construct blob path: models/style-{style_id}/{filename}
+            blob_path = f"models/style-{style_id}/{filename}"
+
+            blob = self.bucket.blob(blob_path)
+
+            # Reset file pointer
+            model_file.seek(0)
+
+            # Upload file
+            blob.upload_from_file(model_file)
+
+            # Return GCS URI
+            gcs_uri = f"gs://{settings.GCS_BUCKET_NAME}/{blob_path}"
+
+            return gcs_uri
+
+        except Exception as e:
+            raise RuntimeError(f"Failed to upload model: {e}") from e
 
 
 # Singleton instance
@@ -80,12 +132,7 @@ _gcs_service = None
 
 
 def get_gcs_service() -> GCSService:
-    """
-    Get singleton GCS service instance
-
-    Returns:
-        GCSService instance
-    """
+    """Get or create GCS service singleton"""
     global _gcs_service
     if _gcs_service is None:
         _gcs_service = GCSService()

@@ -12,8 +12,10 @@ import { useModelsStore } from '@/stores/models'
 import { useGenerationStore } from '@/stores/generations'
 import { useTokenStore } from '@/stores/tokens'
 import { useAuthStore } from '@/stores/auth'
+import { useAlertStore } from '@/stores/alert'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TagButton from '@/components/shared/TagButton.vue'
+import { toggleFollow, getFollowingList } from '@/services/user.service'
 
 const route = useRoute()
 const router = useRouter()
@@ -22,6 +24,7 @@ const modelsStore = useModelsStore()
 const generationStore = useGenerationStore()
 const tokenStore = useTokenStore()
 const authStore = useAuthStore()
+const alertStore = useAlertStore()
 
 // State
 const modelId = computed(() => parseInt(route.params.id))
@@ -29,6 +32,11 @@ const model = computed(() => modelsStore.currentModel)
 const isLoading = computed(() => modelsStore.loading)
 const currentImageIndex = ref(0)
 const isBookmarked = ref(false)
+
+// Example generations state (separate from training images)
+const exampleGenerations = ref([])
+const currentExampleIndex = ref(0)
+const loadingExamples = ref(false)
 
 // Generation form state
 const prompt = ref('')
@@ -48,26 +56,58 @@ const aspectRatioOptions = [
 
 // Computed
 const sampleImages = computed(() => {
-  return model.value?.sample_images || []
+  // Backend returns artworks array with image_url field
+  const artworks = model.value?.artworks || []
+  return artworks.map(artwork => artwork.image_url).filter(url => url)
 })
 
 const currentImage = computed(() => {
   return sampleImages.value[currentImageIndex.value] || null
 })
 
-// All tags to display: default tag (style name) + user tags
-const allTags = computed(() => {
-  const defaultTag = model.value?.name || 'STYLE'
-  return [defaultTag, ...userTags.value]
+// Current example generation image
+const currentExampleImage = computed(() => {
+  return exampleGenerations.value[currentExampleIndex.value]?.image_url || null
+})
+
+// Training image tags: all backend caption tags (read-only)
+const trainingTags = computed(() => {
+  const backendTags = model.value?.tags || []
+
+  // Extract tag names (tags can be objects with {id, name, sequence} or just strings)
+  return backendTags.map(tag =>
+    typeof tag === 'string' ? tag : tag.name
+  )
+})
+
+// Generation tags: style name (default) + user-added tags (for generation prompt)
+const generationTags = computed(() => {
+  // Only use style name as the default tag (not other backend tags)
+  const defaultTag = model.value?.name?.toLowerCase() || 'style'
+
+  // Combine default tag with user-added tags (avoid duplicates)
+  const allTagNames = [defaultTag]
+  userTags.value.forEach(userTag => {
+    if (userTag.toLowerCase() !== defaultTag) {
+      allTagNames.push(userTag)
+    }
+  })
+
+  return allTagNames
 })
 
 const canGenerate = computed(() => {
   return (
     model.value?.training_status === 'completed' &&
-    allTags.value.length > 0 &&
+    generationTags.value.length > 0 &&
     !isGenerating.value &&
     authStore.isAuthenticated
   )
+})
+
+// Check if current user is the owner of this style
+const isOwnStyle = computed(() => {
+  return authStore.isAuthenticated && model.value?.artist_id === authStore.user?.id
 })
 
 // Format time ago
@@ -84,13 +124,35 @@ const formatTimeAgo = (dateString) => {
 }
 
 // Actions
-const toggleBookmark = () => {
+const toggleBookmark = async () => {
   if (!authStore.isAuthenticated) {
     router.push(`/login?returnUrl=/models/${modelId.value}`)
     return
   }
-  isBookmarked.value = !isBookmarked.value
-  // TODO: Call API to bookmark/unbookmark
+
+  // Prevent following yourself
+  if (isOwnStyle.value) {
+    console.log('Cannot follow yourself')
+    return
+  }
+
+  // Get artist ID from the model
+  const artistId = model.value?.artist_id
+  if (!artistId) {
+    console.error('Artist ID not found')
+    return
+  }
+
+  try {
+    // Call follow API
+    const response = await toggleFollow(artistId)
+    isBookmarked.value = response.is_following
+  } catch (error) {
+    console.error('Failed to toggle follow:', error)
+    if (error.response?.status === 400) {
+      console.log('Cannot follow yourself or invalid request')
+    }
+  }
 }
 
 // Filter to allow only English letters and spaces
@@ -147,7 +209,12 @@ const addNewTag = () => {
 const removeTag = (index) => {
   // Can't remove the first tag (style name)
   if (index === 0) return
-  userTags.value.splice(index - 1, 1) // -1 because first tag is default
+
+  // Remove from userTags (index - 1 because first tag is style name)
+  const userTagIndex = index - 1
+  if (userTagIndex >= 0 && userTagIndex < userTags.value.length) {
+    userTags.value.splice(userTagIndex, 1)
+  }
 }
 
 const handleGenerate = async () => {
@@ -175,15 +242,13 @@ const handleGenerate = async () => {
   isGenerating.value = true
 
   try {
-    // Combine all tags as the prompt
-    const combinedPrompt = allTags.value.join(', ')
-
     // Generate random seed
     const randomSeed = Math.floor(Math.random() * 2147483647)
 
     const data = {
       style_id: modelId.value,
-      prompt: combinedPrompt,
+      prompt_tags: generationTags.value,
+      description: '',
       aspect_ratio: selectedAspectRatio.value,
       seed: randomSeed,
     }
@@ -194,21 +259,64 @@ const handleGenerate = async () => {
     await tokenStore.fetchBalance()
 
     // Show success
-    alert('Image generation started! Check your generation history.')
+    alertStore.show({
+      type: 'success',
+      title: t('alerts.generationSuccess.title'),
+      message: t('alerts.generationSuccess.message'),
+      confirmText: t('alerts.generationSuccess.confirmButton'),
+      showCancel: false,
+      onConfirm: () => {
+        router.push('/profile')
+      }
+    })
 
     // Clear user tags (keep default tag)
     userTags.value = []
   } catch (error) {
     console.error('Generation failed:', error)
-    alert(error.response?.data?.error?.message || 'Failed to start generation')
+
+    // Don't show alert for 402 errors - API interceptor will handle it
+    if (error.response?.status === 402) {
+      // API interceptor already showed the insufficient tokens alert
+      return
+    }
+
+    alertStore.show({
+      type: 'error',
+      title: t('alerts.error.title'),
+      message: error.response?.data?.error?.message || t('alerts.generationFailed.message'),
+      confirmText: t('alerts.error.confirmButton'),
+      showCancel: false
+    })
   } finally {
     isGenerating.value = false
   }
 }
 
 const navigateToArtist = () => {
-  if (model.value?.artist?.id) {
-    router.push(`/artist/${model.value.artist.id}`)
+  // Since each artist currently has only one style,
+  // clicking artist name stays on the same style detail page
+  if (model.value?.id) {
+    router.push(`/marketplace/styles/${model.value.id}`)
+  }
+}
+
+// Fetch example generations for this style
+const fetchExampleGenerations = async () => {
+  if (!modelId.value) return
+
+  loadingExamples.value = true
+  try {
+    const response = await modelsStore.fetchStyleExampleGenerations(modelId.value)
+    if (response.success && response.data) {
+      exampleGenerations.value = response.data
+      currentExampleIndex.value = 0
+    }
+  } catch (error) {
+    console.error('Failed to fetch example generations:', error)
+    exampleGenerations.value = []
+  } finally {
+    loadingExamples.value = false
   }
 }
 
@@ -217,9 +325,24 @@ onMounted(async () => {
   try {
     await modelsStore.fetchModelDetail(modelId.value)
 
+    // Fetch example generations for this style
+    await fetchExampleGenerations()
+
     // Fetch user balance if authenticated
     if (authStore.isAuthenticated) {
       await tokenStore.fetchBalance()
+
+      // Check if current user is following the artist
+      try {
+        const followingData = await getFollowingList()
+        const followingIds = followingData.results?.map(user => user.id) || []
+        const artistId = modelsStore.currentModel?.artist_id
+        if (artistId) {
+          isBookmarked.value = followingIds.includes(artistId)
+        }
+      } catch (error) {
+        console.error('Failed to fetch following list:', error)
+      }
     }
   } catch (err) {
     console.error('Failed to fetch model detail:', err)
@@ -253,25 +376,52 @@ onMounted(async () => {
         </svg>
       </div>
 
+      <!-- Previous Button -->
+      <button
+        v-if="sampleImages.length > 1"
+        @click="currentImageIndex = (currentImageIndex - 1 + sampleImages.length) % sampleImages.length"
+        class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+      </button>
+
+      <!-- Next Button -->
+      <button
+        v-if="sampleImages.length > 1"
+        @click="currentImageIndex = (currentImageIndex + 1) % sampleImages.length"
+        class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        </svg>
+      </button>
+
       <!-- Carousel Dots -->
-      <div v-if="sampleImages.length > 1" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+      <div v-if="sampleImages.length > 1" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
         <button
           v-for="(image, index) in sampleImages"
           :key="index"
           @click="currentImageIndex = index"
-          class="w-1.5 h-1.5 rounded-full transition-colors"
-          :class="currentImageIndex === index ? 'bg-white' : 'bg-white/50'"
+          class="w-2 h-2 rounded-full transition-all"
+          :class="currentImageIndex === index ? 'bg-white w-6' : 'bg-white/50'"
         ></button>
+      </div>
+
+      <!-- Image Counter -->
+      <div v-if="sampleImages.length > 1" class="absolute top-3 right-3 px-2 py-1 rounded-full bg-black/50 text-white text-xs">
+        {{ currentImageIndex + 1 }} / {{ sampleImages.length }}
       </div>
     </div>
 
     <!-- Content Section -->
     <div class="px-4">
       <!-- Tags (horizontal scroll) - Read-only display -->
-      <div v-if="allTags.length > 0" class="overflow-x-auto py-3 -mx-4 px-4">
+      <div v-if="trainingTags.length > 0" class="overflow-x-auto py-3 -mx-4 px-4 hide-scrollbar">
         <div class="flex gap-2 min-w-max">
           <TagButton
-            v-for="tag in allTags"
+            v-for="tag in trainingTags"
             :key="tag"
             :label="tag.toUpperCase()"
             icon="🎨"
@@ -284,7 +434,7 @@ onMounted(async () => {
         <h1 class="text-xl font-bold text-neutral-900 flex-1 pr-4">
           {{ model.name }}
         </h1>
-        <button @click="toggleBookmark" class="p-1">
+        <button v-if="!isOwnStyle" @click="toggleBookmark" class="p-1">
           <svg
             class="w-6 h-6 text-neutral-900"
             :fill="isBookmarked ? 'currentColor' : 'none'"
@@ -295,11 +445,6 @@ onMounted(async () => {
           </svg>
         </button>
       </div>
-
-      <!-- Subtitle -->
-      <p class="text-sm text-neutral-600 py-1">
-        {{ $t('styleDetail.subtitle') }}
-      </p>
 
       <!-- Description -->
       <div v-if="model.description" class="py-2">
@@ -320,12 +465,18 @@ onMounted(async () => {
         </span>
         <button @click="navigateToArtist" class="flex items-center gap-1.5 hover:opacity-70 transition-opacity">
           <div class="w-6 h-6 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden">
-            <span class="text-xs font-semibold text-neutral-700">
-              {{ model.artist?.username?.charAt(0).toUpperCase() || 'A' }}
+            <img
+              v-if="model.artist_profile_image"
+              :src="model.artist_profile_image"
+              alt="Artist profile"
+              class="w-full h-full object-cover"
+            />
+            <span v-else class="text-xs font-semibold text-neutral-700">
+              {{ model.artist_username?.charAt(0).toUpperCase() || 'A' }}
             </span>
           </div>
           <span class="text-sm font-semibold text-neutral-900">
-            {{ model.artist?.username || 'Unknown Artist' }}
+            {{ model.artist_username || 'Unknown Artist' }}
           </span>
         </button>
       </div>
@@ -334,24 +485,61 @@ onMounted(async () => {
       <div class="py-4 border-t border-neutral-100">
         <h2 class="text-base font-semibold text-neutral-900 mb-3">{{ $t('styleDetail.exampleGenerateImage') }}</h2>
 
-        <!-- Example Image (same as training image for now) -->
-        <div class="relative w-full aspect-square bg-neutral-100 mb-4 rounded-lg overflow-hidden">
+        <!-- Example Generation Images -->
+        <div v-if="loadingExamples" class="relative w-full aspect-square bg-neutral-100 mb-4 rounded-lg overflow-hidden flex items-center justify-center">
+          <div class="text-neutral-400 text-sm">Loading examples...</div>
+        </div>
+
+        <div v-else-if="exampleGenerations.length > 0" class="relative w-full aspect-square bg-neutral-100 mb-4 rounded-lg overflow-hidden">
           <img
-            v-if="currentImage"
-            :src="currentImage"
-            :alt="model.name"
+            v-if="currentExampleImage"
+            :src="currentExampleImage"
+            :alt="exampleGenerations[currentExampleIndex]?.prompt || model.name"
             class="w-full h-full object-cover"
           />
 
+          <!-- Previous Button -->
+          <button
+            v-if="exampleGenerations.length > 1"
+            @click="currentExampleIndex = (currentExampleIndex - 1 + exampleGenerations.length) % exampleGenerations.length"
+            class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+
+          <!-- Next Button -->
+          <button
+            v-if="exampleGenerations.length > 1"
+            @click="currentExampleIndex = (currentExampleIndex + 1) % exampleGenerations.length"
+            class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
+
           <!-- Carousel Dots -->
-          <div v-if="sampleImages.length > 1" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+          <div v-if="exampleGenerations.length > 1" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
             <button
-              v-for="(image, index) in sampleImages"
-              :key="`gen-${index}`"
-              @click="currentImageIndex = index"
+              v-for="(example, index) in exampleGenerations"
+              :key="`example-${example.id}`"
+              @click="currentExampleIndex = index"
               class="w-1.5 h-1.5 rounded-full transition-colors"
-              :class="currentImageIndex === index ? 'bg-white' : 'bg-white/50'"
+              :class="currentExampleIndex === index ? 'bg-white' : 'bg-white/50'"
             ></button>
+          </div>
+
+          <!-- Image Counter -->
+          <div v-if="exampleGenerations.length > 1" class="absolute top-3 right-3 px-2 py-1 rounded-full bg-black/50 text-white text-xs">
+            {{ currentExampleIndex + 1 }} / {{ exampleGenerations.length }}
+          </div>
+        </div>
+
+        <div v-else class="relative w-full aspect-square bg-neutral-100 mb-4 rounded-lg overflow-hidden flex items-center justify-center">
+          <div class="text-neutral-400 text-sm text-center p-4">
+            <p>{{ $t('styleDetail.noExampleGenerations') }}</p>
           </div>
         </div>
 
@@ -370,19 +558,33 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- User Tags (editable) -->
-        <div class="mb-4">
-          <div class="flex flex-wrap gap-2">
+        <!-- User Tags (editable) - Horizontal scroll -->
+        <div class="mb-4 overflow-x-auto -mx-4 px-4 hide-scrollbar">
+          <div class="flex gap-2 min-w-max">
             <button
-              v-for="(tag, index) in allTags"
+              v-for="(tag, index) in generationTags"
               :key="`tag-${index}`"
               @click="removeTag(index)"
-              class="px-3 py-1.5 rounded-full border-2 text-xs font-medium transition-colors"
+              class="inline-flex items-center px-3 py-1.5 rounded-full border-2 text-xs font-medium transition-colors whitespace-nowrap"
               :class="index === 0
                 ? 'bg-white border-neutral-300 text-neutral-700 cursor-default'
                 : 'bg-white border-neutral-300 text-neutral-700 hover:border-red-300 hover:bg-red-50'"
             >
-              <span class="mr-1">🎨</span>
+              <svg class="w-4 h-4 mr-1.5" viewBox="0 0 20 20">
+                <defs>
+                  <linearGradient id="tagGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#fb923c;stop-opacity:1" />
+                    <stop offset="50%" style="stop-color:#facc15;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#4ade80;stop-opacity:1" />
+                  </linearGradient>
+                </defs>
+                <path
+                  fill="url(#tagGradient)"
+                  fill-rule="evenodd"
+                  d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z"
+                  clip-rule="evenodd"
+                />
+              </svg>
               {{ tag.toUpperCase() }}
             </button>
           </div>
@@ -440,6 +642,22 @@ onMounted(async () => {
           </div>
         </div>
 
+        <!-- Price Display -->
+        <div class="mb-3 p-3 bg-gradient-to-r from-orange-50 via-yellow-50 to-green-50 border-2 border-orange-200 rounded-lg">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium text-neutral-700">{{ $t('styleDetail.generationCost') }}</span>
+            <div class="flex items-center gap-1.5">
+              <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"></path>
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"></path>
+              </svg>
+              <span class="text-lg font-bold text-neutral-900">{{ model.generation_cost_tokens }}</span>
+              <span class="text-sm text-neutral-600">tokens</span>
+            </div>
+          </div>
+          <p class="text-xs text-neutral-500 mt-1.5">{{ $t('styleDetail.tokensWillBeDeducted') }}</p>
+        </div>
+
         <!-- Generate Button -->
         <button
           @click="handleGenerate"
@@ -475,3 +693,15 @@ onMounted(async () => {
     </button>
   </div>
 </template>
+
+<style scoped>
+/* Hide scrollbar for horizontal scroll containers */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+</style>

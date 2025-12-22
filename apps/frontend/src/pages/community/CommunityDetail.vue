@@ -42,7 +42,7 @@
       <div class="mb-4 px-4 flex items-center space-x-2">
         <!-- Avatar -->
         <img
-          :src="feedItem.user.avatar || '/default-avatar.png'"
+          :src="feedItem.user.profile_image || '/default-avatar.png'"
           :alt="feedItem.user.username"
           class="w-10 h-10 rounded-full object-cover"
         />
@@ -78,18 +78,30 @@
             </div>
           </div>
 
+          <!-- Tags Section (right below image) -->
+          <div v-if="tags.length > 0" class="overflow-x-auto py-3 px-4 border-t border-gray-100 hide-scrollbar">
+            <div class="flex gap-2 min-w-max">
+              <TagButton
+                v-for="tag in tags"
+                :key="tag"
+                :label="tag.toUpperCase()"
+              />
+            </div>
+          </div>
+
           <!-- Image Footer -->
           <div class="px-4 py-3 flex items-center justify-between border-t border-gray-100">
-            <!-- Bookmark Button -->
+            <!-- Bookmark Button (Follow Artist) -->
             <button
+              v-if="feedItem.style?.artist && !isCurrentUserArtist"
               @click="handleBookmark"
               :disabled="bookmarking"
               class="transition-colors"
-              :class="feedItem.is_bookmarked ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'"
+              :class="isFollowingArtist ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'"
             >
               <svg
                 class="w-6 h-6"
-                :fill="feedItem.is_bookmarked ? 'currentColor' : 'none'"
+                :fill="isFollowingArtist ? 'currentColor' : 'none'"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
@@ -101,37 +113,24 @@
                 />
               </svg>
             </button>
+            <div v-else class="w-6"></div>
 
             <!-- Styled By -->
-            <div class="flex items-center space-x-2">
+            <div v-if="feedItem.style?.artist" class="flex items-center space-x-2">
               <span class="text-sm italic text-gray-900" style="font-family: 'Brush Script MT', cursive;">Styled by</span>
               <img
-                :src="feedItem.user.avatar || '/default-avatar.png'"
-                :alt="feedItem.user.username"
+                :src="feedItem.style.artist.profile_image || '/default-avatar.png'"
+                :alt="feedItem.style.artist.artist_name"
                 class="w-6 h-6 rounded-full object-cover"
               />
               <router-link
-                :to="`/profile/${feedItem.user.id}`"
+                :to="`/marketplace/styles/${feedItem.style.id}`"
                 class="text-sm font-semibold text-gray-900 hover:text-blue-600"
               >
-                {{ feedItem.user.username }}
+                {{ feedItem.style.artist.artist_name }}
               </router-link>
             </div>
           </div>
-        </div>
-
-        <!-- Tags Section -->
-        <div v-if="tags.length > 0" class="mb-4 px-4 flex items-center space-x-2 overflow-x-auto pb-2">
-          <button
-            v-for="tag in tags"
-            :key="tag"
-            class="flex-shrink-0 inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <svg class="w-4 h-4 mr-1.5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
-            </svg>
-            {{ tag }}
-          </button>
         </div>
 
         <!-- Actions and Info -->
@@ -228,16 +227,45 @@
           <!-- Post Description -->
           <div class="mb-2">
             <span class="font-semibold text-gray-900 mr-2">{{ feedItem.user.username }}</span>
-            <span class="text-gray-700">
+            <span v-if="!isEditingDescription" class="text-gray-700">
               {{ showFullDescription ? feedItem.description : truncatedDescription }}
             </span>
+            <textarea
+              v-else
+              v-model="editedDescription"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows="3"
+              maxlength="500"
+            ></textarea>
             <button
-              v-if="feedItem.description && feedItem.description.length > 100"
+              v-if="!isEditingDescription && feedItem.description && feedItem.description.length > 100"
               @click="showFullDescription = !showFullDescription"
               class="ml-1 text-gray-500 hover:text-gray-700"
             >
               {{ showFullDescription ? $t('communityDetail.less') : $t('communityDetail.more') }}
             </button>
+            <div v-if="isCurrentUserOwner && !isEditingDescription" class="mt-2">
+              <button
+                @click="startEditingDescription"
+                class="text-sm text-blue-600 hover:text-blue-700"
+              >
+                {{ feedItem.description ? $t('communityDetail.editDescription') : $t('communityDetail.addDescription') }}
+              </button>
+            </div>
+            <div v-if="isEditingDescription" class="mt-2 flex space-x-2">
+              <button
+                @click="saveDescription"
+                class="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+              >
+                Save
+              </button>
+              <button
+                @click="cancelEditingDescription"
+                class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
 
           <!-- Timestamp -->
@@ -276,8 +304,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useCommunityStore } from '@/stores/community'
 import { useAuthStore } from '@/stores/auth'
+import { getGenerationDetail, toggleLike as apiToggleLike, updateGenerationDetails, toggleFollow } from '@/services/community.service'
+import { getFollowingList } from '@/services/user.service'
 import BottomNav from '@/components/layout/BottomNav.vue'
 import CommentModal from '@/components/modals/CommentModal.vue'
+import TagButton from '@/components/shared/TagButton.vue'
 import brushIcon from '@/assets/icons/brush_icon.png'
 
 const route = useRoute()
@@ -295,6 +326,9 @@ const bookmarking = ref(false)
 const isCommentModalOpen = ref(false)
 const showFullDescription = ref(false)
 const isPublic = ref(true) // Track visibility status
+const isEditingDescription = ref(false)
+const editedDescription = ref('')
+const isFollowingArtist = ref(false)
 
 // Computed
 const truncatedDescription = computed(() => {
@@ -305,31 +339,30 @@ const truncatedDescription = computed(() => {
 })
 
 const tags = computed(() => {
-  // TODO: Replace with actual tags from API
-  // For now, extract from style name or description
-  const tagList = []
-  if (feedItem.value?.style?.name) {
-    tagList.push(feedItem.value.style.name)
+  // Return tags from API (prompt_tags used during generation)
+  if (feedItem.value?.tags && Array.isArray(feedItem.value.tags)) {
+    return feedItem.value.tags
   }
-  // Mock additional tags
-  if (feedItem.value?.id) {
-    tagList.push('AI Art', 'Digital', 'Creative')
-  }
-  return tagList
+  return []
 })
 
 // Check if the post author is also the style artist
 const isAuthorArtist = computed(() => {
   if (!feedItem.value) return false
-  // TODO: Replace with actual artist comparison when API is ready
-  // For now, check if user has artist role or if user_id matches style artist_id
-  return feedItem.value.user?.id === feedItem.value.style?.artist_id
+  // Check if user_id matches style's artist_id
+  return feedItem.value.user?.id === feedItem.value.style?.artist?.id
 })
 
 // Check if current user owns this image
 const isCurrentUserOwner = computed(() => {
   if (!authStore.isAuthenticated || !feedItem.value) return false
   return authStore.user?.id === feedItem.value.user?.id
+})
+
+// Check if current user is the artist
+const isCurrentUserArtist = computed(() => {
+  if (!authStore.isAuthenticated || !feedItem.value) return false
+  return authStore.user?.id === feedItem.value.style?.artist?.id
 })
 
 // Methods
@@ -343,37 +376,26 @@ async function fetchFeedItem() {
   try {
     const imageId = route.params.id
 
-    // TODO: Replace with actual API call
-    // const response = await getFeedItemById(imageId)
-    // feedItem.value = response.data
+    // Fetch from API
+    const response = await getGenerationDetail(imageId)
 
-    // Mock data for now - check if item exists in store
-    const existingItem = communityStore.feed.find(item => item.id == imageId)
+    // API returns { success: true, data: {...} } format
+    if (response.success && response.data) {
+      feedItem.value = response.data
+      isPublic.value = response.data.is_public !== false // Set initial visibility
 
-    if (existingItem) {
-      feedItem.value = { ...existingItem }
-    } else {
-      // Mock data if not in store
-      feedItem.value = {
-        id: imageId,
-        result_url: 'https://picsum.photos/800/800',
-        description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-        user: {
-          id: 1,
-          username: authStore.user?.username || 'Vincent',
-          avatar: null,
-        },
-        style: {
-          id: 1,
-          name: 'Van Gogh Style',
-          artist_id: 1, // Same as user.id to show brush icon
-        },
-        like_count: 100,
-        comment_count: 5,
-        is_liked_by_current_user: false,
-        is_bookmarked: false,
-        created_at: new Date(Date.now() - 1800000).toISOString(), // 30 minutes ago
+      // Check if current user is following the artist
+      if (authStore.isAuthenticated && feedItem.value.style?.artist?.id) {
+        try {
+          const followingData = await getFollowingList()
+          const followingIds = followingData.results?.map(user => user.id) || []
+          isFollowingArtist.value = followingIds.includes(feedItem.value.style.artist.id)
+        } catch (err) {
+          console.error('Failed to fetch following list:', err)
+        }
       }
+    } else {
+      throw new Error('Invalid response format')
     }
   } catch (err) {
     console.error('Failed to fetch feed item:', err)
@@ -393,18 +415,18 @@ async function handleLike() {
 
   liking.value = true
   try {
-    // TODO: Replace with actual API call
-    // await toggleLike(feedItem.value.id)
+    // Call API to toggle like
+    const response = await apiToggleLike(feedItem.value.id)
 
-    // Update local state
-    feedItem.value.is_liked_by_current_user = !feedItem.value.is_liked_by_current_user
-    feedItem.value.like_count += feedItem.value.is_liked_by_current_user ? 1 : -1
+    // Update local state with API response
+    feedItem.value.is_liked_by_current_user = response.is_liked
+    feedItem.value.like_count = response.like_count
 
     // Update in store if exists
     const storeItem = communityStore.feed.find(item => item.id === feedItem.value.id)
     if (storeItem) {
-      storeItem.is_liked_by_current_user = feedItem.value.is_liked_by_current_user
-      storeItem.like_count = feedItem.value.like_count
+      storeItem.is_liked_by_current_user = response.is_liked
+      storeItem.like_count = response.like_count
     }
   } catch (err) {
     console.error('Failed to toggle like:', err)
@@ -419,16 +441,14 @@ async function handleBookmark() {
     return
   }
 
-  if (bookmarking.value) return
+  if (bookmarking.value || !feedItem.value?.style?.artist) return
 
   bookmarking.value = true
   try {
-    // TODO: Replace with actual API call
-    // await toggleBookmark(feedItem.value.id)
-
-    feedItem.value.is_bookmarked = !feedItem.value.is_bookmarked
+    const response = await toggleFollow(feedItem.value.style.artist.id)
+    isFollowingArtist.value = response.is_following
   } catch (err) {
-    console.error('Failed to toggle bookmark:', err)
+    console.error('Failed to toggle follow:', err)
   } finally {
     bookmarking.value = false
   }
@@ -436,14 +456,48 @@ async function handleBookmark() {
 
 async function handleToggleVisibility() {
   try {
-    // TODO: Replace with actual API call
-    // await updateImageVisibility(feedItem.value.id, !isPublic.value)
+    const newVisibility = !isPublic.value
 
-    // Toggle local state
-    isPublic.value = !isPublic.value
-    console.log('Image visibility toggled to:', isPublic.value ? 'Public' : 'Private')
+    // Call API to update visibility
+    const response = await updateGenerationDetails(feedItem.value.id, {
+      is_public: newVisibility
+    })
+
+    if (response.success) {
+      // Update local state
+      isPublic.value = newVisibility
+      feedItem.value.is_public = newVisibility
+      console.log('Image visibility toggled to:', isPublic.value ? 'Public' : 'Private')
+    }
   } catch (err) {
     console.error('Failed to toggle visibility:', err)
+    alert('Failed to update visibility. Please try again.')
+  }
+}
+
+function startEditingDescription() {
+  isEditingDescription.value = true
+  editedDescription.value = feedItem.value.description || ''
+}
+
+function cancelEditingDescription() {
+  isEditingDescription.value = false
+  editedDescription.value = ''
+}
+
+async function saveDescription() {
+  try {
+    const response = await updateGenerationDetails(feedItem.value.id, {
+      description: editedDescription.value
+    })
+
+    if (response.success) {
+      feedItem.value.description = editedDescription.value
+      isEditingDescription.value = false
+    }
+  } catch (err) {
+    console.error('Failed to save description:', err)
+    alert('Failed to save description. Please try again.')
   }
 }
 

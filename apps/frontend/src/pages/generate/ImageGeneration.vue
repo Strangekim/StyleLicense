@@ -180,7 +180,24 @@ const handleGenerate = async () => {
     formData.value.prompt = ''
   } catch (error) {
     console.error('Generation failed:', error)
-    errors.value.submit = error.response?.data?.error?.message || t('generation.errors.generationFailed')
+
+    // Handle 402 Payment Required (insufficient tokens)
+    if (error.response?.status === 402) {
+      const message = error.response?.data?.error?.message || t('generation.errors.insufficientTokensServer')
+      alert(message)
+
+      // Refresh token balance
+      await tokenStore.fetchBalance()
+
+      // Ask user if they want to purchase tokens
+      if (confirm(t('generation.insufficientTokensConfirm'))) {
+        router.push('/tokens')
+      }
+    } else {
+      // Handle other errors
+      errors.value.submit = error.response?.data?.error?.message || t('generation.errors.generationFailed')
+      alert(errors.value.submit)
+    }
   } finally {
     isGenerating.value = false
   }

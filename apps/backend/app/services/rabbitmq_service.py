@@ -58,7 +58,7 @@ class RabbitMQService:
                 yield self._channel
                 break
 
-            except (pika.exceptions.AMQPConnectionError, pika.exceptions.ChannelClosed) as e:
+            except Exception as e:
                 retry_count += 1
                 logger.warning("RabbitMQ connection attempt %d/%d failed: %s", retry_count, max_retries, str(e))
 
@@ -131,7 +131,7 @@ class RabbitMQService:
         image_paths: List[str],
         num_epochs: int = 200,
         learning_rate: float = 0.0001,
-        batch_size: int = 4,
+        batch_size: int = 1,
         webhook_url: Optional[str] = None
     ) -> str:
         """
@@ -139,7 +139,7 @@ class RabbitMQService:
 
         Args:
             style_id: ID of the style model to train
-            image_paths: List of image GCS paths (gs://bucket/path/to/image.jpg)
+            image_paths: List of image file paths or URLs (GCS URIs)
             num_epochs: Number of training epochs
             learning_rate: Learning rate for training
             batch_size: Batch size for training
@@ -159,12 +159,12 @@ class RabbitMQService:
             "type": "model_training",
             "data": {
                 "style_id": style_id,
-                "images": image_paths,  # Changed from "image_paths" to "images"
-                "parameters": {  # Wrapped training parameters
+                "images": image_paths,  # Changed from 'image_paths' to 'images'
+                "parameters": {
                     "epochs": num_epochs,
                     "learning_rate": learning_rate,
                     "batch_size": batch_size,
-                },
+                }
             },
             "webhook_url": webhook_url,
         }
@@ -180,6 +180,9 @@ class RabbitMQService:
         prompt: str,
         aspect_ratio: str = "1:1",
         seed: Optional[int] = None,
+        signature_path: Optional[str] = None,
+        signature_config: Optional[Dict[str, Any]] = None,
+        prompt_tags: Optional[List[str]] = None,
         webhook_url: Optional[str] = None
     ) -> str:
         """
@@ -192,6 +195,9 @@ class RabbitMQService:
             prompt: Generation prompt
             aspect_ratio: Image aspect ratio (1:1, 2:2, or 1:2)
             seed: Random seed for reproducibility
+            signature_path: Path to artist signature image (GCS URL)
+            signature_config: Signature configuration (position, size, opacity)
+            prompt_tags: List of prompt tags
             webhook_url: Optional callback URL for status updates
 
         Returns:
@@ -203,6 +209,14 @@ class RabbitMQService:
         if webhook_url is None:
             webhook_url = f"{settings.API_BASE_URL}/api/webhooks/generation/{generation_id}/status"
 
+        # Default signature config
+        if signature_config is None:
+            signature_config = {
+                "position": "bottom-right",
+                "size": "medium",
+                "opacity": 0.7
+            }
+
         message = {
             "task_id": task_id,
             "type": "image_generation",
@@ -213,6 +227,9 @@ class RabbitMQService:
                 "prompt": prompt,
                 "aspect_ratio": aspect_ratio,
                 "seed": seed,
+                "signature_path": signature_path or "",
+                "signature_config": signature_config,
+                "prompt_tags": prompt_tags or [],
             },
             "webhook_url": webhook_url,
         }

@@ -11,6 +11,7 @@ import { useRouter } from 'vue-router'
 import { useModelsStore } from '@/stores/models'
 import { useAuthStore } from '@/stores/auth'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import { toggleFollow, getFollowingList } from '@/services/user.service'
 
 const router = useRouter()
 const modelsStore = useModelsStore()
@@ -19,6 +20,7 @@ const searchQuery = ref('')
 const sortBy = ref('recent')
 const followingArtists = ref(new Set()) // Track following status
 const expandedDescriptions = ref(new Set()) // Track expanded descriptions
+const currentImageIndexMap = ref(new Map()) // Track current image index for each model
 
 const toggleDescription = (modelId, event) => {
   event.stopPropagation()
@@ -31,21 +33,59 @@ const toggleDescription = (modelId, event) => {
   expandedDescriptions.value = newSet
 }
 
+const getCurrentImageIndex = (section, modelId) => {
+  const key = `${section}-${modelId}`
+  return currentImageIndexMap.value.get(key) || 0
+}
+
+const setImageIndex = (section, modelId, index, event) => {
+  event.stopPropagation()
+  const key = `${section}-${modelId}`
+  const newMap = new Map(currentImageIndexMap.value)
+  newMap.set(key, index)
+  currentImageIndexMap.value = newMap
+}
+
+const nextImage = (section, modelId, totalImages, event) => {
+  event.stopPropagation()
+  const currentIndex = getCurrentImageIndex(section, modelId)
+  const newIndex = (currentIndex + 1) % totalImages
+  setImageIndex(section, modelId, newIndex, event)
+}
+
+const prevImage = (section, modelId, totalImages, event) => {
+  event.stopPropagation()
+  const currentIndex = getCurrentImageIndex(section, modelId)
+  const newIndex = (currentIndex - 1 + totalImages) % totalImages
+  setImageIndex(section, modelId, newIndex, event)
+}
+
 onMounted(async () => {
   // Load initial models (only completed styles)
   await modelsStore.fetchModels({ training_status: 'completed', sort: '-created_at' })
+
+  // Load following artists list if authenticated
+  if (authStore.isAuthenticated) {
+    try {
+      const followingData = await getFollowingList()
+      const followingIds = followingData.results?.map(user => user.id) || []
+      followingArtists.value = new Set(followingIds)
+    } catch (error) {
+      console.error('Failed to fetch following list:', error)
+    }
+  }
 })
 
 const handleCardClick = (modelId) => {
   router.push(`/models/${modelId}`)
 }
 
-const handleArtistClick = (artistId, event) => {
+const handleArtistClick = (styleId, event) => {
   event.stopPropagation()
-  router.push(`/artist/${artistId}`)
+  router.push(`/marketplace/styles/${styleId}`)
 }
 
-const toggleFollow = async (artistId, event) => {
+const handleToggleFollow = async (artistId, event) => {
   event.stopPropagation()
 
   if (!authStore.isAuthenticated) {
@@ -53,19 +93,24 @@ const toggleFollow = async (artistId, event) => {
     return
   }
 
-  // Create a new Set to trigger reactivity
-  const newSet = new Set(followingArtists.value)
-  if (newSet.has(artistId)) {
-    newSet.delete(artistId)
-    // TODO: Call API to unfollow
-  } else {
-    newSet.add(artistId)
-    // TODO: Call API to follow
+  try {
+    // Call follow API
+    const response = await toggleFollow(artistId)
+
+    // Update local state
+    const newSet = new Set(followingArtists.value)
+    if (response.is_following) {
+      newSet.add(artistId)
+    } else {
+      newSet.delete(artistId)
+    }
+    followingArtists.value = newSet
+  } catch (error) {
+    console.error('Failed to toggle follow:', error)
   }
-  followingArtists.value = newSet
 }
 
-const toggleBookmark = async (modelId, event) => {
+const toggleBookmark = async (model, event) => {
   event.stopPropagation()
 
   if (!authStore.isAuthenticated) {
@@ -73,8 +118,34 @@ const toggleBookmark = async (modelId, event) => {
     return
   }
 
-  // TODO: Call API to bookmark/unbookmark
-  console.log('Toggle bookmark for model:', modelId)
+  // Get artist ID from the model
+  const artistId = model.artist_id
+  if (!artistId) {
+    console.error('Artist ID not found')
+    return
+  }
+
+  // Don't allow following yourself
+  if (artistId === authStore.user?.id) {
+    console.log('Cannot follow yourself')
+    return
+  }
+
+  try {
+    // Call follow API
+    const response = await toggleFollow(artistId)
+
+    // Update local state
+    const newSet = new Set(followingArtists.value)
+    if (response.is_following) {
+      newSet.add(artistId)
+    } else {
+      newSet.delete(artistId)
+    }
+    followingArtists.value = newSet
+  } catch (error) {
+    console.error('Failed to toggle follow:', error)
+  }
 }
 
 // Filter and sort models for top section (recent/popular)
@@ -87,7 +158,7 @@ const recentOrPopularModels = computed(() => {
     filtered = filtered.filter(model =>
       model.name?.toLowerCase().includes(query) ||
       model.description?.toLowerCase().includes(query) ||
-      model.artist?.username?.toLowerCase().includes(query)
+      model.artist_username?.toLowerCase().includes(query)
     )
   }
 
@@ -106,7 +177,7 @@ const followingModels = computed(() => {
   if (!authStore.isAuthenticated) return []
 
   let filtered = modelsStore.models.filter(model =>
-    followingArtists.value.has(model.artist?.id)
+    followingArtists.value.has(model.artist_id)
   )
 
   // Apply search filter
@@ -115,7 +186,7 @@ const followingModels = computed(() => {
     filtered = filtered.filter(model =>
       model.name?.toLowerCase().includes(query) ||
       model.description?.toLowerCase().includes(query) ||
-      model.artist?.username?.toLowerCase().includes(query)
+      model.artist_username?.toLowerCase().includes(query)
     )
   }
 
@@ -125,9 +196,8 @@ const followingModels = computed(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-white">
-    <AppLayout>
-      <div class="max-w-screen-lg mx-auto">
+  <AppLayout>
+    <div class="max-w-screen-lg mx-auto pb-4 overflow-x-hidden">
         <!-- Search Bar -->
         <div class="sticky top-0 z-30 bg-white border-b border-neutral-100 px-4 py-3">
           <div class="max-w-screen-sm mx-auto">
@@ -159,7 +229,7 @@ const followingModels = computed(() => {
         </div>
 
         <!-- Recent/Popular Section (Horizontal Scroll) -->
-        <div class="mb-8">
+        <div class="mb-2">
           <div v-if="recentOrPopularModels.length > 0" class="overflow-x-auto px-4">
         <div class="flex gap-3 pb-4" style="width: max-content;">
           <div
@@ -169,41 +239,72 @@ const followingModels = computed(() => {
             style="width: 45vw; max-width: 280px; min-width: 180px; flex-shrink: 0;"
             @click="handleCardClick(model.id)"
           >
-            <!-- Style Image with Carousel Dots -->
+            <!-- Style Image with Carousel -->
             <div class="relative aspect-square bg-neutral-100">
               <img
-                :src="model.thumbnail_url || model.sample_images?.[0]"
+                :src="model.sample_images?.[getCurrentImageIndex('recent', model.id)] || model.thumbnail_url"
                 :alt="model.name"
                 class="w-full h-full object-cover"
               />
-              <!-- Carousel Dots -->
-              <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                <div
-                  v-for="i in (model.sample_images?.length || 1)"
-                  :key="i"
-                  class="w-1.5 h-1.5 rounded-full"
-                  :class="i === 1 ? 'bg-white' : 'bg-white/50'"
-                ></div>
-              </div>
-              <!-- Bookmark Icon -->
+
+              <!-- Previous Button -->
               <button
-                class="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full"
-                @click="toggleBookmark(model.id, $event)"
+                v-if="model.sample_images && model.sample_images.length > 1"
+                @click="prevImage('recent', model.id, model.sample_images.length, $event)"
+                class="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
               >
-                <svg class="w-4 h-4 text-neutral-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+              </button>
+
+              <!-- Next Button -->
+              <button
+                v-if="model.sample_images && model.sample_images.length > 1"
+                @click="nextImage('recent', model.id, model.sample_images.length, $event)"
+                class="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+
+              <!-- Carousel Dots -->
+              <div v-if="model.sample_images && model.sample_images.length > 1" class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                <button
+                  v-for="(img, index) in model.sample_images"
+                  :key="index"
+                  @click="setImageIndex('recent', model.id, index, $event)"
+                  class="w-1.5 h-1.5 rounded-full transition-all"
+                  :class="getCurrentImageIndex('recent', model.id) === index ? 'bg-white w-4' : 'bg-white/50'"
+                ></button>
+              </div>
+
+              <!-- Bookmark Icon (Follow Artist) -->
+              <button
+                v-if="authStore.user?.id !== model.artist_id"
+                class="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full hover:bg-white transition-colors"
+                @click="toggleBookmark(model, $event)"
+              >
+                <svg
+                  class="w-4 h-4 text-neutral-900"
+                  :fill="followingArtists.has(model.artist_id) ? 'currentColor' : 'none'"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
                 </svg>
               </button>
             </div>
 
             <!-- Card Content -->
-            <div class="p-3 flex flex-col" style="min-height: 180px;">
+            <div class="p-2 flex flex-col" style="min-height: 120px;">
               <!-- Artist Name -->
               <h3
                 class="font-semibold text-sm text-neutral-900 mb-1 cursor-pointer hover:underline truncate"
-                @click="handleArtistClick(model.artist?.id, $event)"
+                @click="handleArtistClick(model.id, $event)"
               >
-                {{ model.artist?.username || $t('marketplace.unknownArtist') }}
+                {{ model.artist_username || $t('marketplace.unknownArtist') }}
               </h3>
 
               <!-- Description -->
@@ -213,8 +314,8 @@ const followingModels = computed(() => {
                   :class="expandedDescriptions.has(model.id) ? '' : 'line-clamp-2'"
                 >
                   {{ model.description || $t('marketplace.noDescription') }}
-                  <span v-if="model.artist?.username" class="text-primary-500">
-                    @{{ model.artist.username }}
+                  <span v-if="model.artist_username" class="text-primary-500">
+                    @{{ model.artist_username }}
                   </span>
                 </p>
                 <button
@@ -227,24 +328,30 @@ const followingModels = computed(() => {
               </div>
 
               <!-- Model Name -->
-              <p class="text-xs text-neutral-500 mb-3 truncate">
+              <p class="text-xs text-neutral-500 mb-1 truncate">
                 {{ model.name }}
               </p>
 
               <!-- Styled by Section -->
-              <div class="flex items-center justify-end gap-2">
+              <div class="flex items-center justify-end gap-1.5 mt-1">
                 <span class="text-xs italic text-neutral-900 flex-shrink-0" style="font-family: 'Brush Script MT', cursive;">
                   Styled by
                 </span>
                 <!-- Artist Avatar -->
-                <div class="w-5 h-5 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                  <span class="text-xs font-semibold text-neutral-700">
-                    {{ model.artist?.username?.charAt(0).toUpperCase() || 'A' }}
+                <div class="w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <img
+                    v-if="model.artist_profile_image"
+                    :src="model.artist_profile_image"
+                    alt="Artist profile"
+                    class="w-full h-full object-cover"
+                  />
+                  <span v-else class="text-xs font-semibold text-neutral-700">
+                    {{ model.artist_username?.charAt(0).toUpperCase() || 'A' }}
                   </span>
                 </div>
                 <!-- Artist Name -->
                 <span class="text-xs font-semibold text-neutral-900 truncate">
-                  {{ model.artist?.username || $t('marketplace.artist') }}
+                  {{ model.artist_username || $t('marketplace.artist') }}
                 </span>
               </div>
             </div>
@@ -268,9 +375,9 @@ const followingModels = computed(() => {
     </div>
 
         <!-- Following Artists Section (Horizontal Scroll) -->
-        <div v-if="authStore.isAuthenticated && followingModels.length > 0" class="mb-8">
+        <div v-if="authStore.isAuthenticated && followingModels.length > 0" class="mb-2">
       <h2 class="text-sm font-semibold text-neutral-900 px-4 mb-3">{{ $t('marketplace.followingArtists') }}</h2>
-      <div class="overflow-x-auto -mx-4 px-4">
+      <div class="overflow-x-auto px-4">
         <div class="flex gap-3 pb-4" style="width: max-content;">
           <div
             v-for="model in followingModels"
@@ -279,41 +386,72 @@ const followingModels = computed(() => {
             style="width: 45vw; max-width: 280px; min-width: 180px; flex-shrink: 0;"
             @click="handleCardClick(model.id)"
           >
-            <!-- Style Image with Carousel Dots -->
+            <!-- Style Image with Carousel -->
             <div class="relative aspect-square bg-neutral-100">
               <img
-                :src="model.thumbnail_url || model.sample_images?.[0]"
+                :src="model.sample_images?.[getCurrentImageIndex('following', model.id)] || model.thumbnail_url"
                 :alt="model.name"
                 class="w-full h-full object-cover"
               />
-              <!-- Carousel Dots -->
-              <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                <div
-                  v-for="i in (model.sample_images?.length || 1)"
-                  :key="i"
-                  class="w-1.5 h-1.5 rounded-full"
-                  :class="i === 1 ? 'bg-white' : 'bg-white/50'"
-                ></div>
-              </div>
-              <!-- Bookmark Icon -->
+
+              <!-- Previous Button -->
               <button
-                class="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full"
-                @click="toggleBookmark(model.id, $event)"
+                v-if="model.sample_images && model.sample_images.length > 1"
+                @click="prevImage('following', model.id, model.sample_images.length, $event)"
+                class="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
               >
-                <svg class="w-4 h-4 text-neutral-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+              </button>
+
+              <!-- Next Button -->
+              <button
+                v-if="model.sample_images && model.sample_images.length > 1"
+                @click="nextImage('following', model.id, model.sample_images.length, $event)"
+                class="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-colors"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+
+              <!-- Carousel Dots -->
+              <div v-if="model.sample_images && model.sample_images.length > 1" class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                <button
+                  v-for="(img, index) in model.sample_images"
+                  :key="index"
+                  @click="setImageIndex('following', model.id, index, $event)"
+                  class="w-1.5 h-1.5 rounded-full transition-all"
+                  :class="getCurrentImageIndex('following', model.id) === index ? 'bg-white w-4' : 'bg-white/50'"
+                ></button>
+              </div>
+
+              <!-- Bookmark Icon (Follow Artist) -->
+              <button
+                v-if="authStore.user?.id !== model.artist_id"
+                class="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full hover:bg-white transition-colors"
+                @click="toggleBookmark(model, $event)"
+              >
+                <svg
+                  class="w-4 h-4 text-neutral-900"
+                  :fill="followingArtists.has(model.artist_id) ? 'currentColor' : 'none'"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
                 </svg>
               </button>
             </div>
 
             <!-- Card Content -->
-            <div class="p-3 flex flex-col" style="min-height: 180px;">
+            <div class="p-2 flex flex-col" style="min-height: 120px;">
               <!-- Artist Name -->
               <h3
                 class="font-semibold text-sm text-neutral-900 mb-1 cursor-pointer hover:underline truncate"
-                @click="handleArtistClick(model.artist?.id, $event)"
+                @click="handleArtistClick(model.id, $event)"
               >
-                {{ model.artist?.username || $t('marketplace.unknownArtist') }}
+                {{ model.artist_username || $t('marketplace.unknownArtist') }}
               </h3>
 
               <!-- Description -->
@@ -323,8 +461,8 @@ const followingModels = computed(() => {
                   :class="expandedDescriptions.has(model.id) ? '' : 'line-clamp-2'"
                 >
                   {{ model.description || $t('marketplace.noDescription') }}
-                  <span v-if="model.artist?.username" class="text-primary-500">
-                    @{{ model.artist.username }}
+                  <span v-if="model.artist_username" class="text-primary-500">
+                    @{{ model.artist_username }}
                   </span>
                 </p>
                 <button
@@ -337,24 +475,30 @@ const followingModels = computed(() => {
               </div>
 
               <!-- Model Name -->
-              <p class="text-xs text-neutral-500 mb-3 truncate">
+              <p class="text-xs text-neutral-500 mb-1 truncate">
                 {{ model.name }}
               </p>
 
               <!-- Styled by Section -->
-              <div class="flex items-center justify-end gap-2">
+              <div class="flex items-center justify-end gap-1.5 mt-1">
                 <span class="text-xs italic text-neutral-900 flex-shrink-0" style="font-family: 'Brush Script MT', cursive;">
                   Styled by
                 </span>
                 <!-- Artist Avatar -->
-                <div class="w-5 h-5 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                  <span class="text-xs font-semibold text-neutral-700">
-                    {{ model.artist?.username?.charAt(0).toUpperCase() || 'A' }}
+                <div class="w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <img
+                    v-if="model.artist_profile_image"
+                    :src="model.artist_profile_image"
+                    alt="Artist profile"
+                    class="w-full h-full object-cover"
+                  />
+                  <span v-else class="text-xs font-semibold text-neutral-700">
+                    {{ model.artist_username?.charAt(0).toUpperCase() || 'A' }}
                   </span>
                 </div>
                 <!-- Artist Name -->
                 <span class="text-xs font-semibold text-neutral-900 truncate">
-                  {{ model.artist?.username || $t('marketplace.artist') }}
+                  {{ model.artist_username || $t('marketplace.artist') }}
                 </span>
               </div>
             </div>
@@ -363,6 +507,5 @@ const followingModels = computed(() => {
       </div>
     </div>
       </div>
-    </AppLayout>
-  </div>
+  </AppLayout>
 </template>

@@ -11,13 +11,44 @@ from app.models import Style, Artwork, Tag, StyleTag
 from app.serializers.base import BaseSerializer
 
 
+def convert_gcs_to_public_url(gcs_uri):
+    """
+    Convert gs:// URI to public HTTPS URL.
+
+    Args:
+        gcs_uri: GCS URI in format gs://bucket-name/path/to/file
+
+    Returns:
+        Public HTTPS URL string or None
+    """
+    if not gcs_uri:
+        return None
+
+    # If already HTTPS, return as-is
+    if gcs_uri.startswith('https://'):
+        return gcs_uri
+
+    # Convert gs:// to public HTTPS URL
+    if gcs_uri.startswith('gs://'):
+        # gs://bucket-name/path -> https://storage.googleapis.com/bucket-name/path
+        return gcs_uri.replace('gs://', 'https://storage.googleapis.com/')
+
+    return gcs_uri
+
+
 class ArtworkSerializer(serializers.ModelSerializer):
     """Serializer for Artwork model (training images)."""
+
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Artwork
         fields = ["id", "image_url", "is_valid", "created_at"]
         read_only_fields = ["id", "is_valid", "created_at"]
+
+    def get_image_url(self, obj):
+        """Convert gs:// URI to public HTTPS URL for browser access."""
+        return convert_gcs_to_public_url(obj.image_url)
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -35,20 +66,29 @@ class StyleListSerializer(BaseSerializer):
 
     Includes minimal fields for performance:
     - id, name, artist info, thumbnail, price, usage_count
+    - description, sample_images for carousel
     """
 
     artist_username = serializers.CharField(source="artist.username", read_only=True)
     artist_id = serializers.IntegerField(source="artist.id", read_only=True)
+    artist_profile_image = serializers.CharField(
+        source="artist.profile_image", read_only=True
+    )
+    thumbnail_url = serializers.SerializerMethodField()
     tags = serializers.SerializerMethodField()
+    sample_images = serializers.SerializerMethodField()
 
     class Meta:
         model = Style
         fields = [
             "id",
             "name",
+            "description",
             "artist_id",
             "artist_username",
+            "artist_profile_image",
             "thumbnail_url",
+            "sample_images",
             "generation_cost_tokens",
             "usage_count",
             "training_status",
@@ -56,6 +96,15 @@ class StyleListSerializer(BaseSerializer):
             "created_at",
         ]
         read_only_fields = fields
+
+    def get_thumbnail_url(self, obj):
+        """Convert gs:// URI to public HTTPS URL for browser access."""
+        return convert_gcs_to_public_url(obj.thumbnail_url)
+
+    def get_sample_images(self, obj):
+        """Get sample training images for carousel (max 5 images)."""
+        artworks = obj.artworks.filter(is_valid=True)[:5]
+        return [convert_gcs_to_public_url(artwork.image_url) for artwork in artworks]
 
     def get_tags(self, obj):
         """Get tag names associated with this style."""
@@ -83,6 +132,7 @@ class StyleDetailSerializer(BaseSerializer):
 
     # Nested serializers
     artworks = ArtworkSerializer(many=True, read_only=True)
+    thumbnail_url = serializers.SerializerMethodField()
     tags = serializers.SerializerMethodField()
 
     # Computed fields
@@ -128,6 +178,10 @@ class StyleDetailSerializer(BaseSerializer):
             "created_at",
             "updated_at",
         ]
+
+    def get_thumbnail_url(self, obj):
+        """Convert gs:// URI to public HTTPS URL for browser access."""
+        return convert_gcs_to_public_url(obj.thumbnail_url)
 
     def get_tags(self, obj):
         """Get tags with full details."""
@@ -276,14 +330,20 @@ class StyleCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         """Cross-field validation."""
-        # Check artist uniqueness (artist + name must be unique)
         request = self.context.get("request")
         if request and hasattr(request, "user"):
             artist = request.user
-            name = attrs.get("name")
-            if Style.objects.filter(artist=artist, name=name).exists():
+
+            # MVP Limitation: 1 artist can only have 1 active style
+            existing_style = Style.objects.filter(artist=artist, is_active=True).first()
+            if existing_style:
                 raise serializers.ValidationError(
-                    {"name": f"You already have a style named '{name}'"}
+                    {
+                        "non_field_errors": [
+                            f"MVP 단계에서는 작가당 1개의 스타일만 생성할 수 있습니다. "
+                            f"기존 스타일 '{existing_style.name}'을 수정하거나 삭제 후 다시 시도해주세요."
+                        ]
+                    }
                 )
 
         return attrs
@@ -315,3 +375,34 @@ class StyleCreateSerializer(serializers.ModelSerializer):
             tag.save(update_fields=["usage_count"])
 
         return style
+
+
+class StyleUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating existing Style.
+
+    MVP Limitation: Only name and description can be updated.
+    Training images, tags, and other settings are immutable after creation.
+    """
+
+    class Meta:
+        model = Style
+        fields = ["id", "name", "description", "updated_at"]
+        read_only_fields = ["id", "updated_at"]
+
+    def validate_name(self, value):
+        """Validate style name."""
+        if len(value) < 3:
+            raise serializers.ValidationError("Style name must be at least 3 characters")
+        if len(value) > 100:
+            raise serializers.ValidationError(
+                "Style name cannot exceed 100 characters"
+            )
+        return value
+
+    def update(self, instance, validated_data):
+        """Update only name and description."""
+        instance.name = validated_data.get("name", instance.name)
+        instance.description = validated_data.get("description", instance.description)
+        instance.save()
+        return instance

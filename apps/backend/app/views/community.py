@@ -9,7 +9,7 @@ from rest_framework.pagination import PageNumberPagination
 from django.db.models import Prefetch
 from django.db import transaction
 
-from app.models import Generation, Like, Comment, Follow, User
+from app.models import Generation, Like, Comment, Follow, User, Artist
 from app.serializers.community import (
     GenerationFeedSerializer,
     GenerationDetailSerializer,
@@ -60,10 +60,40 @@ class GenerationViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = PageNumberPagination
 
     def get_queryset(self):
-        """Return public completed generations."""
-        return Generation.objects.filter(
-            is_public=True, status="completed"
-        ).select_related("user", "style", "style__artist")
+        """
+        Return completed generations that are either:
+        - Public (anyone can see)
+        - Private but owned by current user (owner can see their own private images)
+        """
+        from django.db.models import Q
+
+        queryset = Generation.objects.filter(status="completed").select_related(
+            "user", "style", "style__artist"
+        )
+
+        # If user is authenticated, show public images + their own private images
+        if self.request.user.is_authenticated:
+            queryset = queryset.filter(
+                Q(is_public=True) | Q(user=self.request.user)
+            )
+        else:
+            # If not authenticated, only show public images
+            queryset = queryset.filter(is_public=True)
+
+        return queryset
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Override retrieve to return consistent API response format.
+
+        Returns: { success: true, data: {...} }
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response({
+            "success": True,
+            "data": serializer.data
+        })
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def like(self, request, pk=None):
@@ -277,7 +307,14 @@ class UserViewSet(viewsets.GenericViewSet):
 
         POST /api/users/upgrade-to-artist/
         Response: {"success": true, "data": {...}}
+
+        IMPORTANT: User MUST have a signature before upgrading to artist.
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error("[DEBUG] upgrade_to_artist function called")
+        logger.error(f"[DEBUG] User: {request.user.id if request.user else 'None'}")
+
         user = request.user
 
         # Check if already an artist
@@ -293,20 +330,63 @@ class UserViewSet(viewsets.GenericViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Upgrade to artist
-        user.role = "artist"
-        user.save(update_fields=["role"])
+        # CRITICAL: Validate that user has provided a signature
+        try:
+            artist_profile = Artist.objects.get(user=user)
+            if not artist_profile.signature_image_url:
+                return Response(
+                    {
+                        "success": False,
+                        "error": {
+                            "code": "SIGNATURE_REQUIRED",
+                            "message": "You must provide a signature before upgrading to artist account",
+                        },
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        except Artist.DoesNotExist:
+            return Response(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "SIGNATURE_REQUIRED",
+                        "message": "You must provide a signature before upgrading to artist account",
+                    },
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        # Return updated profile
-        serializer = UserProfileSerializer(user)
-        return Response(
-            {
-                "success": True,
-                "data": serializer.data,
-                "message": "Successfully upgraded to artist account",
-            },
-            status=status.HTTP_200_OK,
-        )
+        # Upgrade to artist
+        try:
+            user.role = "artist"
+            user.save(update_fields=["role"])
+
+            # Return updated profile
+            serializer = UserProfileSerializer(user)
+            return Response(
+                {
+                    "success": True,
+                    "data": serializer.data,
+                    "message": "Successfully upgraded to artist account",
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            import logging
+            import traceback
+            logger = logging.getLogger(__name__)
+            logger.error(f"[ArtistUpgrade] Failed to upgrade user {user.id}: {str(e)}")
+            logger.error(f"[ArtistUpgrade] Traceback: {traceback.format_exc()}")
+            return Response(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "UPGRADE_FAILED",
+                        "message": f"Failed to upgrade to artist: {str(e)}",
+                    },
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=True, methods=["post"])
     def follow(self, request, pk=None):

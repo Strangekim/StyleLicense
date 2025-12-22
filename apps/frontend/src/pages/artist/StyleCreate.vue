@@ -5,10 +5,12 @@
  * providing metadata, and submitting for training.
  */
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useModelsStore } from '@/stores/models'
+import { useAuthStore } from '@/stores/auth'
+import { getMyStyle, updateModel } from '@/services/model.service'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Input from '@/components/shared/Input.vue'
 import Button from '@/components/shared/Button.vue'
@@ -17,6 +19,125 @@ import Card from '@/components/shared/Card.vue'
 const router = useRouter()
 const { t } = useI18n()
 const modelsStore = useModelsStore()
+const authStore = useAuthStore()
+
+// Loading state
+const isCheckingExistingStyle = ref(true)
+
+// Existing style (for edit mode)
+const existingStyle = ref(null)
+
+// Polling interval for training progress updates
+let pollingInterval = null
+
+// Fetch existing style data
+const fetchExistingStyle = async () => {
+  try {
+    const response = await getMyStyle()
+
+    if (response && response.data) {
+      existingStyle.value = response.data
+
+      // Load existing data into form for editing (only if not training)
+      if (!isTrainingInProgress.value) {
+        formData.value.name = existingStyle.value.name || ''
+        formData.value.description = existingStyle.value.description || ''
+        formData.value.price_per_generation = existingStyle.value.generation_cost_tokens || 10
+      }
+
+      // If training just completed, stop polling
+      if (pollingInterval && existingStyle.value.training_status === 'completed') {
+        clearInterval(pollingInterval)
+        pollingInterval = null
+      }
+    }
+  } catch (err) {
+    console.error('Failed to fetch existing style:', err)
+  }
+}
+
+// Start polling for training progress updates
+const startProgressPolling = () => {
+  // Poll every 10 seconds
+  pollingInterval = setInterval(async () => {
+    await fetchExistingStyle()
+  }, 10000) // 10 seconds
+}
+
+// Check if user already has an active style (MVP: 1 style per artist)
+onMounted(async () => {
+  isCheckingExistingStyle.value = true
+
+  if (!authStore.user || authStore.user.role !== 'artist') {
+    isCheckingExistingStyle.value = false
+    return
+  }
+
+  try {
+    await fetchExistingStyle()
+
+    // If training is in progress, start polling for updates
+    if (isTrainingInProgress.value) {
+      startProgressPolling()
+    }
+  } catch (err) {
+    console.error('Failed to check existing style:', err)
+  } finally {
+    isCheckingExistingStyle.value = false
+  }
+})
+
+// Cleanup on unmount
+onUnmounted(() => {
+  if (pollingInterval) {
+    clearInterval(pollingInterval)
+    pollingInterval = null
+  }
+})
+
+// Computed: Check training status
+const isTrainingInProgress = computed(() => {
+  if (!existingStyle.value) return false
+  const status = existingStyle.value.training_status
+  return status === 'pending' || status === 'training'
+})
+
+// Computed: Edit mode if existing style exists AND training is completed
+const isEditMode = computed(() => {
+  if (!existingStyle.value) return false
+  const status = existingStyle.value.training_status
+  return status === 'completed' || status === 'failed'
+})
+
+// Computed: Format training progress for display
+const formattedProgress = computed(() => {
+  if (!existingStyle.value?.training_progress) return null
+
+  const progress = existingStyle.value.training_progress
+
+  return {
+    percent: progress.progress_percent || 0,
+    currentEpoch: progress.current_epoch || 0,
+    totalEpochs: progress.total_epochs || 200,
+    estimatedTimeText: formatEstimatedTime(progress.estimated_seconds || 0)
+  }
+})
+
+// Helper: Format estimated seconds to human-readable time
+const formatEstimatedTime = (seconds) => {
+  if (!seconds || seconds <= 0) return ''
+
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+
+  if (hours > 0) {
+    return `약 ${hours}시간 ${minutes}분`
+  } else if (minutes > 0) {
+    return `약 ${minutes}분`
+  } else {
+    return '1분 이내'
+  }
+}
 
 // Form state
 const formData = ref({
@@ -27,7 +148,6 @@ const formData = ref({
 
 // Image upload state
 const trainingImages = ref([])
-const signatureImage = ref(null)
 const isDragging = ref(false)
 
 // Submission state
@@ -39,6 +159,12 @@ const errors = ref({})
 
 // Computed
 const isValid = computed(() => {
+  // Edit mode: only name is required
+  if (isEditMode.value) {
+    return formData.value.name.trim() && Object.keys(errors.value).length === 0
+  }
+
+  // Create mode: name + training images required
   return (
     formData.value.name.trim() &&
     trainingImages.value.length >= 10 &&
@@ -129,32 +255,6 @@ const removeImage = (index) => {
   trainingImages.value.splice(index, 1)
 }
 
-// Handle signature upload
-const handleSignatureUpload = (event) => {
-  const file = event.target.files[0]
-  if (!file) return
-
-  const error = validateImageFile(file)
-  if (error) {
-    alert(error)
-    return
-  }
-
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    signatureImage.value = {
-      file: file,
-      preview: e.target.result,
-    }
-  }
-  reader.readAsDataURL(file)
-}
-
-// Remove signature
-const removeSignature = () => {
-  signatureImage.value = null
-}
-
 // Update tags for a training image
 const updateImageTags = (index, tags) => {
   if (trainingImages.value[index]) {
@@ -215,10 +315,13 @@ const validateForm = () => {
     newErrors.name = t('styleCreate.errors.styleNameRequired')
   }
 
-  if (trainingImages.value.length < 10) {
-    newErrors.images = t('styleCreate.errors.minimumImagesRequired')
-  } else if (trainingImages.value.length > 100) {
-    newErrors.images = t('styleCreate.errors.maximumImagesExceeded')
+  // Only validate images in create mode
+  if (!isEditMode.value) {
+    if (trainingImages.value.length < 10) {
+      newErrors.images = t('styleCreate.errors.minimumImagesRequired')
+    } else if (trainingImages.value.length > 100) {
+      newErrors.images = t('styleCreate.errors.maximumImagesExceeded')
+    }
   }
 
   if (formData.value.price_per_generation < 1) {
@@ -239,40 +342,54 @@ const handleSubmit = async () => {
   uploadProgress.value = 0
 
   try {
-    // Prepare data with captions (convert tags to caption string)
-    const data = {
-      name: formData.value.name,
-      description: formData.value.description,
-      generation_cost_tokens: formData.value.price_per_generation, // Backend expects generation_cost_tokens
-      training_images: trainingImages.value.map((img) => ({
-        file: img.file,
-        caption: img.tags?.join(', ') || '', // Convert tags array to comma-separated caption
-      })),
-    }
+    if (isEditMode.value) {
+      // Edit mode: Update existing style (name and description only)
+      const data = {
+        name: formData.value.name,
+        description: formData.value.description,
+      }
 
-    // Add signature if provided
-    if (signatureImage.value) {
-      data.signature_image = signatureImage.value.file
-    }
+      await updateModel(existingStyle.value.id, data)
 
-    // Simulate upload progress (real progress tracking would need backend support)
-    const progressInterval = setInterval(() => {
-      uploadProgress.value = Math.min(uploadProgress.value + 10, 90)
-    }, 500)
+      // Show success message
+      alert(t('styleCreate.updateSuccess'))
 
-    // Create model
-    await modelsStore.createModel(data)
-
-    clearInterval(progressInterval)
-    uploadProgress.value = 100
-
-    // Redirect to marketplace after success
-    setTimeout(() => {
+      // Redirect to marketplace after success
       router.push('/marketplace')
-    }, 500)
+    } else {
+      // Create mode: Create new style with training images
+      const data = {
+        name: formData.value.name,
+        description: formData.value.description,
+        generation_cost_tokens: formData.value.price_per_generation,
+        training_images: trainingImages.value.map((img) => ({
+          file: img.file,
+          caption: img.tags?.join(', ') || '',
+        })),
+      }
+
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        uploadProgress.value = Math.min(uploadProgress.value + 10, 90)
+      }, 500)
+
+      // Create model
+      await modelsStore.createModel(data)
+
+      clearInterval(progressInterval)
+      uploadProgress.value = 100
+
+      // Redirect to marketplace after success
+      setTimeout(() => {
+        router.push('/marketplace')
+      }, 500)
+    }
   } catch (err) {
-    console.error('Failed to create style:', err)
-    errors.value.submit = err.response?.data?.error?.message || t('styleCreate.errors.createFailed')
+    console.error('Failed to save style:', err)
+    const errorMessage = isEditMode.value
+      ? t('styleCreate.errors.updateFailed')
+      : t('styleCreate.errors.createFailed')
+    errors.value.submit = err.response?.data?.error?.message || errorMessage
   } finally {
     isSubmitting.value = false
   }
@@ -286,7 +403,6 @@ const resetForm = () => {
     price_per_generation: 10,
   }
   trainingImages.value = []
-  signatureImage.value = null
   errors.value = {}
 }
 </script>
@@ -297,15 +413,153 @@ const resetForm = () => {
       <!-- Page Header -->
       <div class="mb-8">
         <h1 class="text-3xl font-bold text-neutral-900 mb-2">
-          {{ $t('styleCreate.title') }}
+          {{ isEditMode ? $t('styleCreate.editTitle') : $t('styleCreate.title') }}
         </h1>
         <p class="text-neutral-600">
-          {{ $t('styleCreate.subtitle') }}
+          {{ isEditMode ? $t('styleCreate.editSubtitle') : $t('styleCreate.subtitle') }}
         </p>
       </div>
 
+      <!-- Loading State -->
+      <div v-if="isCheckingExistingStyle" class="flex justify-center items-center py-20">
+        <div class="text-center">
+          <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
+          <p class="text-neutral-600">{{ $t('styleCreate.checkingExistingStyle') }}</p>
+        </div>
+      </div>
+
+      <!-- Training in Progress State -->
+      <div v-else-if="isTrainingInProgress" class="max-w-3xl mx-auto">
+        <Card class="overflow-hidden">
+          <!-- Header with Gradient Background -->
+          <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-8 py-10 text-center text-white">
+            <!-- Animated Icon -->
+            <div class="mb-4">
+              <div class="inline-flex items-center justify-center w-16 h-16 bg-white bg-opacity-20 rounded-full backdrop-blur-sm">
+                <svg class="w-8 h-8 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Title -->
+            <h2 class="text-2xl font-bold mb-2">
+              {{ $t('styleCreate.trainingInProgress') }}
+            </h2>
+            <p class="text-blue-100 text-sm">
+              {{ $t('styleCreate.trainingDescription') }}
+            </p>
+          </div>
+
+          <!-- Progress Section -->
+          <div class="px-8 py-8">
+            <!-- Progress Info -->
+            <div v-if="formattedProgress" class="mb-6">
+              <!-- Progress Percentage -->
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-3xl font-bold text-blue-600">
+                  {{ formattedProgress.percent }}%
+                </span>
+                <span class="text-sm text-neutral-500">
+                  {{ formattedProgress.currentEpoch }} / {{ formattedProgress.totalEpochs }} epochs
+                </span>
+              </div>
+
+              <!-- Progress Bar -->
+              <div class="w-full bg-neutral-200 rounded-full h-4 overflow-hidden mb-3">
+                <div
+                  class="bg-gradient-to-r from-blue-500 to-purple-600 h-4 rounded-full transition-all duration-500 relative overflow-hidden"
+                  :style="{ width: `${formattedProgress.percent}%` }"
+                >
+                  <!-- Animated shine effect -->
+                  <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-shimmer"></div>
+                </div>
+              </div>
+
+              <!-- Estimated Time -->
+              <div v-if="formattedProgress.estimatedTimeText" class="flex items-center justify-center gap-2 text-sm text-neutral-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>예상 남은 시간: {{ formattedProgress.estimatedTimeText }}</span>
+              </div>
+            </div>
+
+            <!-- Loading State (no progress data yet) -->
+            <div v-else class="text-center py-6">
+              <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+              <p class="text-sm text-neutral-600">학습 준비 중...</p>
+            </div>
+
+            <!-- Divider -->
+            <div class="border-t border-neutral-200 my-6"></div>
+
+            <!-- Style Info -->
+            <div class="space-y-4">
+              <h3 class="text-lg font-semibold text-neutral-900 mb-4">스타일 정보</h3>
+
+              <div class="grid grid-cols-1 gap-4">
+                <!-- Style Name -->
+                <div class="flex items-start gap-3">
+                  <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-xs text-neutral-500 mb-1">스타일 이름</p>
+                    <p class="font-medium text-neutral-900">{{ existingStyle.name }}</p>
+                  </div>
+                </div>
+
+                <!-- Description -->
+                <div v-if="existingStyle.description" class="flex items-start gap-3">
+                  <div class="flex-shrink-0 w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
+                    </svg>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-xs text-neutral-500 mb-1">설명</p>
+                    <p class="text-neutral-700 text-sm">{{ existingStyle.description }}</p>
+                  </div>
+                </div>
+
+                <!-- Status Badge -->
+                <div class="flex items-start gap-3">
+                  <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-xs text-neutral-500 mb-1">상태</p>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                      {{ $t(`styleCreate.status.${existingStyle.training_status}`) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer Actions -->
+          <div class="bg-neutral-50 px-8 py-4 border-t border-neutral-200">
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              fullWidth
+              @click="router.push('/marketplace')"
+            >
+              마켓플레이스로 이동
+            </Button>
+          </div>
+        </Card>
+      </div>
+
       <!-- Form -->
-      <form @submit.prevent="handleSubmit" class="space-y-8">
+      <form v-else-if="!isCheckingExistingStyle" @submit.prevent="handleSubmit" class="space-y-8">
         <!-- Basic Info -->
         <Card>
           <h2 class="text-xl font-semibold text-neutral-900 mb-4">
@@ -343,8 +597,8 @@ const resetForm = () => {
           </div>
         </Card>
 
-        <!-- Training Images -->
-        <Card>
+        <!-- Training Images (Create Mode Only) -->
+        <Card v-if="!isEditMode">
           <h2 class="text-xl font-semibold text-neutral-900 mb-2">
             {{ $t('styleCreate.trainingImages') }}
           </h2>
@@ -510,53 +764,6 @@ const resetForm = () => {
           </div>
         </Card>
 
-        <!-- Signature (Optional) -->
-        <Card>
-          <h2 class="text-xl font-semibold text-neutral-900 mb-2">
-            {{ $t('styleCreate.signature') }}
-          </h2>
-          <p class="text-sm text-neutral-600 mb-4">
-            {{ $t('styleCreate.signatureDescription') }}
-          </p>
-
-          <div v-if="!signatureImage" class="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center bg-neutral-50">
-            <input
-              ref="signatureInput"
-              type="file"
-              accept="image/png"
-              class="hidden"
-              @change="handleSignatureUpload"
-            />
-
-            <Button
-              type="button"
-              variant="outline"
-              @click="$refs.signatureInput.click()"
-            >
-              {{ $t('styleCreate.uploadSignature') }}
-            </Button>
-            <p class="text-xs text-neutral-500 mt-2">
-              {{ $t('styleCreate.signatureFormatHelper') }}
-            </p>
-          </div>
-
-          <div v-else class="flex items-center gap-4">
-            <img
-              :src="signatureImage.preview"
-              alt="Signature preview"
-              class="h-16 border border-neutral-200 rounded"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              @click="removeSignature"
-            >
-              {{ $t('styleCreate.remove') }}
-            </Button>
-          </div>
-        </Card>
-
         <!-- Submit Error -->
         <div v-if="errors.submit" class="p-4 bg-red-50 border border-red-200 rounded-lg">
           <p class="text-red-800">{{ errors.submit }}</p>
@@ -583,7 +790,7 @@ const resetForm = () => {
             :loading="isSubmitting"
             fullWidth
           >
-            {{ $t('styleCreate.createStyle') }}
+            {{ isEditMode ? $t('styleCreate.updateStyle') : $t('styleCreate.createStyle') }}
           </Button>
           <Button
             type="button"
@@ -599,3 +806,18 @@ const resetForm = () => {
     </div>
   </AppLayout>
 </template>
+
+<style scoped>
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+</style>

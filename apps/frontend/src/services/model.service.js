@@ -56,12 +56,15 @@ export async function createModel(data) {
     formData.append('generation_cost_tokens', data.generation_cost_tokens)
   }
 
-  // Add training images
+  // Add training images and captions
   if (data.training_images && data.training_images.length > 0) {
     data.training_images.forEach((image) => {
       // Extract file from object {file: File, caption: string}
       const file = image.file || image
+      const caption = image.caption || ''
+
       formData.append('training_images', file)
+      formData.append('captions', caption)
     })
   }
 
@@ -87,6 +90,37 @@ export async function createModel(data) {
 }
 
 /**
+ * Get current artist's active style (MVP: 1 style per artist)
+ *
+ * @returns {Promise<Object>} Artist's style or null if none exists
+ */
+export async function getMyStyle() {
+  try {
+    const response = await apiClient.get('/api/styles/my-style/')
+    return response.data
+  } catch (error) {
+    if (error.response?.status === 404) {
+      return null // No style exists
+    }
+    throw error
+  }
+}
+
+/**
+ * Update existing style model (owner only, MVP: name and description only)
+ *
+ * @param {number} id - Model ID
+ * @param {Object} data - Update data
+ * @param {string} data.name - Model name (optional)
+ * @param {string} data.description - Model description (optional)
+ * @returns {Promise<Object>} Updated model
+ */
+export async function updateModel(id, data) {
+  const response = await apiClient.patch(`/api/styles/${id}/`, data)
+  return response.data
+}
+
+/**
  * Delete style model (owner only, soft delete)
  *
  * @param {number} id - Model ID
@@ -97,9 +131,23 @@ export async function deleteModel(id) {
   return response.data
 }
 
+/**
+ * Get example generations for a style
+ *
+ * @param {number} id - Style ID
+ * @returns {Promise<Object>} List of public generations created with this style
+ */
+export async function getStyleExampleGenerations(id) {
+  const response = await apiClient.get(`/api/styles/${id}/example-generations/`)
+  return response.data
+}
+
 export default {
   listModels,
   getModelDetail,
+  getMyStyle,
   createModel,
+  updateModel,
   deleteModel,
+  getStyleExampleGenerations,
 }

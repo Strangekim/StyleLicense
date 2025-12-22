@@ -10,7 +10,7 @@ import api from './api'
  * @returns {Promise<Object>} - Feed list with pagination
  */
 export async function getFeed(params = {}) {
-  const response = await api.get('/community/', { params })
+  const response = await api.get('/api/community/', { params })
   return response.data
 }
 
@@ -20,7 +20,7 @@ export async function getFeed(params = {}) {
  * @returns {Promise<Object>} - Generation detail
  */
 export async function getGenerationDetail(generationId) {
-  const response = await api.get(`/images/${generationId}/`)
+  const response = await api.get(`/api/images/${generationId}/`)
   return response.data
 }
 
@@ -30,7 +30,7 @@ export async function getGenerationDetail(generationId) {
  * @returns {Promise<Object>} - { is_liked, like_count }
  */
 export async function toggleLike(generationId) {
-  const response = await api.post(`/images/${generationId}/like/`)
+  const response = await api.post(`/api/images/${generationId}/like/`)
   return response.data
 }
 
@@ -41,7 +41,7 @@ export async function toggleLike(generationId) {
  * @returns {Promise<Object>} - Comments list with pagination
  */
 export async function getComments(generationId, params = {}) {
-  const response = await api.get(`/images/${generationId}/comments/`, { params })
+  const response = await api.get(`/api/images/${generationId}/comments/`, { params })
   return response.data
 }
 
@@ -53,7 +53,7 @@ export async function getComments(generationId, params = {}) {
  * @returns {Promise<Object>} - Created comment
  */
 export async function addComment(generationId, content, parentId = null) {
-  const response = await api.post(`/images/${generationId}/comments/`, {
+  const response = await api.post(`/api/images/${generationId}/comments/`, {
     content,
     parent: parentId,
   })
@@ -66,7 +66,7 @@ export async function addComment(generationId, content, parentId = null) {
  * @returns {Promise<void>}
  */
 export async function deleteComment(commentId) {
-  await api.delete(`/comments/${commentId}/`)
+  await api.delete(`/api/comments/${commentId}/`)
 }
 
 /**
@@ -75,7 +75,7 @@ export async function deleteComment(commentId) {
  * @returns {Promise<Object>} - { is_following, follower_count }
  */
 export async function toggleFollow(userId) {
-  const response = await api.post(`/users/${userId}/follow/`)
+  const response = await api.post(`/api/users/${userId}/follow/`)
   return response.data
 }
 
@@ -85,6 +85,17 @@ export async function toggleFollow(userId) {
  * @returns {Promise<Object>} - Following list with pagination
  */
 export async function getFollowing(params = {}) {
-  const response = await api.get('/users/following/', { params })
+  const response = await api.get('/api/users/following/', { params })
+  return response.data
+}
+
+/**
+ * Update generation details (description and/or visibility)
+ * @param {number} generationId - Generation ID
+ * @param {Object} data - { description?: string, is_public?: boolean }
+ * @returns {Promise<Object>} - Updated generation data
+ */
+export async function updateGenerationDetails(generationId, data) {
+  const response = await api.patch(`/api/generations/${generationId}/update_details/`, data)
   return response.data
 }

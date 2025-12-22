@@ -17,27 +17,31 @@ class GCSService:
 
     def __init__(self):
         """Initialize GCS client"""
-        # Only import and initialize GCS client if credentials are available
+        # Try to initialize GCS client with credentials file or Application Default Credentials
         self.client = None
         self.bucket = None
 
-        if Config.GOOGLE_APPLICATION_CREDENTIALS and os.path.exists(
-            Config.GOOGLE_APPLICATION_CREDENTIALS
-        ):
-            try:
-                from google.cloud import storage
+        try:
+            from google.cloud import storage
 
+            # If credentials file is specified and exists, use it
+            if Config.GOOGLE_APPLICATION_CREDENTIALS and os.path.exists(
+                Config.GOOGLE_APPLICATION_CREDENTIALS
+            ):
+                logger.info(f"Using credentials file: {Config.GOOGLE_APPLICATION_CREDENTIALS}")
                 self.client = storage.Client(project=Config.GCS_PROJECT_ID)
-                self.bucket = self.client.bucket(Config.GCS_BUCKET_NAME)
-                logger.info(
-                    f"GCS client initialized for bucket: {Config.GCS_BUCKET_NAME}"
-                )
-            except Exception as e:
-                logger.warning(f"Failed to initialize GCS client: {e}")
-        else:
-            logger.warning(
-                "GCS credentials not found. GCS functionality will be disabled."
+            else:
+                # Otherwise, try Application Default Credentials (works on GCE VMs)
+                logger.info("Attempting to use Application Default Credentials")
+                self.client = storage.Client(project=Config.GCS_PROJECT_ID)
+
+            self.bucket = self.client.bucket(Config.GCS_BUCKET_NAME)
+            logger.info(
+                f"GCS client initialized for bucket: {Config.GCS_BUCKET_NAME}"
             )
+        except Exception as e:
+            logger.warning(f"Failed to initialize GCS client: {e}")
+            logger.warning("GCS functionality will be disabled.")
 
     def download_image(self, gcs_path: str, local_path: str) -> bool:
         """
@@ -83,7 +87,7 @@ class GCSService:
 
     def download_images(self, gcs_paths: List[str], local_dir: str) -> List[str]:
         """
-        Download multiple images from GCS
+        Download multiple images from GCS (and their caption files if available)
 
         Args:
             gcs_paths: List of GCS paths
@@ -103,6 +107,22 @@ class GCSService:
 
             if self.download_image(gcs_path, local_path):
                 local_paths.append(local_path)
+
+                # Also download caption file if it exists
+                caption_gcs_path = gcs_path.rsplit('.', 1)[0] + '.txt'
+                caption_local_path = local_path.rsplit('.', 1)[0] + '.txt'
+
+                try:
+                    blob_path = caption_gcs_path.replace(f"gs://{Config.GCS_BUCKET_NAME}/", "")
+                    blob_path = blob_path.replace("gs://", "").split("/", 1)[-1]
+
+                    if self.bucket:
+                        caption_blob = self.bucket.blob(blob_path)
+                        if caption_blob.exists():
+                            caption_blob.download_to_filename(caption_local_path)
+                            logger.info(f"Downloaded caption file: {caption_local_path}")
+                except Exception as e:
+                    logger.debug(f"No caption file for {gcs_path}: {e}")
             else:
                 logger.warning(f"Skipping failed download: {gcs_path}")
 

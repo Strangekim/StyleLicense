@@ -4,7 +4,7 @@
       <!-- Logo -->
       <router-link to="/" class="flex items-center">
         <img
-          src="@/assets/images/main_typo_transverse.png"
+          src="@/assets/images/main_typo.png"
           alt="Style License"
           class="h-10"
         />
@@ -54,14 +54,19 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { storeToRefs } from 'pinia'
+import { useNotificationStore } from '@/stores/notification'
+import { useAuthStore } from '@/stores/auth'
 
 // i18n setup
 const { locale } = useI18n()
 
-// TODO: Connect to notification store
-const hasUnread = ref(false)
+// Notification store - use storeToRefs to maintain reactivity
+const notificationStore = useNotificationStore()
+const authStore = useAuthStore()
+const { hasUnread } = storeToRefs(notificationStore)
 
 // Toggle language between en and ko
 const toggleLanguage = () => {
@@ -78,5 +83,17 @@ const loadPreferredLanguage = () => {
   }
 }
 
-loadPreferredLanguage()
+// Fetch unread notification count on mount
+onMounted(async () => {
+  loadPreferredLanguage()
+
+  // Only fetch if user is authenticated
+  if (authStore.isAuthenticated) {
+    try {
+      await notificationStore.fetchNotifications({ page: 1, page_size: 1 })
+    } catch (err) {
+      console.error('Failed to fetch notification count:', err)
+    }
+  }
+})
 </script>

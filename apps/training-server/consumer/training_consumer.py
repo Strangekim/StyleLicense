@@ -194,9 +194,19 @@ class TrainingConsumer:
 
                 if model_path:
                     # Send training completed webhook
-                    WebhookService.send_training_completed(
-                        style_id, model_path, loss=final_loss, epochs=num_epochs
-                    )
+                    # Note: Even if webhook fails, we still return True because
+                    # the model is already uploaded to GCS. The webhook failure
+                    # should not cause retraining.
+                    try:
+                        WebhookService.send_training_completed(
+                            style_id, model_path, loss=final_loss, epochs=num_epochs
+                        )
+                    except Exception as webhook_error:
+                        logger.error(
+                            f"Failed to send completion webhook (but training succeeded): {webhook_error}"
+                        )
+                        # Still return True - model is uploaded, training is done
+
                     return True
                 else:
                     last_error = "Training failed - no model produced"

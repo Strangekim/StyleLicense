@@ -161,6 +161,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import { getBalance, purchaseTokens, getTransactions } from '@/services/token.service'
 
 const router = useRouter()
 const { t, locale } = useI18n()
@@ -207,14 +208,11 @@ onMounted(async () => {
 async function loadTokenBalance() {
   loading.value = true
   try {
-    // TODO: Replace with actual API call
-    // const response = await getTokenBalance()
-    // tokenBalance.value = response.data.balance
-
-    // Mock data
-    tokenBalance.value = 250
+    const response = await getBalance()
+    tokenBalance.value = response.data.balance
   } catch (error) {
     console.error('Failed to load token balance:', error)
+    tokenBalance.value = 0
   } finally {
     loading.value = false
   }
@@ -223,53 +221,43 @@ async function loadTokenBalance() {
 async function loadTransactions() {
   loadingTransactions.value = true
   try {
-    // TODO: Replace with actual API call
-    // const response = await getTokenTransactions()
-    // transactions.value = response.data
+    const response = await getTransactions({ limit: 50 })
 
-    // Mock data
-    transactions.value = [
-      {
-        id: 1,
-        type: 'purchase',
-        amount: 500,
-        description: 'Purchased 500 tokens',
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-      },
-      {
-        id: 2,
-        type: 'usage',
-        amount: -50,
-        description: 'Generated image with Van Gogh style',
-        created_at: new Date(Date.now() - 172800000).toISOString(),
-      },
-      {
-        id: 3,
-        type: 'usage',
-        amount: -100,
-        description: 'Purchased Van Gogh style',
-        created_at: new Date(Date.now() - 259200000).toISOString(),
-      },
-      {
-        id: 4,
-        type: 'usage',
-        amount: -50,
-        description: 'Generated image with Anime style',
-        created_at: new Date(Date.now() - 345600000).toISOString(),
-      },
-      {
-        id: 5,
-        type: 'usage',
-        amount: -50,
-        description: 'Generated image with Portrait style',
-        created_at: new Date(Date.now() - 432000000).toISOString(),
-      },
-    ]
+    // Transform backend data to frontend format
+    transactions.value = response.data.results.map(tx => ({
+      id: tx.id,
+      type: tx.direction === 'incoming' ? 'purchase' : 'usage',
+      amount: tx.direction === 'incoming' ? tx.amount : -Math.abs(tx.amount),
+      description: getTransactionDescription(tx),
+      created_at: tx.created_at,
+    }))
   } catch (error) {
     console.error('Failed to load transactions:', error)
+    transactions.value = []
   } finally {
     loadingTransactions.value = false
   }
+}
+
+function getTransactionDescription(tx) {
+  // Use memo if available
+  if (tx.memo) {
+    return tx.memo
+  }
+
+  // Generate description based on transaction type
+  if (tx.transaction_type === 'purchase') {
+    return t('tokens.purchasedTokens', { tokens: tx.amount })
+  } else if (tx.transaction_type === 'consume' || tx.transaction_type === 'generation') {
+    if (tx.related_style_name) {
+      return `Generated image with ${tx.related_style_name} style`
+    }
+    return `Used ${Math.abs(tx.amount)} tokens`
+  } else if (tx.transaction_type === 'earn') {
+    return `Earned ${tx.amount} tokens`
+  }
+
+  return `${tx.transaction_type} - ${tx.amount} tokens`
 }
 
 async function handlePurchase() {
@@ -277,31 +265,17 @@ async function handlePurchase() {
 
   purchasing.value = true
   try {
-    // TODO: Replace with actual payment flow
-    // const response = await createPaymentSession({
-    //   package_id: selectedPackage.value.id,
-    //   amount: selectedPackage.value.price,
-    // })
-    // window.location.href = response.data.checkout_url
-
-    // Mock: Simulate purchase
-    alert(t('tokens.purchasingMessage', { tokens: selectedPackage.value.tokens, price: `$${selectedPackage.value.price}` }))
-
-    // In production, this would redirect to Stripe checkout
-    // For now, just simulate success
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // Update balance
-    tokenBalance.value += selectedPackage.value.tokens
-
-    // Add transaction
-    transactions.value.unshift({
-      id: Date.now(),
-      type: 'purchase',
+    // Call backend API to purchase tokens (mock implementation for MVP)
+    const response = await purchaseTokens({
       amount: selectedPackage.value.tokens,
-      description: t('tokens.purchasedTokens', { tokens: selectedPackage.value.tokens }),
-      created_at: new Date().toISOString(),
+      payment_method: 'mock',
     })
+
+    // Update balance from response
+    tokenBalance.value = response.data.balance
+
+    // Reload transactions to show new purchase
+    await loadTransactions()
 
     // Clear selection
     selectedPackage.value = null
@@ -309,7 +283,8 @@ async function handlePurchase() {
     alert(t('tokens.purchaseSuccess'))
   } catch (error) {
     console.error('Failed to purchase tokens:', error)
-    alert(t('tokens.purchaseFailed'))
+    const errorMessage = error.response?.data?.error?.message || t('tokens.purchaseFailed')
+    alert(errorMessage)
   } finally {
     purchasing.value = false
   }

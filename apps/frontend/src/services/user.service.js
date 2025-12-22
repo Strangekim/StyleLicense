@@ -24,14 +24,23 @@ export async function getUserProfile(userId) {
  * @returns {Promise<Object>} - Updated profile data
  */
 export async function updateUserProfile(data) {
-  // Handle file upload separately if profile_image is a File
-  if (data.profile_image instanceof File) {
-    const formData = new FormData()
-    formData.append('profile_image', data.profile_image)
-    if (data.username) formData.append('username', data.username)
-    if (data.bio) formData.append('bio', data.bio)
+  // Handle file upload if profile_image or signature_image is a File
+  const hasFileUpload = data.profile_image instanceof File || data.signature_image instanceof File
 
-    const response = await api.patch('/api/users/me', formData, {
+  if (hasFileUpload) {
+    const formData = new FormData()
+    if (data.profile_image instanceof File) {
+      formData.append('profile_image', data.profile_image)
+    }
+    if (data.signature_image instanceof File) {
+      formData.append('signature_image', data.signature_image)
+    }
+    // Only add username if it has a value (blank username causes validation error)
+    if (data.username) formData.append('username', data.username)
+    // Bio can be empty string (blank=True in model)
+    if (data.bio !== undefined) formData.append('bio', data.bio)
+
+    const response = await api.patch('/api/users/me/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -39,7 +48,7 @@ export async function updateUserProfile(data) {
     return response.data
   } else {
     // Regular JSON update
-    const response = await api.patch('/api/users/me', data)
+    const response = await api.patch('/api/users/me/', data)
     return response.data
   }
 }
@@ -66,17 +75,36 @@ export async function upgradeToArtist() {
 export async function getUserGenerations(userId, params = {}) {
   // If requesting current user's generations
   if (userId === 'me' || !userId) {
-    const response = await api.get('/api/generations/me', { params })
+    const response = await api.get('/api/generations/me/', { params })
     return response.data
   }
 
   // For other users, use the feed endpoint with user filter
   // TODO: Backend needs to add user_id filter to feed endpoint
-  const response = await api.get('/api/generations/feed', {
+  const response = await api.get('/api/generations/feed/', {
     params: {
       ...params,
       user_id: userId,
     },
   })
+  return response.data
+}
+
+/**
+ * Toggle follow/unfollow on a user
+ * @param {number} userId - User ID to follow/unfollow
+ * @returns {Promise<Object>} - { is_following: boolean, follower_count: number }
+ */
+export async function toggleFollow(userId) {
+  const response = await api.post(`/api/users/${userId}/follow/`)
+  return response.data
+}
+
+/**
+ * Get list of users that current user is following
+ * @returns {Promise<Object>} - List of following users
+ */
+export async function getFollowingList() {
+  const response = await api.get('/api/users/following/')
   return response.data
 }

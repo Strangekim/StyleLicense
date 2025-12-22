@@ -264,16 +264,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useGenerationStore } from '@/stores/generations'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { getUserProfile, getUserGenerations } from '@/services/user.service'
 
 const router = useRouter()
 const { t, locale } = useI18n()
 const authStore = useAuthStore()
+const generationStore = useGenerationStore()
 
 // State
 const profile = ref(null)
@@ -281,16 +283,26 @@ const images = ref([])
 const loading = ref(false)
 const loadingImages = ref(false)
 const viewMode = ref('grid') // 'grid' or 'private'
+const pollingInterval = ref(null)
 
 // Computed
 const privateImages = computed(() => {
   return images.value.filter(img => img.visibility === 'private')
 })
 
+const hasProcessingImages = computed(() => {
+  return images.value.some(img => img.status === 'queued' || img.status === 'processing')
+})
+
 // Methods
 onMounted(async () => {
   await fetchProfile()
   await fetchUserImages()
+  startPolling()
+})
+
+onUnmounted(() => {
+  stopPolling()
 })
 
 async function fetchProfile() {
@@ -393,6 +405,26 @@ function formatTime(timestamp) {
       month: 'short',
       day: 'numeric',
     })
+  }
+}
+
+// Polling for processing images
+function startPolling() {
+  // Poll every 5 seconds if there are processing images
+  pollingInterval.value = setInterval(async () => {
+    if (hasProcessingImages.value) {
+      await fetchUserImages()
+    } else {
+      // Stop polling if no processing images
+      stopPolling()
+    }
+  }, 5000)
+}
+
+function stopPolling() {
+  if (pollingInterval.value) {
+    clearInterval(pollingInterval.value)
+    pollingInterval.value = null
   }
 }
 </script>

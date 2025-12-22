@@ -8,6 +8,7 @@ import os
 import logging
 from typing import List
 from pathlib import Path
+from urllib.parse import unquote
 from PIL import Image
 from config import Config
 
@@ -19,43 +20,57 @@ class GCSService:
 
     def __init__(self):
         """Initialize GCS client"""
-        # Only import and initialize GCS client if credentials are available
+        # Initialize GCS client (will use default credentials on GCE VM)
         self.client = None
         self.bucket = None
 
-        if Config.GOOGLE_APPLICATION_CREDENTIALS and os.path.exists(
-            Config.GOOGLE_APPLICATION_CREDENTIALS
-        ):
-            try:
-                from google.cloud import storage
+        try:
+            from google.cloud import storage
 
-                self.client = storage.Client(project=Config.GCS_PROJECT_ID)
-                self.bucket = self.client.bucket(Config.GCS_BUCKET_NAME)
-                logger.info(
-                    f"GCS client initialized for bucket: {Config.GCS_BUCKET_NAME}"
-                )
-            except Exception as e:
-                logger.warning(f"Failed to initialize GCS client: {e}")
-        else:
-            logger.warning(
-                "GCS credentials not found. GCS functionality will be disabled."
+            # On GCE VM, this will automatically use the VM's service account
+            # No explicit credentials needed
+            self.client = storage.Client(project=Config.GCS_PROJECT_ID)
+            self.bucket = self.client.bucket(Config.GCS_BUCKET_NAME)
+            logger.info(
+                f"GCS client initialized for bucket: {Config.GCS_BUCKET_NAME}"
             )
+        except Exception as e:
+            logger.warning(f"Failed to initialize GCS client: {e}")
+            logger.warning("GCS functionality will be disabled.")
 
     def download_image(self, gcs_path: str, local_path: str) -> bool:
         """
         Download a single image from GCS
 
         Args:
-            gcs_path: GCS path (e.g., gs://bucket/path/to/image.jpg or path/to/image.jpg)
+            gcs_path: GCS path (e.g., gs://bucket/path/to/image.jpg, https://storage.googleapis.com/bucket/path, or path/to/image.jpg)
             local_path: Local file path to save the image
 
         Returns:
             True if download was successful, False otherwise
         """
         try:
-            # Remove gs:// prefix and bucket name if present
-            blob_path = gcs_path.replace(f"gs://{Config.GCS_BUCKET_NAME}/", "")
-            blob_path = blob_path.replace("gs://", "").split("/", 1)[-1]
+            # Handle different GCS path formats
+            blob_path = gcs_path
+
+            # Remove https://storage.googleapis.com/bucket/ prefix if present
+            if blob_path.startswith("https://storage.googleapis.com/"):
+                blob_path = blob_path.replace("https://storage.googleapis.com/", "")
+                # Now blob_path is like: stylelicense-media/signatures/file.png
+                # Remove bucket name
+                if blob_path.startswith(f"{Config.GCS_BUCKET_NAME}/"):
+                    blob_path = blob_path.replace(f"{Config.GCS_BUCKET_NAME}/", "", 1)
+
+            # Remove gs://bucket/ prefix if present
+            elif blob_path.startswith(f"gs://{Config.GCS_BUCKET_NAME}/"):
+                blob_path = blob_path.replace(f"gs://{Config.GCS_BUCKET_NAME}/", "")
+
+            # Remove gs:// prefix for other buckets
+            elif blob_path.startswith("gs://"):
+                blob_path = blob_path.replace("gs://", "").split("/", 1)[-1]
+
+            # URL decode the path to handle special characters (e.g., Korean filenames)
+            blob_path = unquote(blob_path)
 
             logger.info(f"Downloading image from GCS: {blob_path}")
 
@@ -229,6 +244,95 @@ class GCSService:
         except Exception as e:
             logger.error(f"Failed to upload directory to GCS: {e}")
             raise RuntimeError(f"GCS directory upload failed") from e
+
+    def download_lora_weights(self, gcs_path: str, local_dir: str) -> str:
+        """
+        Download LoRA weights from GCS.
+
+        Args:
+            gcs_path: GCS path to LoRA directory or file
+                     (e.g., gs://bucket/models/style-19/ or gs://bucket/models/style-19/adapter_model.safetensors)
+            local_dir: Local directory to save LoRA weights
+
+        Returns:
+            Local directory path containing LoRA weights
+
+        Raises:
+            RuntimeError: If download fails
+        """
+        try:
+            if not self.bucket:
+                raise RuntimeError("GCS client not initialized")
+
+            # Parse GCS path to get directory prefix
+            blob_path = gcs_path
+
+            # Remove https://storage.googleapis.com/bucket/ prefix if present
+            if blob_path.startswith("https://storage.googleapis.com/"):
+                blob_path = blob_path.replace("https://storage.googleapis.com/", "")
+                if blob_path.startswith(f"{Config.GCS_BUCKET_NAME}/"):
+                    blob_path = blob_path.replace(f"{Config.GCS_BUCKET_NAME}/", "", 1)
+
+            # Remove gs://bucket/ prefix if present
+            elif blob_path.startswith(f"gs://{Config.GCS_BUCKET_NAME}/"):
+                blob_path = blob_path.replace(f"gs://{Config.GCS_BUCKET_NAME}/", "")
+
+            # Remove gs:// prefix for other buckets
+            elif blob_path.startswith("gs://"):
+                parts = blob_path.replace("gs://", "").split("/", 1)
+                if len(parts) > 1:
+                    blob_path = parts[1]
+
+            # Extract directory prefix (remove filename if present)
+            if blob_path.endswith(('.safetensors', '.json', '.bin', '.pt', '.pth')):
+                # It's a file path, get directory
+                blob_prefix = "/".join(blob_path.split("/")[:-1])
+            else:
+                # It's already a directory
+                blob_prefix = blob_path.rstrip("/")
+
+            logger.info(f"Downloading LoRA weights from GCS prefix: {blob_prefix}")
+
+            # Create local directory
+            os.makedirs(local_dir, exist_ok=True)
+
+            # List all blobs with this prefix
+            blobs = list(self.bucket.list_blobs(prefix=blob_prefix))
+
+            if not blobs:
+                raise RuntimeError(f"No files found at GCS path: {blob_prefix}")
+
+            downloaded_count = 0
+            for blob in blobs:
+                # Skip if it's a directory marker
+                if blob.name.endswith('/'):
+                    continue
+
+                # Get filename relative to prefix
+                relative_path = blob.name[len(blob_prefix):].lstrip('/')
+                if not relative_path:
+                    continue
+
+                # Local file path
+                local_file_path = os.path.join(local_dir, relative_path)
+
+                # Create subdirectories if needed
+                os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
+
+                # Download file
+                logger.info(f"  Downloading: {blob.name}")
+                blob.download_to_filename(local_file_path)
+                downloaded_count += 1
+
+            if downloaded_count == 0:
+                raise RuntimeError(f"No files downloaded from {blob_prefix}")
+
+            logger.info(f"Successfully downloaded {downloaded_count} LoRA files to {local_dir}")
+            return local_dir
+
+        except Exception as e:
+            logger.error(f"Failed to download LoRA weights: {e}")
+            raise RuntimeError(f"LoRA weights download failed") from e
 
     def upload_model(self, model_dir: str, style_id: int) -> str:
         """

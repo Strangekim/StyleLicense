@@ -305,6 +305,13 @@ LOGGING = {
     },
 }
 
+# Google Cloud Storage Configuration
+GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "stylelicense-media")
+GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
+
+# Note: We'll use google-cloud-storage client directly instead of django-storages
+# to avoid configuration complexity
+
 # --- DEBUG: Log the loaded SECRET_KEY hash ---
 import logging
 import hashlib
