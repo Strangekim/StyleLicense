@@ -137,8 +137,6 @@ class GenerationViewSet(viewsets.ViewSet):
                         signature_path = style.artist.artist_profile.signature_image_url
                 except Exception as e:
                     # Log error but don't fail generation
-                    import logging
-                    logger = logging.getLogger(__name__)
                     logger.warning(f"Failed to get signature for style {style.id}: {e}")
 
                 # Send to RabbitMQ
@@ -168,9 +166,7 @@ class GenerationViewSet(viewsets.ViewSet):
             )
 
         except Exception as e:
-            import logging
             import traceback
-            logger = logging.getLogger(__name__)
             logger.error(f"[Generation] Failed to create generation: {str(e)}")
             logger.error(f"[Generation] Traceback: {traceback.format_exc()}")
             return Response(
@@ -285,9 +281,7 @@ class GenerationViewSet(viewsets.ViewSet):
             return Response({"success": True, "data": response_data})
 
         except Exception as e:
-            import logging
             import traceback
-            logger = logging.getLogger(__name__)
             logger.error(f"[Generation] Failed to retrieve generation {pk}: {str(e)}")
             logger.error(f"[Generation] Traceback: {traceback.format_exc()}")
             return Response(
