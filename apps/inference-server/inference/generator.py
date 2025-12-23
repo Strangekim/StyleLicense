@@ -59,7 +59,10 @@ class ImageGenerator:
             lora_weights_path: Path to LoRA weights (optional)
         """
         if self.pipeline is not None:
-            logger.info("Pipeline already loaded, skipping")
+            logger.info("Pipeline already loaded, skipping base model load")
+            # Still load LoRA weights if provided
+            if lora_weights_path:
+                self._load_lora_weights(lora_weights_path)
             return
 
         logger.info(f"Loading Stable Diffusion pipeline: {self.model_name}")
