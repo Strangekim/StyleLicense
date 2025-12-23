@@ -122,8 +122,16 @@ class ImageGenerator:
             # Load PEFT adapter into UNet
             try:
                 logger.info("Loading PEFT adapter into UNet...")
+
+                # If UNet is already a PeftModel, get the base model first
+                base_unet = self.pipeline.unet
+                if isinstance(base_unet, PeftModel):
+                    logger.info("UNet is already a PeftModel, getting base model...")
+                    base_unet = base_unet.get_base_model()
+
+                # Load new adapter on base model
                 self.pipeline.unet = PeftModel.from_pretrained(
-                    self.pipeline.unet,
+                    base_unet,
                     lora_weights_path,
                     adapter_name="default"
                 )
