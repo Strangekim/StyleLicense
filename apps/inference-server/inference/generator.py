@@ -123,15 +123,16 @@ class ImageGenerator:
             try:
                 logger.info("Loading PEFT adapter into UNet...")
 
-                # If UNet is already a PeftModel, get the base model first
-                base_unet = self.pipeline.unet
-                if isinstance(base_unet, PeftModel):
-                    logger.info("UNet is already a PeftModel, getting base model...")
-                    base_unet = base_unet.get_base_model()
+                # If UNet is already a PeftModel, unload it completely first
+                if isinstance(self.pipeline.unet, PeftModel):
+                    logger.info("UNet is already a PeftModel, unloading previous adapter...")
+                    base_unet = self.pipeline.unet.unload()
+                    self.pipeline.unet = base_unet
+                    logger.info("Previous adapter unloaded successfully")
 
-                # Load new adapter on base model
+                # Load new adapter on clean base model
                 self.pipeline.unet = PeftModel.from_pretrained(
-                    base_unet,
+                    self.pipeline.unet,
                     lora_weights_path,
                     adapter_name="default"
                 )
