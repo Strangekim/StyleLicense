@@ -115,6 +115,14 @@ class GenerationViewSet(viewsets.ViewSet):
                     },
                 )
 
+                # Create GenerationTag entries and update usage_count
+                from app.models import Tag, GenerationTag
+                for idx, tag_name in enumerate(prompt_tags):
+                    tag, _ = Tag.objects.get_or_create(name=tag_name.lower())
+                    GenerationTag.objects.create(generation=generation, tag=tag, sequence=idx)
+                    tag.usage_count += 1
+                    tag.save(update_fields=["usage_count"])
+
                 # Get artist signature path
                 signature_path = None
                 try:
@@ -136,6 +144,7 @@ class GenerationViewSet(viewsets.ViewSet):
                     aspect_ratio=aspect_ratio,
                     seed=seed,
                     signature_path=signature_path,
+                    prompt_tags=prompt_tags,
                 )
 
                 # Store task_id in generation_progress

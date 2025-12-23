@@ -246,7 +246,7 @@ def inference_complete(request):
 
             # Store final metadata in generation_progress
             if metadata:
-                if not generation.generation_progress:
+                if generation.generation_progress is None:
                     generation.generation_progress = {}
                 generation.generation_progress.update(metadata)
 
