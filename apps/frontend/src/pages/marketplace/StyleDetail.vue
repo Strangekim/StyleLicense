@@ -16,6 +16,7 @@ import { useAlertStore } from '@/stores/alert'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TagButton from '@/components/shared/TagButton.vue'
 import { toggleFollow, getFollowingList } from '@/services/user.service'
+import { getRecommendedTags } from '@/services/model.service'
 
 const route = useRoute()
 const router = useRouter()
@@ -46,6 +47,10 @@ const isGenerating = ref(false)
 const showWarning = ref(false)
 const selectedAspectRatio = ref('1:1') // Default aspect ratio
 const tagError = ref(false) // Track non-English input attempt
+
+// Tag recommendation state
+const recommendedTags = ref([])
+const loadingRecommendations = ref(false)
 
 // Aspect ratio options
 const aspectRatioOptions = [
@@ -108,6 +113,20 @@ const canGenerate = computed(() => {
 // Check if current user is the owner of this style
 const isOwnStyle = computed(() => {
   return authStore.isAuthenticated && model.value?.artist_id === authStore.user?.id
+})
+
+// Compute next recommended tag (filter out already-used tags)
+const nextRecommendedTag = computed(() => {
+  const currentTagsLower = generationTags.value.map(t => t.toLowerCase())
+  const nextTag = recommendedTags.value.find(tag =>
+    !currentTagsLower.includes(tag.toLowerCase())
+  )
+  return nextTag || ''
+})
+
+// Dynamic placeholder text
+const tagInputPlaceholder = computed(() => {
+  return nextRecommendedTag.value || t('generation.tags.placeholder', 'Add tag...')
 })
 
 // Format time ago
@@ -327,6 +346,18 @@ onMounted(async () => {
 
     // Fetch example generations for this style
     await fetchExampleGenerations()
+
+    // Fetch recommended tags for this style
+    if (model.value?.id) {
+      loadingRecommendations.value = true
+      try {
+        recommendedTags.value = await getRecommendedTags(model.value.id)
+      } catch (error) {
+        console.error('Failed to load recommended tags:', error)
+      } finally {
+        loadingRecommendations.value = false
+      }
+    }
 
     // Fetch user balance if authenticated
     if (authStore.isAuthenticated) {
@@ -596,7 +627,7 @@ onMounted(async () => {
             <input
               v-model="newTagInput"
               type="text"
-              :placeholder="$t('styleDetail.tagInputPlaceholder')"
+              :placeholder="tagInputPlaceholder"
               :class="[
                 'w-full pl-3 pr-10 py-3 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors',
                 tagError
