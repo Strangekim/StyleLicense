@@ -30,6 +30,7 @@ class FeedStyleSerializer(serializers.ModelSerializer):
             return {
                 "id": obj.artist.id,
                 "artist_name": obj.artist.username,
+                "profile_image": obj.artist.profile_image,
             }
         return None
 

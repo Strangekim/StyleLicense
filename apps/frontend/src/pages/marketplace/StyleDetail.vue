@@ -16,6 +16,7 @@ import { useAlertStore } from '@/stores/alert'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TagButton from '@/components/shared/TagButton.vue'
 import { toggleFollow, getFollowingList } from '@/services/user.service'
+import { getRecommendedTags } from '@/services/model.service'
 
 const route = useRoute()
 const router = useRouter()
@@ -46,6 +47,11 @@ const isGenerating = ref(false)
 const showWarning = ref(false)
 const selectedAspectRatio = ref('1:1') // Default aspect ratio
 const tagError = ref(false) // Track non-English input attempt
+
+// Tag recommendation state
+const recommendedTags = ref([])
+const loadingRecommendations = ref(false)
+const skippedTags = ref([]) // Track tags that user deleted (don't recommend again)
 
 // Aspect ratio options
 const aspectRatioOptions = [
@@ -108,6 +114,22 @@ const canGenerate = computed(() => {
 // Check if current user is the owner of this style
 const isOwnStyle = computed(() => {
   return authStore.isAuthenticated && model.value?.artist_id === authStore.user?.id
+})
+
+// Compute next recommended tag (filter out already-used tags and skipped tags)
+const nextRecommendedTag = computed(() => {
+  const currentTagsLower = generationTags.value.map(t => t.toLowerCase())
+  const skippedTagsLower = skippedTags.value.map(t => t.toLowerCase())
+  const nextTag = recommendedTags.value.find(tag => {
+    const tagLower = tag.toLowerCase()
+    return !currentTagsLower.includes(tagLower) && !skippedTagsLower.includes(tagLower)
+  })
+  return nextTag || ''
+})
+
+// Dynamic placeholder text
+const tagInputPlaceholder = computed(() => {
+  return nextRecommendedTag.value || t('generation.tags.placeholder', 'Add tag...')
 })
 
 // Format time ago
@@ -213,7 +235,32 @@ const removeTag = (index) => {
   // Remove from userTags (index - 1 because first tag is style name)
   const userTagIndex = index - 1
   if (userTagIndex >= 0 && userTagIndex < userTags.value.length) {
+    const removedTag = userTags.value[userTagIndex]
     userTags.value.splice(userTagIndex, 1)
+
+    // Track removed tag so it won't be recommended again
+    if (removedTag && !skippedTags.value.includes(removedTag)) {
+      skippedTags.value.push(removedTag)
+    }
+  }
+}
+
+// Handle Tab key to auto-fill recommended tag
+const handleTabKey = (event) => {
+  if (event.key === 'Tab' && nextRecommendedTag.value) {
+    event.preventDefault()
+
+    // If input is empty or only whitespace, fill with recommended tag
+    const currentInput = newTagInput.value.trim()
+    if (!currentInput) {
+      newTagInput.value = nextRecommendedTag.value
+    } else if (currentInput === nextRecommendedTag.value) {
+      // If user already typed the recommended tag, add it and clear input
+      addNewTag()
+    } else {
+      // Replace current input with recommended tag
+      newTagInput.value = nextRecommendedTag.value
+    }
   }
 }
 
@@ -327,6 +374,18 @@ onMounted(async () => {
 
     // Fetch example generations for this style
     await fetchExampleGenerations()
+
+    // Fetch recommended tags for this style
+    if (model.value?.id) {
+      loadingRecommendations.value = true
+      try {
+        recommendedTags.value = await getRecommendedTags(model.value.id)
+      } catch (error) {
+        console.error('Failed to load recommended tags:', error)
+      } finally {
+        loadingRecommendations.value = false
+      }
+    }
 
     // Fetch user balance if authenticated
     if (authStore.isAuthenticated) {
@@ -596,7 +655,7 @@ onMounted(async () => {
             <input
               v-model="newTagInput"
               type="text"
-              :placeholder="$t('styleDetail.tagInputPlaceholder')"
+              :placeholder="tagInputPlaceholder"
               :class="[
                 'w-full pl-3 pr-10 py-3 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors',
                 tagError
@@ -604,6 +663,7 @@ onMounted(async () => {
                   : 'border-neutral-300 focus:ring-primary-500 focus:border-transparent'
               ]"
               @input="filterTagEnglishOnly"
+              @keydown="handleTabKey"
               @keyup.enter="addNewTag"
             />
             <button

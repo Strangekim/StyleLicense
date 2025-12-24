@@ -36,10 +36,10 @@ urlpatterns = [
     # Health check endpoint
     path("health", HealthCheckView.as_view(), name="health"),
     # Authentication endpoints
-    path("auth/google/login", GoogleLoginView.as_view(), name="google_login"),
+    path("auth/google/login/", GoogleLoginView.as_view(), name="google_login"),
     path("auth/google/callback/", GoogleCallbackView.as_view(), name="google_callback"),
-    path("auth/logout", LogoutView.as_view(), name="logout"),
-    path("auth/me", MeView.as_view(), name="me"),
+    path("auth/logout/", LogoutView.as_view(), name="logout"),
+    path("auth/me/", MeView.as_view(), name="me"),
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     # Webhook endpoints (AI servers → Backend)
     path("webhooks/training/progress", webhook.training_progress, name="webhook_training_progress"),

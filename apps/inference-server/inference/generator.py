@@ -59,7 +59,10 @@ class ImageGenerator:
             lora_weights_path: Path to LoRA weights (optional)
         """
         if self.pipeline is not None:
-            logger.info("Pipeline already loaded, skipping")
+            logger.info("Pipeline already loaded, skipping base model load")
+            # Still load LoRA weights if provided
+            if lora_weights_path:
+                self._load_lora_weights(lora_weights_path)
             return
 
         logger.info(f"Loading Stable Diffusion pipeline: {self.model_name}")
@@ -119,6 +122,15 @@ class ImageGenerator:
             # Load PEFT adapter into UNet
             try:
                 logger.info("Loading PEFT adapter into UNet...")
+
+                # If UNet is already a PeftModel, unload it completely first
+                if isinstance(self.pipeline.unet, PeftModel):
+                    logger.info("UNet is already a PeftModel, unloading previous adapter...")
+                    base_unet = self.pipeline.unet.unload()
+                    self.pipeline.unet = base_unet
+                    logger.info("Previous adapter unloaded successfully")
+
+                # Load new adapter on clean base model
                 self.pipeline.unet = PeftModel.from_pretrained(
                     self.pipeline.unet,
                     lora_weights_path,

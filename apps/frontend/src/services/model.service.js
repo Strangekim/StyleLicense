@@ -142,6 +142,22 @@ export async function getStyleExampleGenerations(id) {
   return response.data
 }
 
+/**
+ * Get recommended tags for a style
+ *
+ * @param {number} id - Style ID
+ * @returns {Promise<string[]>} Array of recommended tag names
+ */
+export async function getRecommendedTags(id) {
+  try {
+    const response = await apiClient.get(`/api/styles/${id}/recommended_tags/`)
+    return response.data.data.recommended_tags || []
+  } catch (error) {
+    console.error('Failed to fetch recommended tags:', error)
+    return [] // Graceful fallback
+  }
+}
+
 export default {
   listModels,
   getModelDetail,
@@ -150,4 +166,5 @@ export default {
   updateModel,
   deleteModel,
   getStyleExampleGenerations,
+  getRecommendedTags,
 }

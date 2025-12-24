@@ -9,11 +9,14 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import permissions
 from django.db import transaction
+import logging
 
 from app.models.generation import Generation
 from app.models.style import Style
 from app.services.token_service import TokenService
 from app.services.rabbitmq_service import get_rabbitmq_service
+
+logger = logging.getLogger(__name__)
 
 
 class GenerationViewSet(viewsets.ViewSet):
@@ -115,6 +118,18 @@ class GenerationViewSet(viewsets.ViewSet):
                     },
                 )
 
+                # Create GenerationTag entries and update usage_count
+                from app.models import Tag, GenerationTag
+                logger.info(f"[Generation {generation.id}] Creating tags for prompt_tags: {prompt_tags}")
+                for idx, tag_name in enumerate(prompt_tags):
+                    tag, created = Tag.objects.get_or_create(name=tag_name.lower())
+                    if created:
+                        logger.info(f"[Generation {generation.id}] Created new tag: {tag.name}")
+                    GenerationTag.objects.create(generation=generation, tag=tag, sequence=idx)
+                    tag.usage_count += 1
+                    tag.save(update_fields=["usage_count"])
+                    logger.info(f"[Generation {generation.id}] Tag '{tag.name}' usage_count updated to {tag.usage_count}")
+
                 # Get artist signature path
                 signature_path = None
                 try:
@@ -122,8 +137,6 @@ class GenerationViewSet(viewsets.ViewSet):
                         signature_path = style.artist.artist_profile.signature_image_url
                 except Exception as e:
                     # Log error but don't fail generation
-                    import logging
-                    logger = logging.getLogger(__name__)
                     logger.warning(f"Failed to get signature for style {style.id}: {e}")
 
                 # Send to RabbitMQ
@@ -136,6 +149,7 @@ class GenerationViewSet(viewsets.ViewSet):
                     aspect_ratio=aspect_ratio,
                     seed=seed,
                     signature_path=signature_path,
+                    prompt_tags=prompt_tags,
                 )
 
                 # Store task_id in generation_progress
@@ -152,9 +166,7 @@ class GenerationViewSet(viewsets.ViewSet):
             )
 
         except Exception as e:
-            import logging
             import traceback
-            logger = logging.getLogger(__name__)
             logger.error(f"[Generation] Failed to create generation: {str(e)}")
             logger.error(f"[Generation] Traceback: {traceback.format_exc()}")
             return Response(
@@ -269,9 +281,7 @@ class GenerationViewSet(viewsets.ViewSet):
             return Response({"success": True, "data": response_data})
 
         except Exception as e:
-            import logging
             import traceback
-            logger = logging.getLogger(__name__)
             logger.error(f"[Generation] Failed to retrieve generation {pk}: {str(e)}")
             logger.error(f"[Generation] Traceback: {traceback.format_exc()}")
             return Response(

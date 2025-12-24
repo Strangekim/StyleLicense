@@ -62,7 +62,7 @@ class StyleViewSet(BaseViewSet):
 
     def get_permissions(self):
         """Set permissions based on action."""
-        if self.action in ["list", "retrieve"]:
+        if self.action in ["list", "retrieve", "example_generations", "recommended_tags"]:
             permission_classes = [AllowAny]
         elif self.action == "create":
             permission_classes = [IsAuthenticated, IsArtist]
@@ -592,3 +592,72 @@ class StyleViewSet(BaseViewSet):
                 "message": f"Successfully regenerated tags: {tags_created} new tags created",
             }
         )
+
+    @action(detail=True, methods=["get"], permission_classes=[AllowAny])
+    def recommended_tags(self, request, pk=None):
+        """
+        Get recommended tags for image generation.
+
+        Combines:
+        - Most-used tags from completed generations (usage count DESC)
+        - Training tags from style (sequence order)
+
+        Excludes style name tag (case-insensitive exact match)
+
+        Endpoint: GET /api/styles/:id/recommended-tags/
+        Returns: {"success": true, "data": {"recommended_tags": ["tag1", "tag2", ...]}}
+        """
+        try:
+            style = self.get_object()
+        except Style.DoesNotExist:
+            return Response(
+                {
+                    "success": False,
+                    "error": {"code": "NOT_FOUND", "message": "Style not found"}
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        from app.models import Tag, GenerationTag
+        from django.db.models import Count
+
+        # 1. Get generation tags with usage count
+        generation_tags = (
+            GenerationTag.objects.filter(
+                generation__style_id=pk, generation__status="completed"
+            )
+            .values("tag__name")
+            .annotate(count=Count("tag"))
+            .order_by("-count")[:20]
+        )
+
+        # 2. Get training tags with sequence
+        training_tags = (
+            StyleTag.objects.filter(style_id=pk)
+            .select_related("tag")
+            .order_by("sequence")
+            .values("tag__name", "sequence")
+        )
+
+        # 3. Merge with priority scores
+        # Generation tags: score = 1,000,000 + count
+        # Training tags: score = 10,000 - sequence
+        tag_scores = {}
+
+        for item in generation_tags:
+            tag_scores[item["tag__name"]] = 1000000 + item["count"]
+
+        for item in training_tags:
+            tag_name = item["tag__name"]
+            if tag_name not in tag_scores:
+                tag_scores[tag_name] = 10000 - item["sequence"]
+
+        # 4. Exclude style name (case-insensitive)
+        style_name_lower = style.name.lower()
+        tag_scores = {k: v for k, v in tag_scores.items() if k != style_name_lower}
+
+        # 5. Sort and return top 20
+        sorted_tags = sorted(tag_scores.items(), key=lambda x: x[1], reverse=True)
+        recommended = [tag for tag, score in sorted_tags[:20]]
+
+        return Response({"success": True, "data": {"recommended_tags": recommended}})

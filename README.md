@@ -59,9 +59,46 @@
 
 ---
 
+## 🖥️ 화면 구성 및 시연 동영상
+
+- **시연 영상** 👉 [**YouTube 바로가기**](https://youtube.com/shorts/6i-mFkp4MJI?feature=share)
+  <br>
+
+<table>
+  <tr>
+    <th align="center">메인 화면</th>
+    <th align="center">메인 화면(랭킹 및 피드)</th>
+    <th align="center">적금통 개설 화면</th>
+    <th align="center">적금통 상세 화면</th>
+  </tr>
+  <tr>
+    <td align="center"><img src="./README/Image Create Page.png" width="200"></td>
+    <td align="center"><img src="./README/Image Detail.png" width="200"></td>
+    <td align="center"><img src="./README/Main Page.png" width="200"></td>
+    <td align="center"><img src="./README/My Page.png" width="200"></td>
+  </tr>
+  <tr>
+    <th align="center">알림 화면</th>
+    <th align="center">챌린지 화면</th>
+    <th align="center">마이페이지 화면</th>
+    <th align="center">캐릭터 설정 화면</th>
+  </tr>
+  <tr>
+    <td align="center"><img src="https://github.com/user-attachments/assets/f99b2068-60af-449d-bde2-0cc5d7ab8987" width="200"></td>
+    <td align="center"><img src="https://github.com/user-attachments/assets/29b1876c-bb6e-44d7-bb2a-e8ccc39d7678" width="200"></td>
+    <td align="center"><img src="https://github.com/user-attachments/assets/659bb2ba-c897-428a-913f-f21115a7f9b3" width="200"></td>
+    <td align="center"><img src="https://github.com/user-attachments/assets/c2ae23fe-ebb4-4f48-a8fc-3eb7d1c00c32" width="200"></td>
+  </tr>
+</table>
+
+<br>
+
+---
+
 ## 🛠️ Tech Stack
 
 ### Frontend
+
 ![Vue.js](https://img.shields.io/badge/Vue.js-3.3+-4FC08D?logo=vue.js&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5.0+-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4+-06B6D4?logo=tailwindcss&logoColor=white)
@@ -69,12 +106,14 @@
 ![Axios](https://img.shields.io/badge/Axios-1.6+-5A29E4?logo=axios&logoColor=white)
 
 ### Backend
+
 ![Django](https://img.shields.io/badge/Django-4.2-092E20?logo=django&logoColor=white)
 ![DRF](https://img.shields.io/badge/Django_REST-3.14+-A30000?logo=django&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)
 ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3.12-FF6600?logo=rabbitmq&logoColor=white)
 
 ### AI/ML
+
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.1+-EE4C2C?logo=pytorch&logoColor=white)
 ![Stable Diffusion](https://img.shields.io/badge/Stable_Diffusion-v1.5-purple)
 ![LoRA](https://img.shields.io/badge/LoRA-Fine--tuning-orange)
@@ -82,6 +121,7 @@
 ![CUDA](https://img.shields.io/badge/CUDA-11.8+-76B900?logo=nvidia&logoColor=white)
 
 ### Infrastructure
+
 ![Docker](https://img.shields.io/badge/Docker-24.0+-2496ED?logo=docker&logoColor=white)
 ![Google Cloud Run](https://img.shields.io/badge/Google_Cloud_Run-Serverless-4A90E2?logo=googlecloud&logoColor=white)
 ![Google Compute Engine](https://img.shields.io/badge/Google_Compute_Engine-VM-4A90E2?logo=googlecloud&logoColor=white)
@@ -122,15 +162,15 @@
 
 ### Component Overview
 
-| Component | Technology | Hosting (GCP) | Purpose |
-|-----------|-----------|---|---------|
-| **Frontend** | Vue 3 + Vite | **Cloud Storage + CDN** | SPA with Instagram-inspired UI |
-| **Backend** | Django + DRF | **Cloud Run** | REST API, authentication, business logic |
-| **Database** | PostgreSQL 15 | **Cloud SQL** | User data, models, transactions |
-| **Message Queue** | RabbitMQ | **Compute Engine (GCE)** | Async task distribution |
-| **Training Server** | PyTorch + LoRA | **Compute Engine (GCE)** | Fine-tune Stable Diffusion models |
-| **Inference Server** | Diffusers | **Compute Engine (GCE)** | Generate images with trained models |
-| **Storage** | - | **Cloud Storage** | Store models, images, signatures |
+| Component            | Technology     | Hosting (GCP)            | Purpose                                  |
+| -------------------- | -------------- | ------------------------ | ---------------------------------------- |
+| **Frontend**         | Vue 3 + Vite   | **Cloud Storage + CDN**  | SPA with Instagram-inspired UI           |
+| **Backend**          | Django + DRF   | **Cloud Run**            | REST API, authentication, business logic |
+| **Database**         | PostgreSQL 15  | **Cloud SQL**            | User data, models, transactions          |
+| **Message Queue**    | RabbitMQ       | **Compute Engine (GCE)** | Async task distribution                  |
+| **Training Server**  | PyTorch + LoRA | **Compute Engine (GCE)** | Fine-tune Stable Diffusion models        |
+| **Inference Server** | Diffusers      | **Compute Engine (GCE)** | Generate images with trained models      |
+| **Storage**          | -              | **Cloud Storage**        | Store models, images, signatures         |
 
 ---
 
@@ -255,17 +295,17 @@ StyleLicense/
 
 ## 📚 Documentation
 
-| Document | Description |
-|----------|-------------|
-| [TECHSPEC.md](TECHSPEC.md) | Complete technical specification |
-| [PLAN.md](PLAN.md) | Development milestones and progress |
-| [API.md](docs/API.md) | REST API endpoints and schemas |
-| [Database Schema](docs/database/README.md) | PostgreSQL schema and relationships |
-| [Frontend Guide](apps/frontend/README.md) | Vue 3 architecture and design system |
-| [Backend Guide](apps/backend/README.md) | Django REST Framework patterns |
-| [Training Server](apps/training-server/README.md) | LoRA fine-tuning pipeline |
-| [Inference Server](apps/inference-server/README.md) | Image generation pipeline |
-| [Docker Guide](DOCKER.md) | Deployment and container setup |
+| Document                                            | Description                          |
+| --------------------------------------------------- | ------------------------------------ |
+| [TECHSPEC.md](TECHSPEC.md)                          | Complete technical specification     |
+| [PLAN.md](PLAN.md)                                  | Development milestones and progress  |
+| [API.md](docs/API.md)                               | REST API endpoints and schemas       |
+| [Database Schema](docs/database/README.md)          | PostgreSQL schema and relationships  |
+| [Frontend Guide](apps/frontend/README.md)           | Vue 3 architecture and design system |
+| [Backend Guide](apps/backend/README.md)             | Django REST Framework patterns       |
+| [Training Server](apps/training-server/README.md)   | LoRA fine-tuning pipeline            |
+| [Inference Server](apps/inference-server/README.md) | Image generation pipeline            |
+| [Docker Guide](DOCKER.md)                           | Deployment and container setup       |
 
 ---
 
@@ -336,6 +376,7 @@ We welcome contributions! Please follow these steps:
 7. Open a Pull Request
 
 **Development Guidelines**:
+
 - Follow [TECHSPEC.md](TECHSPEC.md) for feature requirements
 - Check [PLAN.md](PLAN.md) for current milestones
 - Use [CODE_GUIDE.md](apps/*/CODE_GUIDE.md) for code patterns
@@ -348,6 +389,7 @@ We welcome contributions! Please follow these steps:
 **Current Version**: MVP Development (M1 Foundation)
 
 **Progress**:
+
 - ✅ Project setup and architecture design
 - ✅ Database schema and models
 - ✅ Docker infrastructure

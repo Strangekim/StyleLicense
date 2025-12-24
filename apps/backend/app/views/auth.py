@@ -161,10 +161,24 @@ class GoogleCallbackView(View):
         try:
             # Try to find existing user by Google ID or email
             user = User.objects.get(email=email)
+
+            # Update user info from Google (including profile image)
+            updated = False
             if not user.provider_user_id:
                 user.provider = 'google'
                 user.provider_user_id = google_id
+                updated = True
+
+            # Always update profile_image to keep it fresh
+            new_profile_image = userinfo.get('picture')
+            if new_profile_image and user.profile_image != new_profile_image:
+                user.profile_image = new_profile_image
+                updated = True
+
+            if updated:
                 user.save()
+                logger.info(f"[OAuth] Updated user {user.id} with latest Google info")
+
             logger.info(f"[OAuth] Found existing user: id={user.id}")
             return user
         except User.DoesNotExist:
