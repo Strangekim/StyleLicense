@@ -150,7 +150,7 @@ export async function getStyleExampleGenerations(id) {
  */
 export async function getRecommendedTags(id) {
   try {
-    const response = await apiClient.get(`/api/styles/${id}/recommended-tags/`)
+    const response = await apiClient.get(`/api/styles/${id}/recommended_tags/`)
     return response.data.data.recommended_tags || []
   } catch (error) {
     console.error('Failed to fetch recommended tags:', error)
