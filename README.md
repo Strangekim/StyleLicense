@@ -66,96 +66,6 @@
 
 ---
 
-## 🏗️ 아키텍처
-
-### 📊 WBS (Work Breakdown Structure)
-
-<div align="center">
-<img src="README/WBS.png" alt="WBS" width="100%"/>
-</div>
-
-<br>
-
-### 🔧 시스템 아키텍처
-
-<div align="center">
-<img src="README/System Architecture.png" alt="System Architecture" width="100%"/>
-</div>
-
-<br>
-
-### 아키텍처 다이어그램
-
-```
-┌──────────┐  HTTPS (CDN)  ┌─────────────────┐
-│          ├───────────────┤  Cloud Storage  │
-│   User   │               │(Frontend + Assets)│
-│          │  HTTPS (API)  └─────────────────┘
-└──────────┘      │
-                  ↓
-            ┌───────────┐
-            │ Cloud Run │
-            │ (Backend) │
-            └───────────┘
-    ┌───────────┴───────────┐
-    │                         │
-    ↓                         ↓
-┌───────────┐           ┌───────────┐
-│ Cloud SQL │           │ RabbitMQ  │
-│(PostgreSQL)│          (on GCE VM)│
-└───────────┘           └───────────┘
-                              │
-                 ┌────────────┴────────────┐
-                 │                         │
-                 ↓                         ↓
-         ┌───────────────┐       ┌───────────────┐
-         │ Training Server │       │Inference Server │
-         │  (GCE + GPU)  │       │  (GCE + GPU)  │
-         └───────────────┘       └───────────────┘
-```
-
-### 컴포넌트 개요
-
-| 컴포넌트 | 기술 | 호스팅 (GCP) | 목적 |
-| -------------------- | -------------- | ------------------------ | ---------------------------------------- |
-| **Frontend** | Vue 3 + Vite | **Cloud Storage + CDN** | Instagram 스타일의 UI를 가진 SPA |
-| **Backend** | Django + DRF | **Cloud Run** | REST API, 인증, 비즈니스 로직 |
-| **Database** | PostgreSQL 15 | **Cloud SQL** | 사용자 데이터, 모델, 트랜잭션 |
-| **Message Queue** | RabbitMQ | **Compute Engine (GCE)** | 비동기 작업 분산 |
-| **Training Server** | PyTorch + LoRA | **Compute Engine (GCE)** | Stable Diffusion 모델 파인튜닝 |
-| **Inference Server** | Diffusers | **Compute Engine (GCE)** | 학습된 모델로 이미지 생성 |
-| **Storage** | - | **Cloud Storage** | 모델, 이미지, 서명 저장 |
-
----
-
-## ✨ 주요 기능
-
-### 아티스트를 위한 기능
-
-- **🖼️ 스타일 모델 생성**: 10-100개의 학습 이미지를 업로드하여 AI 모델 생성
-- **💰 유연한 가격 책정**: 생성된 이미지당 커스텀 토큰 가격 설정
-- **📊 학습 진행 상황**: 실시간 LoRA 파인튜닝 진행 상황 추적
-- **✍️ 서명 보호**: 생성된 모든 이미지에 워터마크 자동 삽입
-- **💵 수익 분배**: 모든 이미지 생성에서 토큰 수익 획득
-
-### 사용자를 위한 기능
-
-- **🎭 스타일 갤러리 탐색**: 다양한 아티스트의 독특한 아트 스타일 발견
-- **⚡ 즉시 생성**: 라이선스된 스타일로 몇 초 안에 이미지 생성
-- **🎛️ 커스터마이징 옵션**: 다양한 화면 비율 (1:1, 16:9, 9:16, 4:3, 3:4)
-- **🔖 태그 기반 프롬프트**: 영문 키워드 기반 프롬프트 시스템
-- **📱 커뮤니티 피드**: 생성된 아트워크 공유 및 발견
-
-### 플랫폼 기능
-
-- **🪙 토큰 경제**: 안전한 토큰 기반 결제 시스템
-- **🔐 Google OAuth**: Google 계정으로 간편한 인증
-- **🔔 알림**: 학습, 생성, 소셜 인터랙션에 대한 실시간 업데이트
-- **💬 소셜 기능**: 좋아요, 댓글, 다른 크리에이터 팔로우
-- **🔍 고급 검색**: 태그, 아티스트, 인기도로 스타일 검색
-
----
-
 ## 🖥️ 화면 구성 및 시연 동영상
 
 - **시연 영상** 👉 [**YouTube 바로가기**](https://www.youtube.com/shorts/Ofq0wxisI70)
@@ -189,6 +99,66 @@
 </table>
 
 <br>
+
+---
+
+## 🏗️ 아키텍처
+
+### 📊 WBS (Work Breakdown Structure)
+
+<div align="center">
+<img src="README/WBS.png" alt="WBS" width="100%"/>
+</div>
+
+<br>
+
+### 🔧 시스템 아키텍처
+
+<div align="center">
+<img src="README/System Architecture.png" alt="System Architecture" width="100%"/>
+</div>
+
+<br>
+
+### 컴포넌트 개요
+
+| 컴포넌트             | 기술           | 호스팅 (GCP)             | 목적                             |
+| -------------------- | -------------- | ------------------------ | -------------------------------- |
+| **Frontend**         | Vue 3 + Vite   | **Cloud Storage + CDN**  | Instagram 스타일의 UI를 가진 SPA |
+| **Backend**          | Django + DRF   | **Cloud Run**            | REST API, 인증, 비즈니스 로직    |
+| **Database**         | PostgreSQL 15  | **Cloud SQL**            | 사용자 데이터, 모델, 트랜잭션    |
+| **Message Queue**    | RabbitMQ       | **Compute Engine (GCE)** | 비동기 작업 분산                 |
+| **Training Server**  | PyTorch + LoRA | **Compute Engine (GCE)** | Stable Diffusion 모델 파인튜닝   |
+| **Inference Server** | Diffusers      | **Compute Engine (GCE)** | 학습된 모델로 이미지 생성        |
+| **Storage**          | -              | **Cloud Storage**        | 모델, 이미지, 서명 저장          |
+
+---
+
+## ✨ 주요 기능
+
+### 아티스트를 위한 기능
+
+- **🖼️ 스타일 모델 생성**: 10-100개의 학습 이미지를 업로드하여 AI 모델 생성
+- **💰 유연한 가격 책정**: 생성된 이미지당 커스텀 토큰 가격 설정
+- **📊 학습 진행 상황**: 실시간 LoRA 파인튜닝 진행 상황 추적
+- **✍️ 서명 보호**: 생성된 모든 이미지에 워터마크 자동 삽입
+- **💵 수익 분배**: 모든 이미지 생성에서 토큰 수익 획득
+
+### 사용자를 위한 기능
+
+- **🎭 스타일 갤러리 탐색**: 다양한 아티스트의 독특한 아트 스타일 발견
+- **⚡ 즉시 생성**: 라이선스된 스타일로 몇 초 안에 이미지 생성
+- **🎛️ 커스터마이징 옵션**: 다양한 화면 비율 (1:1, 16:9, 9:16, 4:3, 3:4)
+- **🔖 태그 기반 프롬프트**: 영문 키워드 기반 프롬프트 시스템
+- **📱 커뮤니티 피드**: 생성된 아트워크 공유 및 발견
+
+### 플랫폼 기능
+
+- **🪙 토큰 경제**: 안전한 토큰 기반 결제 시스템
+- **🔐 Google OAuth**: Google 계정으로 간편한 인증
+- **🔔 알림**: 학습, 생성, 소셜 인터랙션에 대한 실시간 업데이트
+- **💬 소셜 기능**: 좋아요, 댓글, 다른 크리에이터 팔로우
+- **🔍 고급 검색**: 태그, 아티스트, 인기도로 스타일 검색
 
 ---
 
@@ -313,17 +283,17 @@ StyleLicense/
 
 ## 📚 문서
 
-| 문서                                                | 설명                           |
-| --------------------------------------------------- | ------------------------------ |
-| [TECHSPEC.md](TECHSPEC.md)                          | 전체 기술 명세                 |
-| [PLAN.md](PLAN.md)                                  | 개발 마일스톤 및 진행 상황     |
-| [API.md](docs/API.md)                               | REST API 엔드포인트 및 스키마  |
-| [Database Schema](docs/database/README.md)          | PostgreSQL 스키마 및 관계      |
+| 문서                                                | 설명                            |
+| --------------------------------------------------- | ------------------------------- |
+| [TECHSPEC.md](TECHSPEC.md)                          | 전체 기술 명세                  |
+| [PLAN.md](PLAN.md)                                  | 개발 마일스톤 및 진행 상황      |
+| [API.md](docs/API.md)                               | REST API 엔드포인트 및 스키마   |
+| [Database Schema](docs/database/README.md)          | PostgreSQL 스키마 및 관계       |
 | [Frontend Guide](apps/frontend/README.md)           | Vue 3 아키텍처 및 디자인 시스템 |
-| [Backend Guide](apps/backend/README.md)             | Django REST Framework 패턴     |
-| [Training Server](apps/training-server/README.md)   | LoRA 파인튜닝 파이프라인       |
-| [Inference Server](apps/inference-server/README.md) | 이미지 생성 파이프라인         |
-| [Docker Guide](DOCKER.md)                           | 배포 및 컨테이너 설정          |
+| [Backend Guide](apps/backend/README.md)             | Django REST Framework 패턴      |
+| [Training Server](apps/training-server/README.md)   | LoRA 파인튜닝 파이프라인        |
+| [Inference Server](apps/inference-server/README.md) | 이미지 생성 파이프라인          |
+| [Docker Guide](DOCKER.md)                           | 배포 및 컨테이너 설정           |
 
 ---
 
@@ -381,45 +351,6 @@ pylint app/            # Backend 린팅
 
 ---
 
-## 🤝 기여하기
-
-기여를 환영합니다! 다음 단계를 따라주세요:
-
-1. 저장소 Fork
-2. 기능 브랜치 생성 (`git checkout -b feature/amazing-feature`)
-3. 앱 디렉토리의 관련 CODE_GUIDE.md 읽기
-4. 디자인 시스템 가이드라인 준수 ([Frontend README](apps/frontend/README.md#design-system) 참조)
-5. 변경사항 커밋 (`git commit -m 'feat: add amazing feature'`)
-6. 브랜치에 Push (`git push origin feature/amazing-feature`)
-7. Pull Request 생성
-
-**개발 가이드라인**:
-
-- 기능 요구사항은 [TECHSPEC.md](TECHSPEC.md) 참조
-- 현재 마일스톤은 [PLAN.md](PLAN.md) 확인
-- 코드 패턴은 [CODE_GUIDE.md](apps/*/CODE_GUIDE.md) 사용
-- [docs/design/pages/](docs/design/pages/)의 디자인 목업과 일치
-
----
-
-## 📊 프로젝트 상태
-
-**현재 버전**: MVP 개발 (M1 Foundation)
-
-**진행 상황**:
-
-- ✅ 프로젝트 설정 및 아키텍처 디자인
-- ✅ 데이터베이스 스키마 및 모델
-- ✅ Docker 인프라
-- 🚧 인증 시스템 (진행 중)
-- ⏳ 핵심 백엔드 API (계획됨)
-- ⏳ 프론트엔드 UI 구현 (계획됨)
-- ⏳ AI 학습/추론 파이프라인 (계획됨)
-
-자세한 마일스톤 및 작업 추적은 [PLAN.md](PLAN.md)를 참조하세요.
-
----
-
 ## 📄 라이선스
 
 이 프로젝트는 MIT 라이선스에 따라 라이선스가 부여됩니다 - 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
@@ -428,10 +359,9 @@ pylint app/            # Backend 린팅
 
 ## 👥 팀
 
-**SSAFY 12기 - 자율 프로젝트**
+**SSAFY 14기 - 관통 프로젝트**
 
-- **프로젝트 기간**: 2025-01 ~ 2025-02
-- **팀 규모**: [팀 규모]
+- **프로젝트 기간**: 2025-10 ~ 2025-12
 - **소속**: 삼성 청년 SW 아카데미
 
 ---
